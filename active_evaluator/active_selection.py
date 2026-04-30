@@ -314,6 +314,7 @@ def lazy_greedy_facility(
     tau: float,
     round_budget: int,
     cost_fn: Optional[Callable[[str], float]] = None,
+    pick_trace: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[List[int], torch.Tensor]:
     """Lazy-greedy maximization of the influence-weighted facility-location surrogate.
 
@@ -370,6 +371,20 @@ def lazy_greedy_facility(
 
         selected.append(candidate_idx)
         selected_cost += c
+        if pick_trace is not None:
+            sim_to_VT = sim_pool[:, candidate_idx]
+            top_v_idx = int(torch.argmax(influence * sim_to_VT).item()) if influence.numel() else -1
+            pick_trace.append({
+                "pool_index": int(candidate_idx),
+                "candidate_key": pool_keys[candidate_idx],
+                "marginal_gain": float(true_gain),
+                "cost": float(c),
+                "cumulative_cost_in_round": float(selected_cost),
+                "max_sim_to_VT": float(sim_to_VT.max().item()),
+                "mean_sim_to_VT": float(sim_to_VT.mean().item()),
+                "most_influential_v_index": top_v_idx,
+                "rank_in_round": len(selected) - 1,
+            })
         coverage = torch.maximum(coverage, sim_pool[:, candidate_idx])
 
     return selected, coverage
@@ -440,6 +455,7 @@ def direct_greedy_validation(
     cost_fn: Optional[Callable[[str], float]] = None,
     max_candidates_evaluated: int = 100,
     eval_trace: Optional[List[List[int]]] = None,
+    pick_trace: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[List[int], List[float]]:
     """Plain greedy on validation-loss reduction with FASS-style pre-filtering.
 
@@ -522,9 +538,24 @@ def direct_greedy_validation(
         if best_idx is None or best_gain <= 0:
             break
 
+        c_pick = max(cost(pool[best_idx].key), 1e-9)
+        prev_loss = base_loss
         selected.append(best_idx)
-        selected_cost += max(cost(pool[best_idx].key), 1e-9)
+        selected_cost += c_pick
         marginal_losses.append(best_loss if best_loss is not None else base_loss)
+        if pick_trace is not None:
+            pick_trace.append({
+                "pool_index": int(best_idx),
+                "candidate_key": pool[best_idx].key,
+                "loss_before": float(prev_loss),
+                "loss_after": float(best_loss if best_loss is not None else prev_loss),
+                "loss_reduction": float(prev_loss - (best_loss if best_loss is not None else prev_loss)),
+                "marginal_gain": float(best_gain),
+                "cost": float(c_pick),
+                "cumulative_cost_in_round": float(selected_cost),
+                "n_candidates_evaluated": len(candidate_indices),
+                "rank_in_round": len(selected) - 1,
+            })
         coverage = torch.maximum(coverage, sim_pool[:, best_idx])
         base_loss = best_loss if best_loss is not None else base_loss
 
@@ -667,6 +698,7 @@ def select_extension(
 
         pool_keys = [ex.key for ex in remaining_pool]
         greedy_t0 = time.time()
+        round_pick_trace: List[Dict[str, Any]] = []
         if method == "v1_facility":
             picked, coverage = lazy_greedy_facility(
                 pool_features=pool_features,
@@ -677,6 +709,7 @@ def select_extension(
                 tau=tau,
                 round_budget=round_budget,
                 cost_fn=cost_fn,
+                pick_trace=round_pick_trace,
             )
         else:
             picked, _losses = direct_greedy_validation(
@@ -693,11 +726,18 @@ def select_extension(
                 round_budget=round_budget,
                 cost_fn=cost_fn,
                 max_candidates_evaluated=max_candidates_evaluated,
+                pick_trace=round_pick_trace,
             )
             if picked:
                 picked_features = pool_features[picked]
                 coverage = torch.maximum(coverage, _gaussian_similarity(val_features, picked_features, tau).max(dim=1).values)
         timings["greedy_seconds"] = time.time() - greedy_t0
+
+        # Augment each pick with the source training-model alias parsed
+        # from the candidate key so users can read the trace directly.
+        for entry in round_pick_trace:
+            ck = entry.get("candidate_key", "")
+            entry["source_model"] = ck.split("::", 1)[0] if "::" in ck else ck
 
         new_examples = [remaining_pool[i] for i in picked]
         selected_S.extend(new_examples)
@@ -719,10 +759,24 @@ def select_extension(
             inner_lr,
         )
         _restore_state_dict(predictor, base_state)
+        round_total_cost = sum(p.get("cost", 1.0) for p in round_pick_trace)
+        round_total_gain = sum(p.get("marginal_gain", 0.0) for p in round_pick_trace)
         trajectory.append({
             "round": round_idx,
             "round_budget": round_budget,
             "selected_keys": [ex.key for ex in new_examples],
+            "selected_source_models": [
+                p.get("source_model") for p in round_pick_trace
+            ],
+            "picks": round_pick_trace,
+            "round_cost_paid": float(round_total_cost),
+            "round_gain_total": float(round_total_gain),
+            "influence_stats": {
+                "mean": float(influence.mean().item()) if influence.numel() else 0.0,
+                "min": float(influence.min().item()) if influence.numel() else 0.0,
+                "max": float(influence.max().item()) if influence.numel() else 0.0,
+                "n": int(influence.numel()),
+            },
             "val_loss_before": val_loss_before,
             "val_loss_after": val_loss_after,
             "elapsed_seconds": time.time() - round_start,
@@ -732,20 +786,76 @@ def select_extension(
     # Always restore the meta-trained state so the caller sees an unmutated predictor.
     _restore_state_dict(predictor, base_state)
 
+    # Aggregate per-pick records across rounds for the summary file.
+    all_picks: List[Dict[str, Any]] = []
+    for round_entry in trajectory:
+        for pick in round_entry.get("picks", []):
+            all_picks.append({**pick, "round": round_entry["round"]})
+
+    cost_paid_total = sum(p.get("cost", 1.0) for p in all_picks)
+    gain_total = sum(p.get("marginal_gain", 0.0) for p in all_picks)
+    final_val_loss = (
+        trajectory[-1]["val_loss_after"] if trajectory else None
+    )
+    total_time = sum(r.get("elapsed_seconds", 0.0) for r in trajectory)
+
+    selected_records = [
+        {
+            "key": ex.key,
+            "source_model": ex.key.split("::", 1)[0] if "::" in ex.key else ex.key,
+            "true_label": float(ex.label.item()) if ex.label is not None else None,
+            "cost": float((cost_fn or (lambda _k: 1.0))(ex.key)),
+        }
+        for ex in selected_S
+    ]
+
+    summary = {
+        "method": method,
+        "tau": tau,
+        "cost_fn_name": plan.cost_fn_name,
+        "budget_total": plan.total,
+        "cost_paid_total": float(cost_paid_total),
+        "cost_remaining": float(plan.total - cost_paid_total),
+        "gain_total": float(gain_total),
+        "n_selected": len(selected_S),
+        "pool_size": len(pool_U),
+        "val_size": len(val_V),
+        "val_VT_size": narrow_diag.n_val_narrowed,
+        "final_val_loss": final_val_loss,
+        "total_selection_seconds": total_time,
+        "n_rounds_executed": len(trajectory),
+        "source_models_chosen": [r["source_model"] for r in selected_records],
+        "rationale": (
+            "V1 picks maximize the influence-weighted facility-location surrogate: "
+            "each pick has the largest sum over V_T of I(v) * (sim(v, candidate) - max sim(v, S)). "
+            "I(v) is the gradient-norm influence weight per validation example. "
+            "Cost is c(s)=1 (cardinality) by default."
+            if method == "v1_facility"
+            else
+            "V2 picks maximize per-cost reduction in validation loss after K-step "
+            "adaptation on S_0 ∪ S ∪ {candidate}. Candidates are pre-filtered by V1 "
+            "ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+        ),
+    }
+
     log = {
         "method": method,
         "tau": tau,
         "budget_plan": asdict(plan),
         "narrowing": asdict(narrow_diag),
         "trajectory": trajectory,
+        "selected": selected_records,
         "selected_keys": [ex.key for ex in selected_S],
         "selected_count": len(selected_S),
+        "summary": summary,
     }
     if log_dir is not None:
         with (log_dir / "selection_trajectory.json").open("w", encoding="utf-8") as f:
             json.dump({"trajectory": trajectory, "tau": tau, "method": method}, f, indent=2)
         with (log_dir / "selected_examples.json").open("w", encoding="utf-8") as f:
-            json.dump({"selected_keys": log["selected_keys"]}, f, indent=2)
+            json.dump({"selected": selected_records, "selected_keys": log["selected_keys"]}, f, indent=2)
+        with (log_dir / "selection_summary.json").open("w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
 
     return selected_S, log
 

@@ -1,0 +1,38 @@
+{
+  "summary": {
+    "baseline": {
+      "meta_test_mae_seen": null,
+      "real_test_mae_seen": null,
+      "test_meta_mae_unseen": null,
+      "test_dev_mae_unseen": null,
+      "test_meta_records": [],
+      "test_dev_records": []
+    },
+    "v1_facility": {
+      "meta_test_mae_seen": null,
+      "real_test_mae_seen": null,
+      "test_meta_mae_unseen": null,
+      "test_dev_mae_unseen": null,
+      "test_meta_records": [],
+      "test_dev_records": []
+    },
+    "v2_direct": {
+      "meta_test_mae_seen": null,
+      "real_test_mae_seen": null,
+      "test_meta_mae_unseen": null,
+      "test_dev_mae_unseen": null,
+      "test_meta_records": [],
+      "test_dev_records": []
+    }
+  },
+  "v1_vs_v2": {
+    "wins_v1": 0,
+    "wins_v2": 0,
+    "ties": 0
+  },
+  "selection_summaries": {
+    "baseline": {},
+    "v1_facility": {},
+    "v2_direct": {}
+  }
+}
