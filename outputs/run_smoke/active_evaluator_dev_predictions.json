@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "model": "cycloneboy/SLM-SQL-0.5B",
+      "predicted_accuracy": 0.07100901007652283,
+      "true_accuracy": 0.30000001192092896,
+      "mae": 0.22899100184440613
+    },
+    {
+      "model": "cycloneboy/SLM-SQL-0.6B",
+      "predicted_accuracy": 0.04026462882757187,
+      "true_accuracy": 0.0,
+      "mae": 0.04026462882757187
+    },
+    {
+      "model": "Qwen/Qwen2-0.5B",
+      "predicted_accuracy": 0.06669753044843674,
+      "true_accuracy": 0.0833333358168602,
+      "mae": 0.016635805368423462
+    }
+  ]
+}

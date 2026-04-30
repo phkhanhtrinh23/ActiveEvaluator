@@ -1,0 +1,12 @@
+*.npz
+data/database
+data/test_database
+data/*.zip
+__pycache__/
+*/__pycache__
+*.pyc
+outputs/visualization/*
+outputs/fusionsql/*
+shift_predictor/__pycache__
+.vscode
+.claude

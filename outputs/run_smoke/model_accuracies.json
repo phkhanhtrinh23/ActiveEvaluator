@@ -1,0 +1,22 @@
+{
+  "cycloneboy/SLM-SQL-0.5B": {
+    "meta_val": 0.25,
+    "meta_test": 0.275,
+    "dev": 0.3
+  },
+  "cycloneboy/SLM-SQL-0.6B": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
+  "Qwen/Qwen2-0.5B": {
+    "meta_val": 0.05,
+    "meta_test": 0.0,
+    "dev": 0.08333333333333333
+  },
+  "Qwen/Qwen2.5-0.5B-Instruct": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "results": [
+    {
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "predicted_accuracy": 0.02114393189549446,
+      "true_accuracy": 0.0,
+      "mae": 0.02114393189549446
+    }
+  ],
+  "mae": 0.02114393189549446
+}
