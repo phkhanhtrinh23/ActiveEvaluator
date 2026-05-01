@@ -2,22 +2,34 @@
   "results": [
     {
       "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
-      "predicted_accuracy": 0.46786150336265564,
+      "predicted_accuracy": 0.3929450511932373,
       "true_accuracy": 0.0033333334140479565,
-      "mae": 0.4645281732082367
+      "mae": 0.38961172103881836
     },
     {
       "model": "Qwen/Qwen2.5-0.5B-Instruct",
-      "predicted_accuracy": 0.4071512818336487,
+      "predicted_accuracy": 0.40502607822418213,
       "true_accuracy": 0.0,
-      "mae": 0.4071512818336487
+      "mae": 0.40502607822418213
     },
     {
       "model": "Gensyn/Qwen2.5-0.5B-Instruct",
-      "predicted_accuracy": 0.4071512818336487,
+      "predicted_accuracy": 0.40502607822418213,
       "true_accuracy": 0.0,
-      "mae": 0.4071512818336487
+      "mae": 0.40502607822418213
+    },
+    {
+      "model": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "predicted_accuracy": 0.4084710478782654,
+      "true_accuracy": 0.07999999821186066,
+      "mae": 0.3284710645675659
+    },
+    {
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "predicted_accuracy": 0.3924448788166046,
+      "true_accuracy": 0.046666666865348816,
+      "mae": 0.345778226852417
     }
   ],
-  "mae": 0.42627691229184467
+  "mae": 0.3747826337814331
 }

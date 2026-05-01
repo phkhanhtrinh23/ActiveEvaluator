@@ -3,17 +3,17 @@
     "n_val": 3,
     "n_val_narrowed": 3,
     "quantile_q": 0.0,
-    "rho_threshold": 0.12942397594451904,
-    "rho_mean": 0.41405200958251953,
-    "rho_min": 0.12942397594451904,
-    "rho_max": 0.9809593558311462
+    "rho_threshold": 0.030735140666365623,
+    "rho_mean": 0.3471716046333313,
+    "rho_min": 0.030735140666365623,
+    "rho_max": 0.9785364270210266
   },
   "pool": {
     "applied": true,
-    "pool_size_before": 4,
-    "pool_size_after": 2,
+    "pool_size_before": 7,
+    "pool_size_after": 4,
     "quantile_q": 0.5,
-    "rho_threshold": 0.4989921450614929,
-    "rho_mean": 0.5190566778182983
+    "rho_threshold": 0.4072869122028351,
+    "rho_mean": 0.45400941371917725
   }
 }

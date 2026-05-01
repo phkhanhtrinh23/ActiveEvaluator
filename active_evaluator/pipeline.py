@@ -263,10 +263,19 @@ def build_tasks(
     tasks: List[ShiftDescriptorTask] = []
     for model in tqdm(models, desc="Build tasks", leave=False):
         model_name = model.alias or model.model_id
-        emb_meta_train = cache.load_or_compute(model, "meta_train", splits["meta_train"].prompts)
-        emb_meta_val = cache.load_or_compute(model, "meta_val", splits["meta_val"].prompts)
-        emb_meta_test = cache.load_or_compute(model, "meta_test", splits["meta_test"].prompts)
-        emb_dev = cache.load_or_compute(model, dev_split.name, dev_split.prompts)
+        # Skip models that didn't make it through the generation stage.
+        if model_name not in accuracy.accuracy_map:
+            print(f"[ActiveEvaluator] WARN: no accuracy entry for {model_name}, skipping task build.")
+            continue
+        try:
+            emb_meta_train = cache.load_or_compute(model, "meta_train", splits["meta_train"].prompts)
+            emb_meta_val = cache.load_or_compute(model, "meta_val", splits["meta_val"].prompts)
+            emb_meta_test = cache.load_or_compute(model, "meta_test", splits["meta_test"].prompts)
+            emb_dev = cache.load_or_compute(model, dev_split.name, dev_split.prompts)
+        except Exception as exc:
+            print(f"[ActiveEvaluator] WARN: embedding extraction failed for {model_name}: {type(exc).__name__}: {exc}")
+            cache.clear_extractors()
+            continue
 
         support_desc = compute_shift_descriptor(
             model_name,
@@ -466,6 +475,7 @@ def run_inference_for_models(
             (dev_key, dev_split),
         ]
         generator: SQLGenerator | None = None
+        model_failed = False
         try:
             for key_name, split in split_plan:
                 cached = maybe_load_cached_metrics(model_dir, split.name, len(split.indices))
@@ -482,12 +492,23 @@ def run_inference_for_models(
                     db_root=db_root,
                 )
                 model_accs[key_name] = metrics["execution_accuracy"]
+        except Exception as exc:
+            # Per-model isolation: a single failed download / OOM / corrupt
+            # checkpoint shouldn't kill an 18-model benchmark. Log, skip, move
+            # on. Downstream task building will skip models without an entry
+            # in accuracy_summary.
+            print(f"[ActiveEvaluator] WARN: skipping {model_name} after error: {type(exc).__name__}: {exc}")
+            model_failed = True
         finally:
             if generator is not None:
-                generator.shutdown()
+                try:
+                    generator.shutdown()
+                except Exception:
+                    pass
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        accuracy_summary[model_name] = model_accs
+        if not model_failed:
+            accuracy_summary[model_name] = model_accs
     return accuracy_summary
 
 

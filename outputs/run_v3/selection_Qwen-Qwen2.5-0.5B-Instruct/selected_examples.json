@@ -7,6 +7,18 @@
       "cost": 1.0
     },
     {
+      "key": "Qwen/Qwen2.5-1.5B::train_support",
+      "source_model": "Qwen/Qwen2.5-1.5B",
+      "true_label": 0.38333332538604736,
+      "cost": 1.0
+    },
+    {
+      "key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+      "source_model": "stabilityai/stablelm-2-zephyr-1_6b",
+      "true_label": 0.0,
+      "cost": 1.0
+    },
+    {
       "key": "Qwen/Qwen2-0.5B::train_support",
       "source_model": "Qwen/Qwen2-0.5B",
       "true_label": 0.06666667014360428,
@@ -15,6 +27,8 @@
   ],
   "selected_keys": [
     "Qwen/Qwen2.5-Coder-1.5B::train_support",
+    "Qwen/Qwen2.5-1.5B::train_support",
+    "stabilityai/stablelm-2-zephyr-1_6b::train_support",
     "Qwen/Qwen2-0.5B::train_support"
   ]
 }

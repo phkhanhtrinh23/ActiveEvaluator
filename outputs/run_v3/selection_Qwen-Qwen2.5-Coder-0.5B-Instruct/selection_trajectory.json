@@ -1,0 +1,139 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-Coder-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-Coder-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
+          "inner_product_score": -0.002713266294449568,
+          "weight": -0.019959857687354088,
+          "residual_norm_after": 0.002305817324668169,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-Coder-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.11311827600002289,
+        "min": 0.09012004733085632,
+        "max": 0.15870100259780884,
+        "n": 3
+      },
+      "val_loss_before": 0.013495567254722118,
+      "val_loss_after": 0.01724938675761223,
+      "elapsed_seconds": 0.012743949890136719,
+      "timings": {
+        "adapt_seconds": 0.0045413970947265625,
+        "embed_seconds": 0.0002455711364746094,
+        "influence_seconds": 0.0008149147033691406,
+        "greedy_seconds": 0.002074718475341797
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
+          "inner_product_score": -0.023960130289196968,
+          "weight": -0.25891441106796265,
+          "residual_norm_after": 0.003224989166483283,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.16377714276313782,
+        "min": 0.126712366938591,
+        "max": 0.1847117692232132,
+        "n": 3
+      },
+      "val_loss_before": 0.017170054838061333,
+      "val_loss_after": 0.018524888902902603,
+      "elapsed_seconds": 0.01221013069152832,
+      "timings": {
+        "adapt_seconds": 0.004439592361450195,
+        "embed_seconds": 0.00023698806762695312,
+        "influence_seconds": 0.0008099079132080078,
+        "greedy_seconds": 0.0018267631530761719
+      }
+    },
+    {
+      "round": 2,
+      "round_budget": 2,
+      "selected_keys": [
+        "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+        "Qwen/Qwen2-0.5B::train_support"
+      ],
+      "selected_source_models": [
+        "stabilityai/stablelm-2-zephyr-1_6b",
+        "Qwen/Qwen2-0.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+          "inner_product_score": 0.021923014894127846,
+          "weight": 0.4229778051376343,
+          "residual_norm_after": 0.0029650325886905193,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "stabilityai/stablelm-2-zephyr-1_6b"
+        },
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
+          "inner_product_score": 0.00030962846358306706,
+          "weight": 0.20207694172859192,
+          "residual_norm_after": 0.002149860607460141,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 2.0,
+          "rank_in_round": 1,
+          "source_model": "Qwen/Qwen2-0.5B"
+        }
+      ],
+      "round_cost_paid": 2.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.17497789859771729,
+        "min": 0.11646460741758347,
+        "max": 0.20821236073970795,
+        "n": 3
+      },
+      "val_loss_before": 0.018659865483641624,
+      "val_loss_after": 0.014692222699522972,
+      "elapsed_seconds": 0.012084007263183594,
+      "timings": {
+        "adapt_seconds": 0.004298686981201172,
+        "embed_seconds": 0.0002276897430419922,
+        "influence_seconds": 0.0008056163787841797,
+        "greedy_seconds": 0.0018711090087890625
+      }
+    }
+  ],
+  "tau": 0.2004646211862564,
+  "method": "v3_gradmatch"
+}

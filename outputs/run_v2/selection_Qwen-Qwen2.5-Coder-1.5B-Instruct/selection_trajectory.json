@@ -2,71 +2,104 @@
   "trajectory": [
     {
       "round": 0,
-      "round_budget": 1,
+      "round_budget": 2,
       "selected_keys": [
+        "Qwen/Qwen2.5-1.5B::train_support",
         "TinyLlama/TinyLlama_v1.1::train_support"
       ],
       "selected_source_models": [
+        "Qwen/Qwen2.5-1.5B",
         "TinyLlama/TinyLlama_v1.1"
       ],
       "picks": [
         {
-          "pool_index": 1,
-          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
-          "loss_before": 0.011316033080220222,
-          "loss_after": 0.011301330290734768,
-          "loss_reduction": 1.470278948545456e-05,
-          "marginal_gain": 1.470278948545456e-05,
+          "pool_index": 2,
+          "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
+          "loss_before": 0.01508423499763012,
+          "loss_after": 0.013641664758324623,
+          "loss_reduction": 0.0014425702393054962,
+          "marginal_gain": 0.0014425702393054962,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "n_candidates_evaluated": 2,
+          "n_candidates_evaluated": 4,
           "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-1.5B"
+        },
+        {
+          "pool_index": 1,
+          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
+          "loss_before": 0.013641664758324623,
+          "loss_after": 0.013514022342860699,
+          "loss_reduction": 0.0001276424154639244,
+          "marginal_gain": 0.0001276424154639244,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 2.0,
+          "n_candidates_evaluated": 3,
+          "rank_in_round": 1,
           "source_model": "TinyLlama/TinyLlama_v1.1"
         }
       ],
-      "round_cost_paid": 1.0,
-      "round_gain_total": 1.470278948545456e-05,
+      "round_cost_paid": 2.0,
+      "round_gain_total": 0.0015702126547694206,
       "influence_stats": {
-        "mean": 0.1056104227900505,
-        "min": 0.029521746560931206,
-        "max": 0.1866375207901001,
+        "mean": 0.07089244574308395,
+        "min": 0.0302128829061985,
+        "max": 0.1475038081407547,
         "n": 3
       },
-      "val_loss_before": 0.011169089004397392,
-      "val_loss_after": 0.011399983428418636,
-      "elapsed_seconds": 0.07997560501098633,
+      "val_loss_before": 0.014918671920895576,
+      "val_loss_after": 0.01445507537573576,
+      "elapsed_seconds": 0.11018133163452148,
       "timings": {
-        "adapt_seconds": 0.026061058044433594,
-        "embed_seconds": 0.00033164024353027344,
-        "influence_seconds": 0.014171600341796875,
-        "greedy_seconds": 0.029065847396850586
+        "adapt_seconds": 0.020322799682617188,
+        "embed_seconds": 0.0003409385681152344,
+        "influence_seconds": 0.014332294464111328,
+        "greedy_seconds": 0.06540679931640625
       }
     },
     {
       "round": 1,
       "round_budget": 2,
-      "selected_keys": [],
-      "selected_source_models": [],
-      "picks": [],
-      "round_cost_paid": 0.0,
-      "round_gain_total": 0.0,
+      "selected_keys": [
+        "stabilityai/stablelm-2-zephyr-1_6b::train_support"
+      ],
+      "selected_source_models": [
+        "stabilityai/stablelm-2-zephyr-1_6b"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+          "loss_before": 0.0159959364682436,
+          "loss_after": 0.014165109023451805,
+          "loss_reduction": 0.0018308274447917938,
+          "marginal_gain": 0.0018308274447917938,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "n_candidates_evaluated": 2,
+          "rank_in_round": 0,
+          "source_model": "stabilityai/stablelm-2-zephyr-1_6b"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0018308274447917938,
       "influence_stats": {
-        "mean": 0.11344262212514877,
-        "min": 0.0362243577837944,
-        "max": 0.18189820647239685,
+        "mean": 0.14180251955986023,
+        "min": 0.12762267887592316,
+        "max": 0.15091991424560547,
         "n": 3
       },
-      "val_loss_before": 0.010895471088588238,
-      "val_loss_after": 0.011468454264104366,
-      "elapsed_seconds": 0.026030540466308594,
+      "val_loss_before": 0.01588626764714718,
+      "val_loss_after": 0.013844192028045654,
+      "elapsed_seconds": 0.05032849311828613,
       "timings": {
-        "adapt_seconds": 0.009227275848388672,
-        "embed_seconds": 0.00022792816162109375,
-        "influence_seconds": 0.0011425018310546875,
-        "greedy_seconds": 0.006057262420654297
+        "adapt_seconds": 0.009335041046142578,
+        "embed_seconds": 0.0002422332763671875,
+        "influence_seconds": 0.0010249614715576172,
+        "greedy_seconds": 0.029421567916870117
       }
     }
   ],
-  "tau": 0.6135529279708862,
+  "tau": 0.17405138909816742,
   "method": "v2_direct"
 }

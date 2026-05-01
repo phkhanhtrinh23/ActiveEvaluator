@@ -1,0 +1,20 @@
+{
+  "method": "v1_facility",
+  "tau": 0.15508802235126495,
+  "cost_fn_name": "cardinality",
+  "budget_total": 4,
+  "cost_paid_total": 1.0,
+  "cost_remaining": 3.0,
+  "gain_total": 0.020536061376333237,
+  "n_selected": 1,
+  "pool_size": 4,
+  "val_size": 3,
+  "val_VT_size": 3,
+  "final_val_loss": 0.016020163893699646,
+  "total_selection_seconds": 0.038239240646362305,
+  "n_rounds_executed": 3,
+  "source_models_chosen": [
+    "Qwen/Qwen2.5-1.5B"
+  ],
+  "rationale": "V1 picks maximize the influence-weighted facility-location surrogate: each pick has the largest sum over V_T of I(v) * (sim(v, candidate) - max sim(v, S)). I(v) is the gradient-norm influence weight per validation example. Cost is c(s)=1 (cardinality) by default."
+}

@@ -1,0 +1,112 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-Coder-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-Coder-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
+          "marginal_gain": 0.057457245886325836,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "max_sim_to_VT": 0.8453843593597412,
+          "mean_sim_to_VT": 0.34419339895248413,
+          "most_influential_v_index": 1,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-Coder-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.057457245886325836,
+      "influence_stats": {
+        "mean": 0.11093595623970032,
+        "min": 0.10014835745096207,
+        "max": 0.13219326734542847,
+        "n": 3
+      },
+      "val_loss_before": 0.01396959088742733,
+      "val_loss_after": 0.018277425318956375,
+      "elapsed_seconds": 0.013126850128173828,
+      "timings": {
+        "adapt_seconds": 0.005547761917114258,
+        "embed_seconds": 0.0002377033233642578,
+        "influence_seconds": 0.0009970664978027344,
+        "greedy_seconds": 0.0002040863037109375
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2-0.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2-0.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
+          "marginal_gain": 0.025816068053245544,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "max_sim_to_VT": 0.6435852646827698,
+          "mean_sim_to_VT": 0.5002313852310181,
+          "most_influential_v_index": 2,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2-0.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.025816068053245544,
+      "influence_stats": {
+        "mean": 0.14485783874988556,
+        "min": 0.10329889506101608,
+        "max": 0.16876941919326782,
+        "n": 3
+      },
+      "val_loss_before": 0.017925329506397247,
+      "val_loss_after": 0.015859253704547882,
+      "elapsed_seconds": 0.012790203094482422,
+      "timings": {
+        "adapt_seconds": 0.005465507507324219,
+        "embed_seconds": 0.00022149085998535156,
+        "influence_seconds": 0.0009512901306152344,
+        "greedy_seconds": 0.0001933574676513672
+      }
+    },
+    {
+      "round": 2,
+      "round_budget": 2,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.13083063066005707,
+        "min": 0.11678528040647507,
+        "max": 0.139101043343544,
+        "n": 3
+      },
+      "val_loss_before": 0.015866277739405632,
+      "val_loss_after": 0.015839917585253716,
+      "elapsed_seconds": 0.012618541717529297,
+      "timings": {
+        "adapt_seconds": 0.005439281463623047,
+        "embed_seconds": 0.00023674964904785156,
+        "influence_seconds": 0.0009365081787109375,
+        "greedy_seconds": 0.00010061264038085938
+      }
+    }
+  ],
+  "tau": 0.15508802235126495,
+  "method": "v1_facility"
+}

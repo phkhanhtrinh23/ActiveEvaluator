@@ -1,0 +1,136 @@
+[ActiveEvaluator] Generating SQL for cycloneboy/SLM-SQL-0.5B...
+[ActiveEvaluator] Generating SQL for cycloneboy/SLM-SQL-0.6B...
+[ActiveEvaluator] Generating SQL for cycloneboy/CscSQL-Merge-Qwen2.5-Coder-0.5B-Instruct...
+[ActiveEvaluator] Generating SQL for Qwen/Qwen2-0.5B...
+[ActiveEvaluator] Generating SQL for Qwen/Qwen2.5-Coder-1.5B...
+[ActiveEvaluator] Generating SQL for TinyLlama/TinyLlama_v1.1...
+[ActiveEvaluator] Generating SQL for deepseek-ai/deepseek-coder-1.3b-base...
+[ActiveEvaluator] Generating SQL for Qwen/Qwen2.5-1.5B...
+[ActiveEvaluator] Generating SQL for HuggingFaceTB/SmolLM-1.7B...
+[ActiveEvaluator] Generating SQL for stabilityai/stablelm-2-zephyr-1_6b...
+[ActiveEvaluator] Generating SQL for Qwen/Qwen2.5-Coder-1.5B-Instruct...
+[ActiveEvaluator] Generating SQL for Qwen/Qwen2.5-0.5B-Instruct...
+[ActiveEvaluator] Generating SQL for Gensyn/Qwen2.5-0.5B-Instruct...
+[ActiveEvaluator] Generating SQL for Qwen/Qwen2.5-Coder-0.5B-Instruct...
+[ActiveEvaluator] Generating SQL for TinyLlama/TinyLlama-1.1B-Chat-v1.0...
+Build tasks:   0%|          | 0/10 [00:00<?, ?it/s]Build tasks:  10%|█         | 1/10 [00:02<00:26,  3.00s/it]Build tasks:  20%|██        | 2/10 [00:05<00:21,  2.74s/it]Build tasks:  30%|███       | 3/10 [00:06<00:12,  1.78s/it]Build tasks:  40%|████      | 4/10 [00:08<00:13,  2.18s/it]Build tasks:  50%|█████     | 5/10 [00:10<00:10,  2.03s/it]Build tasks:  60%|██████    | 6/10 [00:14<00:09,  2.45s/it]Build tasks:  70%|███████   | 7/10 [00:17<00:08,  2.71s/it]Build tasks:  80%|████████  | 8/10 [00:18<00:04,  2.39s/it]Build tasks:  90%|█████████ | 9/10 [00:22<00:02,  2.65s/it]Build tasks: 100%|██████████| 10/10 [00:25<00:00,  2.84s/it]                                                            [ActiveEvaluator] Training on 7 tasks for 300 epochs.
+Meta-train:   0%|          | 0/300 [00:00<?, ?it/s]Meta-train:   0%|          | 1/300 [00:00<00:34,  8.70it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:   5%|▌         | 15/300 [00:00<00:03, 79.78it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  10%|▉         | 29/300 [00:00<00:02, 106.05it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  13%|█▎        | 40/300 [00:00<00:02, 105.61it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  18%|█▊        | 55/300 [00:00<00:02, 120.69it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  23%|██▎       | 70/300 [00:00<00:01, 129.81it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  30%|███       | 90/300 [00:00<00:01, 142.70it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  35%|███▌      | 106/300 [00:00<00:01, 147.19it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  40%|████      | 121/300 [00:00<00:01, 145.82it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  45%|████▌     | 136/300 [00:01<00:01, 145.70it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  50%|█████     | 151/300 [00:01<00:01, 136.77it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  55%|█████▌    | 166/300 [00:01<00:00, 138.63it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  60%|██████    | 180/300 [00:01<00:00, 132.04it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  65%|██████▌   | 195/300 [00:01<00:00, 135.48it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  70%|███████   | 210/300 [00:01<00:00, 130.76it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  75%|███████▌  | 225/300 [00:01<00:00, 134.94it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [AMeta-train:  80%|███████▉  | 239/300 [00:01<00:00, 136.29it/s]
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A
+Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+                                                [A                                                              Context-adapt:   0%|          | 0/7 [00:00<?, ?it/s]                                                    Meta-eval:   0%|          | 0/10 [00:00<?, ?it/s]                                                 [ActiveEvaluator] Meta-test MAE: 0.1198
+Transfer-eval:   0%|          | 0/10 [00:00<?, ?it/s]                                                     [ActiveEvaluator] Real-test MAE: 0.2635
+[ActiveEvaluator] Adapting to 5 held-out model(s).
+Build tasks:   0%|          | 0/5 [00:00<?, ?it/s]Build tasks:  20%|██        | 1/5 [00:02<00:09,  2.37s/it]Build tasks:  40%|████      | 2/5 [00:03<00:04,  1.36s/it]Build tasks:  60%|██████    | 3/5 [00:03<00:02,  1.03s/it]Build tasks:  80%|████████  | 4/5 [00:04<00:00,  1.13it/s]Build tasks: 100%|██████████| 5/5 [00:07<00:00,  1.81s/it]                                                          Active-v1_facility:   0%|          | 0/3 [00:00<?, ?it/s]
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A                                                         [ActiveEvaluator] Qwen/Qwen2.5-Coder-1.5B-Instruct: extended support set with 1 examples (method=v1_facility).
+Active-v1_facility:   0%|          | 0/3 [00:00<?, ?it/s]
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A                                                         [ActiveEvaluator] Qwen/Qwen2.5-0.5B-Instruct: extended support set with 2 examples (method=v1_facility).
+Active-v1_facility:   0%|          | 0/3 [00:00<?, ?it/s]
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A                                                         [ActiveEvaluator] Gensyn/Qwen2.5-0.5B-Instruct: extended support set with 2 examples (method=v1_facility).
+Active-v1_facility:   0%|          | 0/3 [00:00<?, ?it/s]
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A                                                         [ActiveEvaluator] Qwen/Qwen2.5-Coder-0.5B-Instruct: extended support set with 2 examples (method=v1_facility).
+Active-v1_facility:   0%|          | 0/3 [00:00<?, ?it/s]
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A
+Adapt:   0%|          | 0/15 [00:00<?, ?it/s][A
+                                             [A                                                         [ActiveEvaluator] TinyLlama/TinyLlama-1.1B-Chat-v1.0: extended support set with 1 examples (method=v1_facility).
+Meta-eval:   0%|          | 0/5 [00:00<?, ?it/s]                                                Transfer-eval:   0%|          | 0/5 [00:00<?, ?it/s]                                                    [ActiveEvaluator] Held-out Meta-test MAE: 0.1182
+[ActiveEvaluator] Held-out Real-test MAE: 0.3748

@@ -1,18 +1,10 @@
 #!/bin/bash
 mkdir -p outputs/run_v2
-if [ ! -d outputs/run_v2/predictions ]; then
-  cp -r outputs/run_baseline/predictions outputs/run_v2/predictions
+# Symlink the predictions dir to avoid duplicating ~MB on a full disk.
+if [ ! -e outputs/run_v2/predictions ]; then
+  ln -s ../run_baseline/predictions outputs/run_v2/predictions
 fi
 
-# V2 improvements over run #3:
-#  --selection-weight-decay 1e-2     : regularizes K-step adapt -> prevents
-#                                       overfitting tiny V_T.
-#  --selection-early-stop-patience 3 : abort the K-step adapt when V_T loss
-#                                       plateaus, reducing per-candidate noise.
-#  --selection-inner-lr 0.1          : V2 specifically benefits from a more
-#                                       aggressive lr (with sigmoid + weight
-#                                       decay it stays stable) so the K-step
-#                                       adapt actually moves.
 python -m active_evaluator.pipeline \
   --train-path data/sft_spider_train_text2sql.json \
   --dev-path data/sft_spider_dev_text2sql.json \
@@ -24,7 +16,7 @@ python -m active_evaluator.pipeline \
   --use-active-selection \
   --selection-method v2_direct \
   --selection-n-rounds 2 \
-  --selection-budget-absolute 3 \
+  --selection-budget-absolute 4 \
   --selection-narrowing-quantile 0.0 \
   --selection-pool-narrow-quantile 0.5 \
   --selection-K-steps 25 \
@@ -40,7 +32,12 @@ python -m active_evaluator.pipeline \
     Qwen/Qwen2.5-Coder-1.5B \
     TinyLlama/TinyLlama_v1.1 \
     deepseek-ai/deepseek-coder-1.3b-base \
+    Qwen/Qwen2.5-1.5B \
+    HuggingFaceTB/SmolLM-1.7B \
+    stabilityai/stablelm-2-zephyr-1_6b \
   --test-model-ids \
     Qwen/Qwen2.5-Coder-1.5B-Instruct \
     Qwen/Qwen2.5-0.5B-Instruct \
-    Gensyn/Qwen2.5-0.5B-Instruct
+    Gensyn/Qwen2.5-0.5B-Instruct \
+    Qwen/Qwen2.5-Coder-0.5B-Instruct \
+    TinyLlama/TinyLlama-1.1B-Chat-v1.0

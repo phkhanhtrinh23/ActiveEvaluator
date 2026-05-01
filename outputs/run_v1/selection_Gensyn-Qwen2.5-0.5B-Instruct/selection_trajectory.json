@@ -13,32 +13,32 @@
         {
           "pool_index": 1,
           "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
-          "marginal_gain": 0.01676410250365734,
+          "marginal_gain": 0.038069188594818115,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "max_sim_to_VT": 0.7270407676696777,
-          "mean_sim_to_VT": 0.2613668441772461,
+          "max_sim_to_VT": 0.8976178765296936,
+          "mean_sim_to_VT": 0.44459521770477295,
           "most_influential_v_index": 1,
           "rank_in_round": 0,
           "source_model": "Qwen/Qwen2.5-Coder-1.5B"
         }
       ],
       "round_cost_paid": 1.0,
-      "round_gain_total": 0.01676410250365734,
+      "round_gain_total": 0.038069188594818115,
       "influence_stats": {
-        "mean": 0.1331985592842102,
-        "min": 0.02618294581770897,
-        "max": 0.22866682708263397,
+        "mean": 0.09777673333883286,
+        "min": 0.07693789154291153,
+        "max": 0.13905778527259827,
         "n": 3
       },
-      "val_loss_before": 0.010600686073303223,
-      "val_loss_after": 0.021276075392961502,
-      "elapsed_seconds": 0.010868549346923828,
+      "val_loss_before": 0.013452834449708462,
+      "val_loss_after": 0.016701441258192062,
+      "elapsed_seconds": 0.012871980667114258,
       "timings": {
-        "adapt_seconds": 0.004258394241333008,
-        "embed_seconds": 0.000213623046875,
-        "influence_seconds": 0.0007886886596679688,
-        "greedy_seconds": 0.00017452239990234375
+        "adapt_seconds": 0.00543212890625,
+        "embed_seconds": 0.00023126602172851562,
+        "influence_seconds": 0.0009856224060058594,
+        "greedy_seconds": 0.00019598007202148438
       }
     },
     {
@@ -54,46 +54,59 @@
         {
           "pool_index": 0,
           "candidate_key": "Qwen/Qwen2-0.5B::train_support",
-          "marginal_gain": 0.01974952593445778,
+          "marginal_gain": 0.011434420943260193,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "max_sim_to_VT": 0.5505145192146301,
-          "mean_sim_to_VT": 0.3999520242214203,
+          "max_sim_to_VT": 0.7556464672088623,
+          "mean_sim_to_VT": 0.6299959421157837,
           "most_influential_v_index": 2,
           "rank_in_round": 0,
           "source_model": "Qwen/Qwen2-0.5B"
         }
       ],
       "round_cost_paid": 1.0,
-      "round_gain_total": 0.01974952593445778,
+      "round_gain_total": 0.011434420943260193,
       "influence_stats": {
-        "mean": 0.23853734135627747,
-        "min": 0.008462602272629738,
-        "max": 0.5430100560188293,
+        "mean": 0.13501861691474915,
+        "min": 0.11304299533367157,
+        "max": 0.14779120683670044,
         "n": 3
       },
-      "val_loss_before": 0.02289283648133278,
-      "val_loss_after": 0.014505348168313503,
-      "elapsed_seconds": 0.010305643081665039,
+      "val_loss_before": 0.0164186954498291,
+      "val_loss_after": 0.015176594257354736,
+      "elapsed_seconds": 0.013048887252807617,
       "timings": {
-        "adapt_seconds": 0.004392147064208984,
-        "embed_seconds": 0.00021386146545410156,
-        "influence_seconds": 0.0007824897766113281,
-        "greedy_seconds": 0.00013780593872070312
+        "adapt_seconds": 0.005635976791381836,
+        "embed_seconds": 0.0002276897430419922,
+        "influence_seconds": 0.0009908676147460938,
+        "greedy_seconds": 0.00018858909606933594
       }
     },
     {
       "round": 2,
-      "round_budget": 1,
+      "round_budget": 2,
       "selected_keys": [],
-      "val_loss_before": 0.015179197303950787,
-      "val_loss_after": 0.015179197303950787,
-      "elapsed_seconds": 0.004434108734130859,
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.1250399798154831,
+        "min": 0.1218116357922554,
+        "max": 0.12736491858959198,
+        "n": 3
+      },
+      "val_loss_before": 0.015185527503490448,
+      "val_loss_after": 0.015160372480750084,
+      "elapsed_seconds": 0.012819290161132812,
       "timings": {
-        "adapt_seconds": 0.004228353500366211
+        "adapt_seconds": 0.00548100471496582,
+        "embed_seconds": 0.0002295970916748047,
+        "influence_seconds": 0.0009732246398925781,
+        "greedy_seconds": 9.942054748535156e-05
       }
     }
   ],
-  "tau": 0.5323147177696228,
+  "tau": 0.2472943216562271,
   "method": "v1_facility"
 }

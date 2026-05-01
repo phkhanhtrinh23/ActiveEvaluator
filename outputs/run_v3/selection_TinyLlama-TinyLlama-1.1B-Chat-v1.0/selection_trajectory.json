@@ -1,0 +1,139 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 2,
+          "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
+          "inner_product_score": 0.00042560213478282094,
+          "weight": 0.006844532210379839,
+          "residual_norm_after": 0.002746215322986245,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.10515650361776352,
+        "min": 0.07738932222127914,
+        "max": 0.16060593724250793,
+        "n": 3
+      },
+      "val_loss_before": 0.013441618531942368,
+      "val_loss_after": 0.014982650056481361,
+      "elapsed_seconds": 0.012441396713256836,
+      "timings": {
+        "adapt_seconds": 0.00442957878112793,
+        "embed_seconds": 0.0002396106719970703,
+        "influence_seconds": 0.0008094310760498047,
+        "greedy_seconds": 0.0020294189453125
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 1,
+      "selected_keys": [
+        "TinyLlama/TinyLlama_v1.1::train_support"
+      ],
+      "selected_source_models": [
+        "TinyLlama/TinyLlama_v1.1"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
+          "inner_product_score": 0.00558719364926219,
+          "weight": 0.36078712344169617,
+          "residual_norm_after": 0.0032557209488004446,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "TinyLlama/TinyLlama_v1.1"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.14225468039512634,
+        "min": 0.14106318354606628,
+        "max": 0.1437331587076187,
+        "n": 3
+      },
+      "val_loss_before": 0.014956701546907425,
+      "val_loss_after": 0.013980060815811157,
+      "elapsed_seconds": 0.01208043098449707,
+      "timings": {
+        "adapt_seconds": 0.0043408870697021484,
+        "embed_seconds": 0.0002295970916748047,
+        "influence_seconds": 0.0008187294006347656,
+        "greedy_seconds": 0.0018315315246582031
+      }
+    },
+    {
+      "round": 2,
+      "round_budget": 2,
+      "selected_keys": [
+        "HuggingFaceTB/SmolLM-1.7B::train_support",
+        "deepseek-ai/deepseek-coder-1.3b-base::train_support"
+      ],
+      "selected_source_models": [
+        "HuggingFaceTB/SmolLM-1.7B",
+        "deepseek-ai/deepseek-coder-1.3b-base"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "HuggingFaceTB/SmolLM-1.7B::train_support",
+          "inner_product_score": 0.002175773261114955,
+          "weight": 0.2787736654281616,
+          "residual_norm_after": 0.0033959082793444395,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "HuggingFaceTB/SmolLM-1.7B"
+        },
+        {
+          "pool_index": 0,
+          "candidate_key": "deepseek-ai/deepseek-coder-1.3b-base::train_support",
+          "inner_product_score": 0.0002644458145368844,
+          "weight": 0.14814290404319763,
+          "residual_norm_after": 0.0019282728899270296,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 2.0,
+          "rank_in_round": 1,
+          "source_model": "deepseek-ai/deepseek-coder-1.3b-base"
+        }
+      ],
+      "round_cost_paid": 2.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.12792862951755524,
+        "min": 0.11547133326530457,
+        "max": 0.15244516730308533,
+        "n": 3
+      },
+      "val_loss_before": 0.01399820577353239,
+      "val_loss_after": 0.013622097671031952,
+      "elapsed_seconds": 0.012087583541870117,
+      "timings": {
+        "adapt_seconds": 0.00428462028503418,
+        "embed_seconds": 0.00022721290588378906,
+        "influence_seconds": 0.0007932186126708984,
+        "greedy_seconds": 0.001861572265625
+      }
+    }
+  ],
+  "tau": 0.2004646211862564,
+  "method": "v3_gradmatch"
+}

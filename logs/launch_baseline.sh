@@ -1,7 +1,9 @@
 #!/bin/bash
-# Re-run #3: sigmoid output + stronger eval-time adaptation.
-# Eval inner steps 5 -> 15, inner_lr 0.01 -> 0.03 to give the support pair
-# (label=0 for our test models) more leverage to override the meta-training prior.
+# Extended model set: 12 train + 6 test = 18 models.
+# Cached models (10): predictions reused from outputs/run_baseline/predictions/.
+# New models (8): full generation runs the first time, then cached.
+# Sigmoid output + stronger eval-time adaptation.
+
 python -m active_evaluator.pipeline \
   --train-path data/sft_spider_train_text2sql.json \
   --dev-path data/sft_spider_dev_text2sql.json \
@@ -18,7 +20,12 @@ python -m active_evaluator.pipeline \
     Qwen/Qwen2.5-Coder-1.5B \
     TinyLlama/TinyLlama_v1.1 \
     deepseek-ai/deepseek-coder-1.3b-base \
+    Qwen/Qwen2.5-1.5B \
+    HuggingFaceTB/SmolLM-1.7B \
+    stabilityai/stablelm-2-zephyr-1_6b \
   --test-model-ids \
     Qwen/Qwen2.5-Coder-1.5B-Instruct \
     Qwen/Qwen2.5-0.5B-Instruct \
-    Gensyn/Qwen2.5-0.5B-Instruct
+    Gensyn/Qwen2.5-0.5B-Instruct \
+    Qwen/Qwen2.5-Coder-0.5B-Instruct \
+    TinyLlama/TinyLlama-1.1B-Chat-v1.0

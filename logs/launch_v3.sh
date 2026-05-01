@@ -1,12 +1,9 @@
 #!/bin/bash
 mkdir -p outputs/run_v3
-if [ ! -d outputs/run_v3/predictions ]; then
-  cp -r outputs/run_baseline/predictions outputs/run_v3/predictions
+if [ ! -e outputs/run_v3/predictions ]; then
+  ln -s ../run_baseline/predictions outputs/run_v3/predictions
 fi
 
-# V3: GRAD-MATCH via OMP (Killamsetty et al., ICML 2021).
-# Pick weighted subset of pool whose summed gradient approximates the V_T
-# gradient. No K-step adaptation oracle inside the picker.
 python -m active_evaluator.pipeline \
   --train-path data/sft_spider_train_text2sql.json \
   --dev-path data/sft_spider_dev_text2sql.json \
@@ -18,7 +15,7 @@ python -m active_evaluator.pipeline \
   --use-active-selection \
   --selection-method v3_gradmatch \
   --selection-n-rounds 3 \
-  --selection-budget-absolute 3 \
+  --selection-budget-absolute 4 \
   --selection-narrowing-quantile 0.0 \
   --selection-pool-narrow-quantile 0.5 \
   --selection-K-steps 15 \
@@ -31,7 +28,12 @@ python -m active_evaluator.pipeline \
     Qwen/Qwen2.5-Coder-1.5B \
     TinyLlama/TinyLlama_v1.1 \
     deepseek-ai/deepseek-coder-1.3b-base \
+    Qwen/Qwen2.5-1.5B \
+    HuggingFaceTB/SmolLM-1.7B \
+    stabilityai/stablelm-2-zephyr-1_6b \
   --test-model-ids \
     Qwen/Qwen2.5-Coder-1.5B-Instruct \
     Qwen/Qwen2.5-0.5B-Instruct \
-    Gensyn/Qwen2.5-0.5B-Instruct
+    Gensyn/Qwen2.5-0.5B-Instruct \
+    Qwen/Qwen2.5-Coder-0.5B-Instruct \
+    TinyLlama/TinyLlama-1.1B-Chat-v1.0

@@ -1,0 +1,54 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 2,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.10123662650585175,
+        "min": 0.07588911056518555,
+        "max": 0.1507069319486618,
+        "n": 3
+      },
+      "val_loss_before": 0.01349092647433281,
+      "val_loss_after": 0.013594985008239746,
+      "elapsed_seconds": 0.03302145004272461,
+      "timings": {
+        "adapt_seconds": 0.009313583374023438,
+        "embed_seconds": 0.00023698806762695312,
+        "influence_seconds": 0.0009579658508300781,
+        "greedy_seconds": 0.013061046600341797
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 2,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.10500025004148483,
+        "min": 0.08217807114124298,
+        "max": 0.14966349303722382,
+        "n": 3
+      },
+      "val_loss_before": 0.013517036102712154,
+      "val_loss_after": 0.013597764074802399,
+      "elapsed_seconds": 0.04026985168457031,
+      "timings": {
+        "adapt_seconds": 0.009263753890991211,
+        "embed_seconds": 0.00023555755615234375,
+        "influence_seconds": 0.0009870529174804688,
+        "greedy_seconds": 0.02019023895263672
+      }
+    }
+  ],
+  "tau": 0.1779758781194687,
+  "method": "v2_direct"
+}

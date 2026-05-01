@@ -1,13 +1,27 @@
 {
   "selected": [
     {
+      "key": "Qwen/Qwen2.5-1.5B::train_support",
+      "source_model": "Qwen/Qwen2.5-1.5B",
+      "true_label": 0.38333332538604736,
+      "cost": 1.0
+    },
+    {
       "key": "TinyLlama/TinyLlama_v1.1::train_support",
       "source_model": "TinyLlama/TinyLlama_v1.1",
+      "true_label": 0.0,
+      "cost": 1.0
+    },
+    {
+      "key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+      "source_model": "stabilityai/stablelm-2-zephyr-1_6b",
       "true_label": 0.0,
       "cost": 1.0
     }
   ],
   "selected_keys": [
-    "TinyLlama/TinyLlama_v1.1::train_support"
+    "Qwen/Qwen2.5-1.5B::train_support",
+    "TinyLlama/TinyLlama_v1.1::train_support",
+    "stabilityai/stablelm-2-zephyr-1_6b::train_support"
   ]
 }

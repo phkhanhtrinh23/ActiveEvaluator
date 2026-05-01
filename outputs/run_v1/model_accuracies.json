@@ -34,6 +34,21 @@
     "meta_test": 0.0,
     "dev": 0.0
   },
+  "Qwen/Qwen2.5-1.5B": {
+    "meta_val": 0.38333333333333336,
+    "meta_test": 0.39,
+    "dev": 0.51
+  },
+  "HuggingFaceTB/SmolLM-1.7B": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
+  "stabilityai/stablelm-2-zephyr-1_6b": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
   "Qwen/Qwen2.5-Coder-1.5B-Instruct": {
     "meta_val": 0.0,
     "meta_test": 0.0,
@@ -48,5 +63,15 @@
     "meta_val": 0.0,
     "meta_test": 0.0,
     "dev": 0.0
+  },
+  "Qwen/Qwen2.5-Coder-0.5B-Instruct": {
+    "meta_val": 0.1,
+    "meta_test": 0.12666666666666668,
+    "dev": 0.08
+  },
+  "TinyLlama/TinyLlama-1.1B-Chat-v1.0": {
+    "meta_val": 0.006666666666666667,
+    "meta_test": 0.01,
+    "dev": 0.04666666666666667
   }
 }

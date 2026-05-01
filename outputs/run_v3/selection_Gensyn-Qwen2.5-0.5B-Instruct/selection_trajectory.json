@@ -13,9 +13,9 @@
         {
           "pool_index": 1,
           "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
-          "inner_product_score": -0.0036297617480158806,
-          "weight": -0.02375110425055027,
-          "residual_norm_after": 0.0012378937099128962,
+          "inner_product_score": 0.003700314089655876,
+          "weight": 0.032787516713142395,
+          "residual_norm_after": 0.003073750762268901,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -25,73 +25,115 @@
       "round_cost_paid": 1.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.1516239494085312,
-        "min": 0.03472357615828514,
-        "max": 0.21354874968528748,
+        "mean": 0.09643301367759705,
+        "min": 0.06343453377485275,
+        "max": 0.16141459345817566,
         "n": 3
       },
-      "val_loss_before": 0.010270783677697182,
-      "val_loss_after": 0.025813262909650803,
-      "elapsed_seconds": 0.011548757553100586,
+      "val_loss_before": 0.013593096286058426,
+      "val_loss_after": 0.015561792999505997,
+      "elapsed_seconds": 0.012984514236450195,
       "timings": {
-        "adapt_seconds": 0.0042879581451416016,
-        "embed_seconds": 0.0002167224884033203,
-        "influence_seconds": 0.0007746219635009766,
-        "greedy_seconds": 0.001554250717163086
+        "adapt_seconds": 0.004638671875,
+        "embed_seconds": 0.00024509429931640625,
+        "influence_seconds": 0.0008265972137451172,
+        "greedy_seconds": 0.002082347869873047
       }
     },
     {
       "round": 1,
       "round_budget": 1,
       "selected_keys": [
-        "Qwen/Qwen2-0.5B::train_support"
+        "Qwen/Qwen2.5-1.5B::train_support"
       ],
       "selected_source_models": [
-        "Qwen/Qwen2-0.5B"
+        "Qwen/Qwen2.5-1.5B"
       ],
       "picks": [
         {
-          "pool_index": 0,
-          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
-          "inner_product_score": 0.08215846121311188,
-          "weight": 0.7667669653892517,
-          "residual_norm_after": 0.013329739682376385,
+          "pool_index": 1,
+          "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
+          "inner_product_score": -0.016400974243879318,
+          "weight": -0.18655197322368622,
+          "residual_norm_after": 0.0016638312954455614,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
-          "source_model": "Qwen/Qwen2-0.5B"
+          "source_model": "Qwen/Qwen2.5-1.5B"
         }
       ],
       "round_cost_paid": 1.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.25400394201278687,
-        "min": 0.01909082755446434,
-        "max": 0.579154372215271,
+        "mean": 0.14849349856376648,
+        "min": 0.13924141228199005,
+        "max": 0.154027059674263,
         "n": 3
       },
-      "val_loss_before": 0.024647943675518036,
-      "val_loss_after": 0.016800181940197945,
-      "elapsed_seconds": 0.011252641677856445,
+      "val_loss_before": 0.015506829135119915,
+      "val_loss_after": 0.017047882080078125,
+      "elapsed_seconds": 0.012517929077148438,
       "timings": {
-        "adapt_seconds": 0.0041964054107666016,
-        "embed_seconds": 0.00020933151245117188,
-        "influence_seconds": 0.0007741451263427734,
-        "greedy_seconds": 0.0013365745544433594
+        "adapt_seconds": 0.00446009635925293,
+        "embed_seconds": 0.00023603439331054688,
+        "influence_seconds": 0.0008308887481689453,
+        "greedy_seconds": 0.0018758773803710938
       }
     },
     {
       "round": 2,
-      "round_budget": 1,
-      "selected_keys": [],
-      "val_loss_before": 0.01761505752801895,
-      "val_loss_after": 0.01761505752801895,
-      "elapsed_seconds": 0.004484415054321289,
+      "round_budget": 2,
+      "selected_keys": [
+        "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+        "Qwen/Qwen2-0.5B::train_support"
+      ],
+      "selected_source_models": [
+        "stabilityai/stablelm-2-zephyr-1_6b",
+        "Qwen/Qwen2-0.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+          "inner_product_score": 0.015766387805342674,
+          "weight": 0.381094366312027,
+          "residual_norm_after": 0.0026346156373620033,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "stabilityai/stablelm-2-zephyr-1_6b"
+        },
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
+          "inner_product_score": 0.0002687363885343075,
+          "weight": 0.17932941019535065,
+          "residual_norm_after": 0.002074057934805751,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 2.0,
+          "rank_in_round": 1,
+          "source_model": "Qwen/Qwen2-0.5B"
+        }
+      ],
+      "round_cost_paid": 2.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.1633242666721344,
+        "min": 0.12717974185943604,
+        "max": 0.1838294416666031,
+        "n": 3
+      },
+      "val_loss_before": 0.017116200178861618,
+      "val_loss_after": 0.014339897781610489,
+      "elapsed_seconds": 0.012964487075805664,
       "timings": {
-        "adapt_seconds": 0.004250288009643555
+        "adapt_seconds": 0.004904270172119141,
+        "embed_seconds": 0.0002338886260986328,
+        "influence_seconds": 0.0008244514465332031,
+        "greedy_seconds": 0.0019104480743408203
       }
     }
   ],
-  "tau": 0.5815088748931885,
+  "tau": 0.3174978196620941,
   "method": "v3_gradmatch"
 }
