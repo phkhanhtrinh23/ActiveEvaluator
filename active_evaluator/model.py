@@ -32,7 +32,10 @@ class ActiveEvaluator(nn.Module):
         h = F.relu(self.fc2(h))
         h = self.dropout(h)
         out = self.fc3(h)
-        return out.squeeze(-1)
+        # Bound predictions to [0, 1]: execution accuracy is a probability,
+        # so unbounded linear outputs can drift far outside the valid range
+        # and inflate MAE. Sigmoid keeps gradients smooth across the range.
+        return torch.sigmoid(out).squeeze(-1)
 
     def functional_forward(self, x: torch.Tensor, params: Sequence[torch.Tensor] | None) -> torch.Tensor:
         if params is None:
@@ -44,7 +47,7 @@ class ActiveEvaluator(nn.Module):
         h = F.linear(h, params[2], params[3])
         h = F.relu(h)
         out = F.linear(h, params[4], params[5])
-        return out.squeeze(-1)
+        return torch.sigmoid(out).squeeze(-1)
 
     def parameter_list(self) -> List[torch.nn.Parameter]:
         return [

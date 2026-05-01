@@ -1,0 +1,21 @@
+{
+  "method": "v3_gradmatch",
+  "tau": 0.5815088748931885,
+  "cost_fn_name": "cardinality",
+  "budget_total": 3,
+  "cost_paid_total": 2.0,
+  "cost_remaining": 1.0,
+  "gain_total": 0.0,
+  "n_selected": 2,
+  "pool_size": 2,
+  "val_size": 3,
+  "val_VT_size": 3,
+  "final_val_loss": 0.01761505752801895,
+  "total_selection_seconds": 0.02728581428527832,
+  "n_rounds_executed": 3,
+  "source_models_chosen": [
+    "Qwen/Qwen2.5-Coder-1.5B",
+    "Qwen/Qwen2-0.5B"
+  ],
+  "rationale": "V3 picks via GRAD-MATCH OMP (Killamsetty et al., 2021): at each step select the candidate whose gradient has the largest |inner product| with the current residual = grad(L_VT) - sum_i w_i grad(L_i). After each pick we refit weights w via regularized least squares. Purely first-order, no nested K-step adaptation."
+}

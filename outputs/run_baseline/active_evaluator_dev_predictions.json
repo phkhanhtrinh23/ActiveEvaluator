@@ -1,0 +1,46 @@
+{
+  "results": [
+    {
+      "model": "cycloneboy/SLM-SQL-0.5B",
+      "predicted_accuracy": 0.5531337857246399,
+      "true_accuracy": 0.2633333206176758,
+      "mae": 0.2898004651069641
+    },
+    {
+      "model": "cycloneboy/SLM-SQL-0.6B",
+      "predicted_accuracy": 0.5398188233375549,
+      "true_accuracy": 0.0,
+      "mae": 0.5398188233375549
+    },
+    {
+      "model": "cycloneboy/CscSQL-Merge-Qwen2.5-Coder-0.5B-Instruct",
+      "predicted_accuracy": 0.5426741242408752,
+      "true_accuracy": 0.03999999910593033,
+      "mae": 0.5026741027832031
+    },
+    {
+      "model": "Qwen/Qwen2-0.5B",
+      "predicted_accuracy": 0.5451842546463013,
+      "true_accuracy": 0.07333333045244217,
+      "mae": 0.4718509316444397
+    },
+    {
+      "model": "Qwen/Qwen2.5-Coder-1.5B",
+      "predicted_accuracy": 0.5650416016578674,
+      "true_accuracy": 0.5933333039283752,
+      "mae": 0.028291702270507812
+    },
+    {
+      "model": "TinyLlama/TinyLlama_v1.1",
+      "predicted_accuracy": 0.2927148938179016,
+      "true_accuracy": 0.0,
+      "mae": 0.2927148938179016
+    },
+    {
+      "model": "deepseek-ai/deepseek-coder-1.3b-base",
+      "predicted_accuracy": 0.06785299628973007,
+      "true_accuracy": 0.0,
+      "mae": 0.06785299628973007
+    }
+  ]
+}

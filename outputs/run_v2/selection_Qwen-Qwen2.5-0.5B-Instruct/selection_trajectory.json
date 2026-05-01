@@ -1,0 +1,90 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-Coder-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-Coder-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
+          "loss_before": 0.014390459284186363,
+          "loss_after": 0.011332808062434196,
+          "loss_reduction": 0.0030576512217521667,
+          "marginal_gain": 0.0030576512217521667,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "n_candidates_evaluated": 2,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-Coder-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0030576512217521667,
+      "influence_stats": {
+        "mean": 0.07740809768438339,
+        "min": 0.012372351251542568,
+        "max": 0.1823074370622635,
+        "n": 3
+      },
+      "val_loss_before": 0.013968667946755886,
+      "val_loss_after": 0.021669305860996246,
+      "elapsed_seconds": 0.03275585174560547,
+      "timings": {
+        "adapt_seconds": 0.00933527946472168,
+        "embed_seconds": 0.00021457672119140625,
+        "influence_seconds": 0.0009679794311523438,
+        "greedy_seconds": 0.01275944709777832
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 2,
+      "selected_keys": [
+        "Qwen/Qwen2-0.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2-0.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
+          "loss_before": 0.03471234440803528,
+          "loss_after": 0.019713811576366425,
+          "loss_reduction": 0.014998532831668854,
+          "marginal_gain": 0.014998532831668854,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "n_candidates_evaluated": 1,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2-0.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.014998532831668854,
+      "influence_stats": {
+        "mean": 0.2373581826686859,
+        "min": 0.027488265186548233,
+        "max": 0.44602417945861816,
+        "n": 3
+      },
+      "val_loss_before": 0.03091869316995144,
+      "val_loss_after": 0.014978637918829918,
+      "elapsed_seconds": 0.03514909744262695,
+      "timings": {
+        "adapt_seconds": 0.009347915649414062,
+        "embed_seconds": 0.00021505355834960938,
+        "influence_seconds": 0.0009872913360595703,
+        "greedy_seconds": 0.015147209167480469
+      }
+    }
+  ],
+  "tau": 0.27420496940612793,
+  "method": "v2_direct"
+}

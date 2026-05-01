@@ -1,1 +1,63 @@
-=== Waiting for baseline (PID 623624) to finish ===
+=== [09:28:52] Launching baseline ===
+=== [09:30:45] Baseline done ===
+=== [09:30:45] Launching V1 ===
+=== [09:31:16] V1 done ===
+=== [09:31:16] Launching V2 ===
+=== [09:31:39] V2 done ===
+=== [09:31:39] ALL DONE ===
+## Top-line MAE comparison
+
+| Run | Seen meta-test MAE | Seen real-test MAE | Unseen meta-test MAE | Unseen real-test MAE |
+| --- | --- | --- | --- | --- |
+| baseline | 0.0292 | 0.3133 | 0.0690 | 0.5416 |
+| v1_facility | 0.0251 | 0.2493 | 0.2237 | 0.4263 |
+| v2_direct | 0.0268 | 0.3019 | 0.1608 | 0.5295 |
+
+## Per-test-model real-test predictions (unseen)
+
+| Model | True | BL pred | BL MAE | V1 pred | V1 MAE | V2 pred | V2 MAE |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Qwen/Qwen2.5-Coder-1.5B-Instruct | 0.003 | 0.544 | 0.541 | 0.468 | 0.465 | 0.529 | 0.525 |
+| Qwen/Qwen2.5-0.5B-Instruct | 0.000 | 0.542 | 0.542 | 0.407 | 0.407 | 0.532 | 0.532 |
+| Gensyn/Qwen2.5-0.5B-Instruct | 0.000 | 0.542 | 0.542 | 0.407 | 0.407 | 0.532 | 0.532 |
+
+## V1 vs V2 per-model winner (smaller real-test MAE wins)
+
+| Model | V1 MAE | V2 MAE | Winner |
+| --- | --- | --- | --- |
+| Qwen/Qwen2.5-Coder-1.5B-Instruct | 0.4645 | 0.5252 | V1 |
+| Qwen/Qwen2.5-0.5B-Instruct | 0.4072 | 0.5316 | V1 |
+| Gensyn/Qwen2.5-0.5B-Instruct | 0.4072 | 0.5316 | V1 |
+
+**V1 wins: 3 | V2 wins: 0 | Ties: 0**
+
+## Selection economics (per test model, averaged)
+
+| Run | Budget | Cost paid | n picked | Gain total | Final val loss | Sel. time |
+| --- | --- | --- | --- | --- | --- | --- |
+| v1_facility | 3.0 | 1.7 | 1.7 | 0.041 | 0.0216 | 0.04s |
+| v2_direct | 3.0 | 1.7 | 1.7 | 0.005 | 0.0114 | 0.07s |
+
+## Most-picked training models (across all test models)
+
+### v1_facility
+
+| Source training model | Times picked |
+| --- | --- |
+| Qwen/Qwen2.5-Coder-1.5B | 3 |
+| Qwen/Qwen2-0.5B | 2 |
+
+### v2_direct
+
+| Source training model | Times picked |
+| --- | --- |
+| Qwen/Qwen2.5-Coder-1.5B | 2 |
+| Qwen/Qwen2-0.5B | 2 |
+| TinyLlama/TinyLlama_v1.1 | 1 |
+
+
+Full comparison written to outputs/comparison.json
+
+Comparison artifacts:
+  - logs/comparison.md  (Markdown tables)
+  - outputs/comparison.json  (structured payload)

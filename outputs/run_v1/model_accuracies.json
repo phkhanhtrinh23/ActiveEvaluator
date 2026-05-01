@@ -1,0 +1,52 @@
+{
+  "cycloneboy/SLM-SQL-0.5B": {
+    "meta_val": 0.29333333333333333,
+    "meta_test": 0.30666666666666664,
+    "dev": 0.2633333333333333
+  },
+  "cycloneboy/SLM-SQL-0.6B": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
+  "cycloneboy/CscSQL-Merge-Qwen2.5-Coder-0.5B-Instruct": {
+    "meta_val": 0.05333333333333334,
+    "meta_test": 0.06333333333333334,
+    "dev": 0.04
+  },
+  "Qwen/Qwen2-0.5B": {
+    "meta_val": 0.06666666666666667,
+    "meta_test": 0.07333333333333333,
+    "dev": 0.07333333333333333
+  },
+  "Qwen/Qwen2.5-Coder-1.5B": {
+    "meta_val": 0.49333333333333335,
+    "meta_test": 0.5,
+    "dev": 0.5933333333333334
+  },
+  "TinyLlama/TinyLlama_v1.1": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
+  "deepseek-ai/deepseek-coder-1.3b-base": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
+  "Qwen/Qwen2.5-Coder-1.5B-Instruct": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0033333333333333335
+  },
+  "Qwen/Qwen2.5-0.5B-Instruct": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  },
+  "Gensyn/Qwen2.5-0.5B-Instruct": {
+    "meta_val": 0.0,
+    "meta_test": 0.0,
+    "dev": 0.0
+  }
+}

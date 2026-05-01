@@ -1,0 +1,95 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-Coder-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-Coder-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
+          "marginal_gain": 0.0498533770442009,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "max_sim_to_VT": 0.8723874688148499,
+          "mean_sim_to_VT": 0.43590086698532104,
+          "most_influential_v_index": 2,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-Coder-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0498533770442009,
+      "influence_stats": {
+        "mean": 0.16685158014297485,
+        "min": 0.052563440054655075,
+        "max": 0.25964123010635376,
+        "n": 3
+      },
+      "val_loss_before": 0.01101333275437355,
+      "val_loss_after": 0.032853640615940094,
+      "elapsed_seconds": 0.05678963661193848,
+      "timings": {
+        "adapt_seconds": 0.01751995086669922,
+        "embed_seconds": 0.0003223419189453125,
+        "influence_seconds": 0.014590024948120117,
+        "greedy_seconds": 0.010112285614013672
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 1,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.3500908613204956,
+        "min": 0.1129857748746872,
+        "max": 0.6808301210403442,
+        "n": 3
+      },
+      "val_loss_before": 0.035594381392002106,
+      "val_loss_after": 0.03118222951889038,
+      "elapsed_seconds": 0.011129379272460938,
+      "timings": {
+        "adapt_seconds": 0.0051081180572509766,
+        "embed_seconds": 0.0002486705780029297,
+        "influence_seconds": 0.0009512901306152344,
+        "greedy_seconds": 8.988380432128906e-05
+      }
+    },
+    {
+      "round": 2,
+      "round_budget": 1,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.32675713300704956,
+        "min": 0.08973906189203262,
+        "max": 0.6528736352920532,
+        "n": 3
+      },
+      "val_loss_before": 0.03290174528956413,
+      "val_loss_after": 0.03435196727514267,
+      "elapsed_seconds": 0.010248899459838867,
+      "timings": {
+        "adapt_seconds": 0.004450559616088867,
+        "embed_seconds": 0.00022363662719726562,
+        "influence_seconds": 0.00078582763671875,
+        "greedy_seconds": 7.581710815429688e-05
+      }
+    }
+  ],
+  "tau": 1.1892189979553223,
+  "method": "v1_facility"
+}

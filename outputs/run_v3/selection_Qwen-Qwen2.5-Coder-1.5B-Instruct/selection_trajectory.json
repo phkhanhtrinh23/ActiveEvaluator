@@ -1,0 +1,97 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-Coder-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-Coder-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
+          "inner_product_score": -0.04759397357702255,
+          "weight": -0.19804896414279938,
+          "residual_norm_after": 0.015031787566840649,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-Coder-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.19011178612709045,
+        "min": 0.07239674031734467,
+        "max": 0.36130478978157043,
+        "n": 3
+      },
+      "val_loss_before": 0.013147693127393723,
+      "val_loss_after": 0.04205941781401634,
+      "elapsed_seconds": 0.15033555030822754,
+      "timings": {
+        "adapt_seconds": 0.01743936538696289,
+        "embed_seconds": 0.0003304481506347656,
+        "influence_seconds": 0.014108896255493164,
+        "greedy_seconds": 0.10273861885070801
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 1,
+      "selected_keys": [
+        "TinyLlama/TinyLlama_v1.1::train_support"
+      ],
+      "selected_source_models": [
+        "TinyLlama/TinyLlama_v1.1"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
+          "inner_product_score": 0.05169057846069336,
+          "weight": 2.376936912536621,
+          "residual_norm_after": 0.1421748697757721,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "TinyLlama/TinyLlama_v1.1"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.39179104566574097,
+        "min": 0.16656646132469177,
+        "max": 0.7313143610954285,
+        "n": 3
+      },
+      "val_loss_before": 0.04153408855199814,
+      "val_loss_after": 0.029282741248607635,
+      "elapsed_seconds": 0.01179051399230957,
+      "timings": {
+        "adapt_seconds": 0.004454851150512695,
+        "embed_seconds": 0.0002505779266357422,
+        "influence_seconds": 0.0008463859558105469,
+        "greedy_seconds": 0.0014004707336425781
+      }
+    },
+    {
+      "round": 2,
+      "round_budget": 1,
+      "selected_keys": [],
+      "val_loss_before": 0.03169026970863342,
+      "val_loss_after": 0.03169026970863342,
+      "elapsed_seconds": 0.004529476165771484,
+      "timings": {
+        "adapt_seconds": 0.0043179988861083984
+      }
+    }
+  ],
+  "tau": 1.271397590637207,
+  "method": "v3_gradmatch"
+}

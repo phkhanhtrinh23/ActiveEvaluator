@@ -18,8 +18,9 @@ from typing import Any, Dict, List, Optional
 ROOT = Path("outputs")
 RUNS = {
     "baseline": ROOT / "run_baseline",
-    "v1_facility": ROOT / "run_active",
-    "v2_direct": ROOT / "run_active_v2",
+    "v1_facility": ROOT / "run_v1",
+    "v2_direct": ROOT / "run_v2",
+    "v3_gradmatch": ROOT / "run_v3",
 }
 
 
@@ -103,8 +104,10 @@ def main() -> None:
             f"{vals.get('v1_facility_mae', float('nan')):.3f}" if 'v1_facility_mae' in vals else "n/a",
             f"{vals.get('v2_direct', float('nan')):.3f}" if 'v2_direct' in vals else "n/a",
             f"{vals.get('v2_direct_mae', float('nan')):.3f}" if 'v2_direct_mae' in vals else "n/a",
+            f"{vals.get('v3_gradmatch', float('nan')):.3f}" if 'v3_gradmatch' in vals else "n/a",
+            f"{vals.get('v3_gradmatch_mae', float('nan')):.3f}" if 'v3_gradmatch_mae' in vals else "n/a",
         ])
-    print(md_table(rows, ["Model", "True", "BL pred", "BL MAE", "V1 pred", "V1 MAE", "V2 pred", "V2 MAE"]))
+    print(md_table(rows, ["Model", "True", "BL pred", "BL MAE", "V1 pred", "V1 MAE", "V2 pred", "V2 MAE", "V3 pred", "V3 MAE"]))
     print()
 
     # --- V1 vs V2 win/loss/tie on per-model MAE ---
@@ -133,7 +136,7 @@ def main() -> None:
     # --- Selection cost / gain / time per run, averaged across test models ---
     print("## Selection economics (per test model, averaged)\n")
     rows = []
-    for run_name in ("v1_facility", "v2_direct"):
+    for run_name in ("v1_facility", "v2_direct", "v3_gradmatch"):
         ss = data[run_name]["selection_summaries"]
         if not ss:
             rows.append([run_name, "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"])
@@ -151,7 +154,7 @@ def main() -> None:
 
     # --- Source-model frequency for V1 and V2 ---
     print("## Most-picked training models (across all test models)\n")
-    for run_name in ("v1_facility", "v2_direct"):
+    for run_name in ("v1_facility", "v2_direct", "v3_gradmatch"):
         ss = data[run_name]["selection_summaries"]
         if not ss:
             print(f"### {run_name}: no selection logs"); continue

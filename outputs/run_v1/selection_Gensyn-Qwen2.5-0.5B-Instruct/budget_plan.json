@@ -1,0 +1,14 @@
+{
+  "total": 3,
+  "n_rounds": 3,
+  "per_round": [
+    1,
+    1,
+    1
+  ],
+  "cost_fn_name": "cardinality",
+  "pool_size": 4,
+  "budget_fraction": 0.1,
+  "budget_absolute": 3,
+  "extras": {}
+}

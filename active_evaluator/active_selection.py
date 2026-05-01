@@ -248,6 +248,119 @@ def narrow_validation(
 # ---------------------------------------------------------------------------
 
 
+def compute_per_example_gradients(
+    predictor: ActiveEvaluator,
+    examples: Sequence[SelectionExample],
+) -> torch.Tensor:
+    """Per-example flattened gradients of MSE loss w.r.t. predictor params.
+
+    Returns a tensor of shape ``(len(examples), P)`` where ``P`` is the total
+    number of predictor parameters. Used by GRAD-MATCH (Killamsetty et al.,
+    2021) to pick a subset whose weighted gradient sum approximates a target
+    (e.g. the V_T gradient).
+    """
+    if not examples:
+        return torch.empty(0)
+    grads: List[torch.Tensor] = []
+    for ex in examples:
+        if ex.label is None:
+            raise ValueError(f"Example {ex.key} is missing a label.")
+        x = _zero_context(predictor, ex.descriptor)
+        target = ex.label.to(x.device)
+        for p in predictor.parameters():
+            if p.grad is not None:
+                p.grad = None
+        pred = predictor(x)
+        loss = F.mse_loss(pred, target)
+        gs = torch.autograd.grad(loss, list(predictor.parameters()),
+                                 retain_graph=False, create_graph=False)
+        flat = torch.cat([g.reshape(-1) for g in gs if g is not None])
+        grads.append(flat.detach())
+    return torch.stack(grads)
+
+
+def gradient_match_omp(
+    target_grad: torch.Tensor,
+    candidate_grads: torch.Tensor,
+    candidate_keys: Sequence[str],
+    budget: int,
+    lambda_reg: float = 1e-3,
+    cost_fn: Optional[Callable[[str], float]] = None,
+    pick_trace: Optional[List[Dict[str, Any]]] = None,
+) -> Tuple[List[int], torch.Tensor]:
+    """Orthogonal Matching Pursuit for gradient matching (Killamsetty et al. 2021).
+
+    Picks a subset of candidates plus per-candidate weights ``w`` minimizing
+    ``|| sum_i w_i g_i - g_target ||^2 + lambda * ||w||^2`` under cardinality
+    ``|S| <= budget``. The residual update + greedy selection rule is exactly
+    the OMP algorithm shown in Algorithm 2 of the paper.
+
+    Returns:
+        ``(selected_indices, weights)`` where ``weights`` has shape
+        ``(len(selected_indices),)`` aligned with ``selected_indices``.
+    """
+    if budget <= 0 or candidate_grads.numel() == 0 or target_grad.numel() == 0:
+        return [], torch.empty(0)
+    cost = cost_fn or (lambda _key: 1.0)
+
+    selected: List[int] = []
+    cost_paid = 0.0
+    residual = target_grad.clone()
+
+    while len(selected) < budget and len(selected) < candidate_grads.shape[0]:
+        # Inner product of each remaining candidate with the residual.
+        scores = candidate_grads @ residual  # (P,)
+        # Mask out already-selected candidates.
+        scores_abs = scores.abs().clone()
+        for idx in selected:
+            scores_abs[idx] = -1.0
+        # Mask out candidates whose cost would overshoot the budget.
+        for idx in range(candidate_grads.shape[0]):
+            if idx in selected:
+                continue
+            c = max(cost(candidate_keys[idx]), 1e-9)
+            if cost_paid + c > budget:
+                scores_abs[idx] = -1.0
+        if scores_abs.max().item() < 0:
+            break
+        best = int(torch.argmax(scores_abs).item())
+        selected.append(best)
+        cost_paid += max(cost(candidate_keys[best]), 1e-9)
+
+        # Refit weights via regularized least squares on the selected set.
+        G = candidate_grads[selected]               # (k, P)
+        gram = G @ G.t() + lambda_reg * torch.eye(len(selected), device=G.device)  # (k, k)
+        rhs = G @ target_grad                        # (k,)
+        try:
+            w = torch.linalg.solve(gram, rhs)
+        except RuntimeError:
+            w = torch.linalg.lstsq(gram, rhs.unsqueeze(-1)).solution.squeeze(-1)
+
+        # Update residual.
+        recon = (w.unsqueeze(-1) * G).sum(dim=0)
+        residual = target_grad - recon
+
+        if pick_trace is not None:
+            pick_trace.append({
+                "pool_index": int(best),
+                "candidate_key": candidate_keys[best],
+                "inner_product_score": float(scores[best].item()),
+                "weight": float(w[-1].item()),
+                "residual_norm_after": float(residual.norm(p=2).item()),
+                "cost": float(max(cost(candidate_keys[best]), 1e-9)),
+                "cumulative_cost_in_round": float(cost_paid),
+                "rank_in_round": len(selected) - 1,
+            })
+
+    weights = torch.zeros(len(selected))
+    if selected:
+        G = candidate_grads[selected]
+        gram = G @ G.t() + lambda_reg * torch.eye(len(selected), device=G.device)
+        rhs = G @ target_grad
+        weights = torch.linalg.solve(gram, rhs)
+    return selected, weights
+
+
 def compute_influence_weights(
     predictor: ActiveEvaluator,
     val_VT: Sequence[SelectionExample],
@@ -408,23 +521,48 @@ def _adapt_K_steps(
     examples: Sequence[SelectionExample],
     K_steps: int,
     inner_lr: float,
+    weight_decay: float = 0.0,
+    early_stop_eval: Optional[Sequence[SelectionExample]] = None,
+    early_stop_patience: int = 0,
 ) -> None:
     """Run ``K_steps`` SGD steps on ``examples`` in-place.
 
     The caller is expected to clone/restore the state dict around this call.
+
+    Args:
+        weight_decay: L2 penalty on weights during the inner-loop SGD.
+            Acts as a regularizer that limits how far the per-candidate
+            adaptation can drift from the meta-trained init -- this is
+            the lever V2 uses to avoid overfitting a tiny V_T.
+        early_stop_eval: If given, evaluate val loss on this set after each
+            step and stop early when it stops improving for ``early_stop_patience``
+            consecutive steps. Cheap because the set is tiny.
+        early_stop_patience: Number of non-improving steps tolerated before stop.
     """
     if not examples or K_steps <= 0:
         return
     descriptors = torch.cat([_zero_context(predictor, ex.descriptor) for ex in examples], dim=0)
     labels = torch.cat([ex.label for ex in examples], dim=0)
-    optim = torch.optim.SGD(predictor.parameters(), lr=inner_lr)
+    optim = torch.optim.SGD(predictor.parameters(), lr=inner_lr, weight_decay=weight_decay)
     predictor.train()
+    best_es_loss = float("inf")
+    bad_streak = 0
     for _ in tqdm(range(K_steps), desc="Adapt", leave=False, disable=K_steps <= 1):
         optim.zero_grad()
         preds = predictor(descriptors)
         loss = F.mse_loss(preds, labels)
         loss.backward()
         optim.step()
+        if early_stop_eval is not None and early_stop_patience > 0:
+            es_loss = _val_loss(predictor, early_stop_eval)
+            if es_loss < best_es_loss - 1e-7:
+                best_es_loss = es_loss
+                bad_streak = 0
+            else:
+                bad_streak += 1
+                if bad_streak >= early_stop_patience:
+                    break
+            predictor.train()
     predictor.eval()
 
 
@@ -456,6 +594,8 @@ def direct_greedy_validation(
     max_candidates_evaluated: int = 100,
     eval_trace: Optional[List[List[int]]] = None,
     pick_trace: Optional[List[Dict[str, Any]]] = None,
+    weight_decay: float = 0.0,
+    early_stop_patience: int = 0,
 ) -> Tuple[List[int], List[float]]:
     """Plain greedy on validation-loss reduction with FASS-style pre-filtering.
 
@@ -498,7 +638,12 @@ def direct_greedy_validation(
     )
 
     _restore_state_dict(predictor, state_snapshot)
-    _adapt_K_steps(predictor, list(support_S), K_steps, inner_lr)
+    _adapt_K_steps(
+        predictor, list(support_S), K_steps, inner_lr,
+        weight_decay=weight_decay,
+        early_stop_eval=val_VT if early_stop_patience > 0 else None,
+        early_stop_patience=early_stop_patience,
+    )
     base_loss = _val_loss(predictor, val_VT)
     _restore_state_dict(predictor, state_snapshot)
 
@@ -526,7 +671,12 @@ def direct_greedy_validation(
                 continue
             extension = list(support_S) + [pool[i] for i in selected] + [pool[idx]]
             _restore_state_dict(predictor, state_snapshot)
-            _adapt_K_steps(predictor, extension, K_steps, inner_lr)
+            _adapt_K_steps(
+                predictor, extension, K_steps, inner_lr,
+                weight_decay=weight_decay,
+                early_stop_eval=val_VT if early_stop_patience > 0 else None,
+                early_stop_patience=early_stop_patience,
+            )
             new_loss = _val_loss(predictor, val_VT)
             _restore_state_dict(predictor, state_snapshot)
             gain = (base_loss - new_loss) / c
@@ -585,6 +735,11 @@ def select_extension(
     cost_fn: Optional[Callable[[str], float]] = None,
     seed: int = 42,
     max_candidates_evaluated: int = 100,
+    pool_narrow_q: float = 0.0,
+    weight_decay: float = 0.0,
+    early_stop_patience: int = 0,
+    selection_inner_lr: Optional[float] = None,
+    gradmatch_lambda: float = 1e-3,
     log_dir: Optional[Path] = None,
 ) -> Tuple[List[SelectionExample], Dict[str, Any]]:
     """Select an extension set ``S`` from ``pool_U`` to augment ``support_S0``.
@@ -612,7 +767,7 @@ def select_extension(
     Returns:
         ``(selected_S, log)`` where log is a JSON-serializable diagnostics dict.
     """
-    if method not in {"v1_facility", "v2_direct"}:
+    if method not in {"v1_facility", "v2_direct", "v3_gradmatch"}:
         raise ValueError(f"Unknown selection method '{method}'.")
 
     torch.manual_seed(seed)
@@ -637,6 +792,31 @@ def select_extension(
     feat_all = compute_embeddings(predictor, cat_examples) if cat_examples else torch.empty(0)
     tau = compute_bandwidth_median(feat_all, seed=seed) if feat_all.numel() else 1.0
 
+    # Optional target-aware narrowing of pool U: keep candidates whose mean
+    # similarity to T is at least the pool_narrow_q quantile. This prevents
+    # facility-location from picking far-from-target candidates with mismatched
+    # labels just to maximize V_T coverage.
+    pool_narrow_diag: Dict[str, Any] = {"applied": False}
+    if pool_narrow_q > 0.0 and pool_U and target_T:
+        feats_U = compute_embeddings(predictor, list(pool_U))
+        feats_T = compute_embeddings(predictor, list(target_T))
+        sim_UT = _gaussian_similarity(feats_U, feats_T, tau)
+        rho_U = sim_UT.mean(dim=1)
+        thr = torch.quantile(rho_U, pool_narrow_q).item()
+        keep = [ex for ex, score in zip(pool_U, rho_U.tolist()) if score >= thr]
+        if not keep:
+            keep = [pool_U[int(torch.argmax(rho_U).item())]]
+        pool_narrow_diag = {
+            "applied": True,
+            "pool_size_before": len(pool_U),
+            "pool_size_after": len(keep),
+            "quantile_q": pool_narrow_q,
+            "rho_threshold": float(thr),
+            "rho_mean": float(rho_U.mean().item()),
+        }
+        pool_U = keep
+        pool_U_keys = {ex.key for ex in pool_U}
+
     val_VT, narrow_diag = narrow_validation(
         val_V,
         target_T,
@@ -648,7 +828,7 @@ def select_extension(
     assert all(ex.key not in pool_U_keys for ex in val_VT), "V_T must remain disjoint from U."
     if log_dir is not None:
         with (log_dir / "narrowing_diagnostics.json").open("w", encoding="utf-8") as f:
-            json.dump(asdict(narrow_diag), f, indent=2)
+            json.dump({"V": asdict(narrow_diag), "pool": pool_narrow_diag}, f, indent=2)
 
     selected_S: List[SelectionExample] = []
     selected_keys: set[str] = set()
@@ -656,6 +836,7 @@ def select_extension(
     remaining_pool = list(pool_U)
     trajectory: List[Dict[str, Any]] = []
     base_state = _clone_state_dict(predictor)
+    eff_lr = selection_inner_lr if selection_inner_lr is not None else inner_lr
 
     method_iter = tqdm(range(plan.n_rounds), desc=f"Active-{method}", leave=False)
     for round_idx in method_iter:
@@ -667,7 +848,10 @@ def select_extension(
         # reflects the latest adapted state, then re-embed V_T and pool.
         adapt_t0 = time.time()
         _restore_state_dict(predictor, base_state)
-        _adapt_K_steps(predictor, list(support_S0) + selected_S, K_steps, inner_lr)
+        _adapt_K_steps(
+            predictor, list(support_S0) + selected_S, K_steps, eff_lr,
+            weight_decay=weight_decay,
+        )
         timings["adapt_seconds"] = time.time() - adapt_t0
 
         val_loss_before = _val_loss(predictor, val_VT) if val_VT else 0.0
@@ -711,6 +895,24 @@ def select_extension(
                 cost_fn=cost_fn,
                 pick_trace=round_pick_trace,
             )
+        elif method == "v3_gradmatch":
+            # GRAD-MATCH (Killamsetty et al., 2021): pick weighted subset of
+            # pool whose summed gradient approximates the V_T gradient.
+            cand_grads = compute_per_example_gradients(predictor, remaining_pool)
+            vt_grads = compute_per_example_gradients(predictor, val_VT)
+            target_grad = vt_grads.mean(dim=0)
+            picked, gm_weights = gradient_match_omp(
+                target_grad=target_grad,
+                candidate_grads=cand_grads,
+                candidate_keys=pool_keys,
+                budget=round_budget,
+                lambda_reg=gradmatch_lambda,
+                cost_fn=cost_fn,
+                pick_trace=round_pick_trace,
+            )
+            if picked:
+                picked_features = pool_features[picked]
+                coverage = torch.maximum(coverage, _gaussian_similarity(val_features, picked_features, tau).max(dim=1).values)
         else:
             picked, _losses = direct_greedy_validation(
                 predictor=predictor,
@@ -722,11 +924,13 @@ def select_extension(
                 influence=influence,
                 tau=tau,
                 K_steps=K_steps,
-                inner_lr=inner_lr,
+                inner_lr=eff_lr,
                 round_budget=round_budget,
                 cost_fn=cost_fn,
                 max_candidates_evaluated=max_candidates_evaluated,
                 pick_trace=round_pick_trace,
+                weight_decay=weight_decay,
+                early_stop_patience=early_stop_patience,
             )
             if picked:
                 picked_features = pool_features[picked]
@@ -831,10 +1035,18 @@ def select_extension(
             "I(v) is the gradient-norm influence weight per validation example. "
             "Cost is c(s)=1 (cardinality) by default."
             if method == "v1_facility"
-            else
-            "V2 picks maximize per-cost reduction in validation loss after K-step "
-            "adaptation on S_0 ∪ S ∪ {candidate}. Candidates are pre-filtered by V1 "
-            "ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+            else (
+                "V3 picks via GRAD-MATCH OMP (Killamsetty et al., 2021): at each step "
+                "select the candidate whose gradient has the largest |inner product| "
+                "with the current residual = grad(L_VT) - sum_i w_i grad(L_i). After "
+                "each pick we refit weights w via regularized least squares. Purely "
+                "first-order, no nested K-step adaptation."
+                if method == "v3_gradmatch"
+                else
+                "V2 picks maximize per-cost reduction in validation loss after K-step "
+                "adaptation on S_0 ∪ S ∪ {candidate}. Candidates are pre-filtered by V1 "
+                "ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+            )
         ),
     }
 

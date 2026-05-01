@@ -1,38 +1,389 @@
 {
   "summary": {
     "baseline": {
-      "meta_test_mae_seen": null,
-      "real_test_mae_seen": null,
-      "test_meta_mae_unseen": null,
-      "test_dev_mae_unseen": null,
-      "test_meta_records": [],
-      "test_dev_records": []
+      "meta_test_mae_seen": 0.029169597796031406,
+      "real_test_mae_seen": 0.3132862736071859,
+      "test_meta_mae_unseen": 0.0689689430097739,
+      "test_dev_mae_unseen": 0.5416455467542013,
+      "test_meta_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.05427657440304756,
+          "true_accuracy": 0.0,
+          "mae": 0.05427657440304756
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.07631512731313705,
+          "true_accuracy": 0.0,
+          "mae": 0.07631512731313705
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.07631512731313705,
+          "true_accuracy": 0.0,
+          "mae": 0.07631512731313705
+        }
+      ],
+      "test_dev_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.5442574620246887,
+          "true_accuracy": 0.0033333334140479565,
+          "mae": 0.5409241318702698
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.542006254196167,
+          "true_accuracy": 0.0,
+          "mae": 0.542006254196167
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.542006254196167,
+          "true_accuracy": 0.0,
+          "mae": 0.542006254196167
+        }
+      ]
     },
     "v1_facility": {
-      "meta_test_mae_seen": null,
-      "real_test_mae_seen": null,
-      "test_meta_mae_unseen": null,
-      "test_dev_mae_unseen": null,
-      "test_meta_records": [],
-      "test_dev_records": []
+      "meta_test_mae_seen": 0.025147669283407077,
+      "real_test_mae_seen": 0.24933828200612748,
+      "test_meta_mae_unseen": 0.22373935083548227,
+      "test_dev_mae_unseen": 0.42627691229184467,
+      "test_meta_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.2402099221944809,
+          "true_accuracy": 0.0,
+          "mae": 0.2402099221944809
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.21550406515598297,
+          "true_accuracy": 0.0,
+          "mae": 0.21550406515598297
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.21550406515598297,
+          "true_accuracy": 0.0,
+          "mae": 0.21550406515598297
+        }
+      ],
+      "test_dev_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.46786150336265564,
+          "true_accuracy": 0.0033333334140479565,
+          "mae": 0.4645281732082367
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.4071512818336487,
+          "true_accuracy": 0.0,
+          "mae": 0.4071512818336487
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.4071512818336487,
+          "true_accuracy": 0.0,
+          "mae": 0.4071512818336487
+        }
+      ]
     },
     "v2_direct": {
-      "meta_test_mae_seen": null,
-      "real_test_mae_seen": null,
-      "test_meta_mae_unseen": null,
-      "test_dev_mae_unseen": null,
-      "test_meta_records": [],
-      "test_dev_records": []
+      "meta_test_mae_seen": 0.026877087141786302,
+      "real_test_mae_seen": 0.3125849760004452,
+      "test_meta_mae_unseen": 0.16148758058746657,
+      "test_dev_mae_unseen": 0.5426154136657715,
+      "test_meta_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.057874176651239395,
+          "true_accuracy": 0.0,
+          "mae": 0.057874176651239395
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.21329428255558014,
+          "true_accuracy": 0.0,
+          "mae": 0.21329428255558014
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.21329428255558014,
+          "true_accuracy": 0.0,
+          "mae": 0.21329428255558014
+        }
+      ],
+      "test_dev_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.5283287763595581,
+          "true_accuracy": 0.0033333334140479565,
+          "mae": 0.5249954462051392
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.5514253973960876,
+          "true_accuracy": 0.0,
+          "mae": 0.5514253973960876
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.5514253973960876,
+          "true_accuracy": 0.0,
+          "mae": 0.5514253973960876
+        }
+      ]
+    },
+    "v3_gradmatch": {
+      "meta_test_mae_seen": 0.026502797113997594,
+      "real_test_mae_seen": 0.2731134109199047,
+      "test_meta_mae_unseen": 0.21268742779890695,
+      "test_dev_mae_unseen": 0.4934728940327962,
+      "test_meta_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.20169581472873688,
+          "true_accuracy": 0.0,
+          "mae": 0.20169581472873688
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.218183234333992,
+          "true_accuracy": 0.0,
+          "mae": 0.218183234333992
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.218183234333992,
+          "true_accuracy": 0.0,
+          "mae": 0.218183234333992
+        }
+      ],
+      "test_dev_records": [
+        {
+          "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+          "predicted_accuracy": 0.5022632479667664,
+          "true_accuracy": 0.0033333334140479565,
+          "mae": 0.4989299178123474
+        },
+        {
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.49074438214302063,
+          "true_accuracy": 0.0,
+          "mae": 0.49074438214302063
+        },
+        {
+          "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+          "predicted_accuracy": 0.49074438214302063,
+          "true_accuracy": 0.0,
+          "mae": 0.49074438214302063
+        }
+      ]
     }
   },
   "v1_vs_v2": {
-    "wins_v1": 0,
+    "wins_v1": 3,
     "wins_v2": 0,
     "ties": 0
   },
   "selection_summaries": {
     "baseline": {},
-    "v1_facility": {},
-    "v2_direct": {}
+    "v1_facility": {
+      "Gensyn-Qwen2.5-0.5B-Instruct": {
+        "method": "v1_facility",
+        "tau": 0.5323147177696228,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.03651362843811512,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.015179197303950787,
+        "total_selection_seconds": 0.025608301162719727,
+        "n_rounds_executed": 3,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "Qwen/Qwen2-0.5B"
+        ],
+        "rationale": "V1 picks maximize the influence-weighted facility-location surrogate: each pick has the largest sum over V_T of I(v) * (sim(v, candidate) - max sim(v, S)). I(v) is the gradient-norm influence weight per validation example. Cost is c(s)=1 (cardinality) by default."
+      },
+      "Qwen-Qwen2.5-0.5B-Instruct": {
+        "method": "v1_facility",
+        "tau": 0.5323147177696228,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.03651362843811512,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.015179197303950787,
+        "total_selection_seconds": 0.02497100830078125,
+        "n_rounds_executed": 3,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "Qwen/Qwen2-0.5B"
+        ],
+        "rationale": "V1 picks maximize the influence-weighted facility-location surrogate: each pick has the largest sum over V_T of I(v) * (sim(v, candidate) - max sim(v, S)). I(v) is the gradient-norm influence weight per validation example. Cost is c(s)=1 (cardinality) by default."
+      },
+      "Qwen-Qwen2.5-Coder-1.5B-Instruct": {
+        "method": "v1_facility",
+        "tau": 1.1892189979553223,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 1.0,
+        "cost_remaining": 2.0,
+        "gain_total": 0.0498533770442009,
+        "n_selected": 1,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.03435196727514267,
+        "total_selection_seconds": 0.07816791534423828,
+        "n_rounds_executed": 3,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B"
+        ],
+        "rationale": "V1 picks maximize the influence-weighted facility-location surrogate: each pick has the largest sum over V_T of I(v) * (sim(v, candidate) - max sim(v, S)). I(v) is the gradient-norm influence weight per validation example. Cost is c(s)=1 (cardinality) by default."
+      }
+    },
+    "v2_direct": {
+      "Gensyn-Qwen2.5-0.5B-Instruct": {
+        "method": "v2_direct",
+        "tau": 0.27420496940612793,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.01805618405342102,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.014978637918829918,
+        "total_selection_seconds": 0.06745600700378418,
+        "n_rounds_executed": 2,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "Qwen/Qwen2-0.5B"
+        ],
+        "rationale": "V2 picks maximize per-cost reduction in validation loss after K-step adaptation on S_0 \u222a S \u222a {candidate}. Candidates are pre-filtered by V1 ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+      },
+      "Qwen-Qwen2.5-0.5B-Instruct": {
+        "method": "v2_direct",
+        "tau": 0.27420496940612793,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.01805618405342102,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.014978637918829918,
+        "total_selection_seconds": 0.06790494918823242,
+        "n_rounds_executed": 2,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "Qwen/Qwen2-0.5B"
+        ],
+        "rationale": "V2 picks maximize per-cost reduction in validation loss after K-step adaptation on S_0 \u222a S \u222a {candidate}. Candidates are pre-filtered by V1 ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+      },
+      "Qwen-Qwen2.5-Coder-1.5B-Instruct": {
+        "method": "v2_direct",
+        "tau": 0.6135529279708862,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 1.0,
+        "cost_remaining": 2.0,
+        "gain_total": 1.470278948545456e-05,
+        "n_selected": 1,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.011468454264104366,
+        "total_selection_seconds": 0.10600614547729492,
+        "n_rounds_executed": 2,
+        "source_models_chosen": [
+          "TinyLlama/TinyLlama_v1.1"
+        ],
+        "rationale": "V2 picks maximize per-cost reduction in validation loss after K-step adaptation on S_0 \u222a S \u222a {candidate}. Candidates are pre-filtered by V1 ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+      }
+    },
+    "v3_gradmatch": {
+      "Gensyn-Qwen2.5-0.5B-Instruct": {
+        "method": "v3_gradmatch",
+        "tau": 0.5815088748931885,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.0,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.01761505752801895,
+        "total_selection_seconds": 0.02728581428527832,
+        "n_rounds_executed": 3,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "Qwen/Qwen2-0.5B"
+        ],
+        "rationale": "V3 picks via GRAD-MATCH OMP (Killamsetty et al., 2021): at each step select the candidate whose gradient has the largest |inner product| with the current residual = grad(L_VT) - sum_i w_i grad(L_i). After each pick we refit weights w via regularized least squares. Purely first-order, no nested K-step adaptation."
+      },
+      "Qwen-Qwen2.5-0.5B-Instruct": {
+        "method": "v3_gradmatch",
+        "tau": 0.5815088748931885,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.0,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.01761505752801895,
+        "total_selection_seconds": 0.027170181274414062,
+        "n_rounds_executed": 3,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "Qwen/Qwen2-0.5B"
+        ],
+        "rationale": "V3 picks via GRAD-MATCH OMP (Killamsetty et al., 2021): at each step select the candidate whose gradient has the largest |inner product| with the current residual = grad(L_VT) - sum_i w_i grad(L_i). After each pick we refit weights w via regularized least squares. Purely first-order, no nested K-step adaptation."
+      },
+      "Qwen-Qwen2.5-Coder-1.5B-Instruct": {
+        "method": "v3_gradmatch",
+        "tau": 1.271397590637207,
+        "cost_fn_name": "cardinality",
+        "budget_total": 3,
+        "cost_paid_total": 2.0,
+        "cost_remaining": 1.0,
+        "gain_total": 0.0,
+        "n_selected": 2,
+        "pool_size": 2,
+        "val_size": 3,
+        "val_VT_size": 3,
+        "final_val_loss": 0.03169026970863342,
+        "total_selection_seconds": 0.1666555404663086,
+        "n_rounds_executed": 3,
+        "source_models_chosen": [
+          "Qwen/Qwen2.5-Coder-1.5B",
+          "TinyLlama/TinyLlama_v1.1"
+        ],
+        "rationale": "V3 picks via GRAD-MATCH OMP (Killamsetty et al., 2021): at each step select the candidate whose gradient has the largest |inner product| with the current residual = grad(L_VT) - sum_i w_i grad(L_i). After each pick we refit weights w via regularized least squares. Purely first-order, no nested K-step adaptation."
+      }
+    }
   }
 }

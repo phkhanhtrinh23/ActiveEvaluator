@@ -103,7 +103,7 @@ These logs answer "**what** got selected" (`source_models_chosen`, `selected[*].
 python -m active_evaluator.pipeline \
   --train-path data/sft_spider_train_text2sql.json \
   --dev-path data/sft_spider_dev_text2sql.json \
-  --output-dir outputs/run_active \
+  --output-dir outputs/run_v1 \
   --max-train-samples 1500 --max-dev-samples 300 \
   --use-active-selection \
   --selection-method v1_facility \

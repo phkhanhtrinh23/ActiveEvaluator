@@ -1,0 +1,21 @@
+{
+  "method": "v2_direct",
+  "tau": 0.27420496940612793,
+  "cost_fn_name": "cardinality",
+  "budget_total": 3,
+  "cost_paid_total": 2.0,
+  "cost_remaining": 1.0,
+  "gain_total": 0.01805618405342102,
+  "n_selected": 2,
+  "pool_size": 2,
+  "val_size": 3,
+  "val_VT_size": 3,
+  "final_val_loss": 0.014978637918829918,
+  "total_selection_seconds": 0.06745600700378418,
+  "n_rounds_executed": 2,
+  "source_models_chosen": [
+    "Qwen/Qwen2.5-Coder-1.5B",
+    "Qwen/Qwen2-0.5B"
+  ],
+  "rationale": "V2 picks maximize per-cost reduction in validation loss after K-step adaptation on S_0 \u222a S \u222a {candidate}. Candidates are pre-filtered by V1 ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
+}

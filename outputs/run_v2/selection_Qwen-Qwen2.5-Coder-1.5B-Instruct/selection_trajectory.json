@@ -1,0 +1,72 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "TinyLlama/TinyLlama_v1.1::train_support"
+      ],
+      "selected_source_models": [
+        "TinyLlama/TinyLlama_v1.1"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
+          "loss_before": 0.011316033080220222,
+          "loss_after": 0.011301330290734768,
+          "loss_reduction": 1.470278948545456e-05,
+          "marginal_gain": 1.470278948545456e-05,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "n_candidates_evaluated": 2,
+          "rank_in_round": 0,
+          "source_model": "TinyLlama/TinyLlama_v1.1"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 1.470278948545456e-05,
+      "influence_stats": {
+        "mean": 0.1056104227900505,
+        "min": 0.029521746560931206,
+        "max": 0.1866375207901001,
+        "n": 3
+      },
+      "val_loss_before": 0.011169089004397392,
+      "val_loss_after": 0.011399983428418636,
+      "elapsed_seconds": 0.07997560501098633,
+      "timings": {
+        "adapt_seconds": 0.026061058044433594,
+        "embed_seconds": 0.00033164024353027344,
+        "influence_seconds": 0.014171600341796875,
+        "greedy_seconds": 0.029065847396850586
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 2,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.11344262212514877,
+        "min": 0.0362243577837944,
+        "max": 0.18189820647239685,
+        "n": 3
+      },
+      "val_loss_before": 0.010895471088588238,
+      "val_loss_after": 0.011468454264104366,
+      "elapsed_seconds": 0.026030540466308594,
+      "timings": {
+        "adapt_seconds": 0.009227275848388672,
+        "embed_seconds": 0.00022792816162109375,
+        "influence_seconds": 0.0011425018310546875,
+        "greedy_seconds": 0.006057262420654297
+      }
+    }
+  ],
+  "tau": 0.6135529279708862,
+  "method": "v2_direct"
+}

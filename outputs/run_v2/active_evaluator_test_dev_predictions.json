@@ -1,0 +1,23 @@
+{
+  "results": [
+    {
+      "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+      "predicted_accuracy": 0.5283287763595581,
+      "true_accuracy": 0.0033333334140479565,
+      "mae": 0.5249954462051392
+    },
+    {
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "predicted_accuracy": 0.5514253973960876,
+      "true_accuracy": 0.0,
+      "mae": 0.5514253973960876
+    },
+    {
+      "model": "Gensyn/Qwen2.5-0.5B-Instruct",
+      "predicted_accuracy": 0.5514253973960876,
+      "true_accuracy": 0.0,
+      "mae": 0.5514253973960876
+    }
+  ],
+  "mae": 0.5426154136657715
+}

@@ -1,0 +1,19 @@
+{
+  "V": {
+    "n_val": 3,
+    "n_val_narrowed": 3,
+    "quantile_q": 0.0,
+    "rho_threshold": 0.12670715153217316,
+    "rho_mean": 0.4119812846183777,
+    "rho_min": 0.12670715153217316,
+    "rho_max": 0.9768156409263611
+  },
+  "pool": {
+    "applied": true,
+    "pool_size_before": 4,
+    "pool_size_after": 2,
+    "quantile_q": 0.5,
+    "rho_threshold": 0.49903976917266846,
+    "rho_mean": 0.5203088521957397
+  }
+}

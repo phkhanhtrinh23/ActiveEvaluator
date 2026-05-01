@@ -1,0 +1,97 @@
+{
+  "trajectory": [
+    {
+      "round": 0,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2.5-Coder-1.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2.5-Coder-1.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 1,
+          "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
+          "inner_product_score": -0.0036297617480158806,
+          "weight": -0.02375110425055027,
+          "residual_norm_after": 0.0012378937099128962,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2.5-Coder-1.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.1516239494085312,
+        "min": 0.03472357615828514,
+        "max": 0.21354874968528748,
+        "n": 3
+      },
+      "val_loss_before": 0.010270783677697182,
+      "val_loss_after": 0.025813262909650803,
+      "elapsed_seconds": 0.01148676872253418,
+      "timings": {
+        "adapt_seconds": 0.004220247268676758,
+        "embed_seconds": 0.00021338462829589844,
+        "influence_seconds": 0.000774383544921875,
+        "greedy_seconds": 0.0015554428100585938
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 1,
+      "selected_keys": [
+        "Qwen/Qwen2-0.5B::train_support"
+      ],
+      "selected_source_models": [
+        "Qwen/Qwen2-0.5B"
+      ],
+      "picks": [
+        {
+          "pool_index": 0,
+          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
+          "inner_product_score": 0.08215846121311188,
+          "weight": 0.7667669653892517,
+          "residual_norm_after": 0.013329739682376385,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 1.0,
+          "rank_in_round": 0,
+          "source_model": "Qwen/Qwen2-0.5B"
+        }
+      ],
+      "round_cost_paid": 1.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.25400394201278687,
+        "min": 0.01909082755446434,
+        "max": 0.579154372215271,
+        "n": 3
+      },
+      "val_loss_before": 0.024647943675518036,
+      "val_loss_after": 0.016800181940197945,
+      "elapsed_seconds": 0.011268854141235352,
+      "timings": {
+        "adapt_seconds": 0.004214763641357422,
+        "embed_seconds": 0.0002110004425048828,
+        "influence_seconds": 0.0007767677307128906,
+        "greedy_seconds": 0.0013041496276855469
+      }
+    },
+    {
+      "round": 2,
+      "round_budget": 1,
+      "selected_keys": [],
+      "val_loss_before": 0.01761505752801895,
+      "val_loss_after": 0.01761505752801895,
+      "elapsed_seconds": 0.004414558410644531,
+      "timings": {
+        "adapt_seconds": 0.0042133331298828125
+      }
+    }
+  ],
+  "tau": 0.5815088748931885,
+  "method": "v3_gradmatch"
+}

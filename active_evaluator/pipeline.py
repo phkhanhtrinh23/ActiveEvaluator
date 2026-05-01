@@ -198,8 +198,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--meta-reg-beta", type=float, default=1e-3, help="KL-style meta regularizer on outer loss.")
     parser.add_argument("--use-active-selection", action="store_true",
                         help="Enable active extension of the adaptation set at test time.")
-    parser.add_argument("--selection-method", choices=["v1_facility", "v2_direct"],
-                        default="v1_facility", help="Active-selection algorithm to use.")
+    parser.add_argument("--selection-method",
+                        choices=["v1_facility", "v2_direct", "v3_gradmatch"],
+                        default="v1_facility",
+                        help="Active-selection algorithm to use. v3_gradmatch is "
+                             "GRAD-MATCH OMP (Killamsetty et al. 2021).")
+    parser.add_argument("--selection-gradmatch-lambda", type=float, default=1e-3,
+                        help="L2 regularizer on OMP weights for GRAD-MATCH.")
     parser.add_argument("--selection-n-rounds", type=int, default=5,
                         help="Active-learning rounds at test time.")
     parser.add_argument("--selection-budget-fraction", type=float, default=0.10,
@@ -210,6 +215,16 @@ def parse_args() -> argparse.Namespace:
                         help="Inner adaptation steps for active selection (defaults to --eval-inner-steps).")
     parser.add_argument("--selection-narrowing-quantile", type=float, default=0.7,
                         help="Quantile q for narrowing V to V_T.")
+    parser.add_argument("--selection-pool-narrow-quantile", type=float, default=0.0,
+                        help="Quantile q for target-aware narrowing of pool U (0.0 disables).")
+    parser.add_argument("--selection-inner-lr", type=float, default=None,
+                        help="Override inner-lr inside selection's K-step adapt; defaults to --inner-lr.")
+    parser.add_argument("--selection-weight-decay", type=float, default=0.0,
+                        help="L2 weight decay applied during selection's K-step adapt; "
+                             "regularizes V2 to prevent overfitting a tiny V_T.")
+    parser.add_argument("--selection-early-stop-patience", type=int, default=0,
+                        help="Stop selection's K-step adapt after this many non-improving steps "
+                             "on V_T (0 disables; only used by V2's per-candidate evaluation).")
     parser.add_argument("--selection-max-candidates-evaluated", type=int, default=100,
                         help="Cap on direct evaluations per pick (Version 2 only).")
     parser.add_argument("--selection-seed", type=int, default=42,
@@ -543,6 +558,11 @@ def extend_test_tasks_with_active_selection(
             K_steps=K_steps,
             inner_lr=args.inner_lr,
             quantile_q=args.selection_narrowing_quantile,
+            pool_narrow_q=args.selection_pool_narrow_quantile,
+            weight_decay=args.selection_weight_decay,
+            early_stop_patience=args.selection_early_stop_patience,
+            selection_inner_lr=args.selection_inner_lr,
+            gradmatch_lambda=args.selection_gradmatch_lambda,
             seed=args.selection_seed,
             max_candidates_evaluated=args.selection_max_candidates_evaluated,
             log_dir=log_dir,
@@ -652,7 +672,11 @@ def main() -> None:
     _apply_descriptor_norm(tasks, norm_mean, norm_std)
     clear_cuda_cache()
     if len(tasks) > 1:
-        val_size = max(1, len(tasks) // 5)
+        # Hold out a meaningful chunk so the active-selection val_V (and the
+        # narrowed V_T) is non-trivial. With max(3, n//3) you get >=3 val tasks
+        # whenever total tasks >= 4.
+        val_size = max(3, len(tasks) // 3) if len(tasks) >= 4 else 1
+        val_size = min(val_size, len(tasks) - 1)  # keep at least 1 train task
         val_tasks = tasks[:val_size]
         train_tasks = tasks[val_size:]
     else:
