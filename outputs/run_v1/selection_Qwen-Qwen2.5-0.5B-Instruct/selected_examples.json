@@ -5,16 +5,9 @@
       "source_model": "Qwen/Qwen2.5-Coder-1.5B",
       "true_label": 0.4933333396911621,
       "cost": 1.0
-    },
-    {
-      "key": "Qwen/Qwen2-0.5B::train_support",
-      "source_model": "Qwen/Qwen2-0.5B",
-      "true_label": 0.06666667014360428,
-      "cost": 1.0
     }
   ],
   "selected_keys": [
-    "Qwen/Qwen2.5-Coder-1.5B::train_support",
-    "Qwen/Qwen2-0.5B::train_support"
+    "Qwen/Qwen2.5-Coder-1.5B::train_support"
   ]
 }

@@ -13,59 +13,69 @@
 [ActiveEvaluator] Generating SQL for Gensyn/Qwen2.5-0.5B-Instruct...
 [ActiveEvaluator] Generating SQL for Qwen/Qwen2.5-Coder-0.5B-Instruct...
 [ActiveEvaluator] Generating SQL for TinyLlama/TinyLlama-1.1B-Chat-v1.0...
-Build tasks:   0%|          | 0/10 [00:00<?, ?it/s]Build tasks:  10%|█         | 1/10 [00:01<00:09,  1.10s/it]Build tasks:  20%|██        | 2/10 [00:01<00:07,  1.02it/s]Build tasks:  30%|███       | 3/10 [00:02<00:05,  1.20it/s]Build tasks:  40%|████      | 4/10 [00:03<00:05,  1.06it/s]Build tasks:  50%|█████     | 5/10 [00:07<00:09,  1.98s/it]Build tasks:  60%|██████    | 6/10 [00:10<00:09,  2.43s/it]Build tasks:  70%|███████   | 7/10 [00:14<00:08,  2.72s/it]Build tasks:  80%|████████  | 8/10 [00:15<00:04,  2.41s/it]Build tasks:  90%|█████████ | 9/10 [00:19<00:02,  2.91s/it]Build tasks: 100%|██████████| 10/10 [00:23<00:00,  3.01s/it]                                                            [ActiveEvaluator] Training on 7 tasks for 300 epochs.
-Meta-train:   0%|          | 0/300 [00:00<?, ?it/s]Meta-train:   0%|          | 1/300 [00:00<00:33,  8.85it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:   6%|▌         | 18/300 [00:00<00:02, 98.57it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Build tasks:   0%|          | 0/10 [00:00<?, ?it/s]Build tasks:  10%|█         | 1/10 [00:02<00:22,  2.55s/it]Build tasks:  20%|██        | 2/10 [00:07<00:29,  3.70s/it]Build tasks:  30%|███       | 3/10 [00:09<00:23,  3.29s/it]Build tasks:  40%|████      | 4/10 [00:11<00:15,  2.67s/it]Build tasks:  50%|█████     | 5/10 [00:14<00:13,  2.74s/it]Build tasks:  60%|██████    | 6/10 [00:17<00:11,  2.92s/it]Build tasks:  70%|███████   | 7/10 [00:20<00:09,  3.03s/it]Build tasks:  80%|████████  | 8/10 [00:22<00:05,  2.64s/it]Build tasks:  90%|█████████ | 9/10 [00:26<00:02,  2.83s/it]Build tasks: 100%|██████████| 10/10 [00:29<00:00,  2.96s/it]                                                            [ActiveEvaluator] Training on 6 tasks for 300 epochs.
+Meta-train:   0%|          | 0/300 [00:00<?, ?it/s]Meta-train:   0%|          | 1/300 [00:00<00:34,  8.71it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:   6%|▌         | 17/300 [00:00<00:03, 92.09it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  11%|█         | 33/300 [00:00<00:02, 119.31it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  10%|█         | 30/300 [00:00<00:02, 106.53it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  15%|█▌        | 45/300 [00:00<00:02, 122.66it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  17%|█▋        | 50/300 [00:00<00:01, 132.47it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  23%|██▎       | 69/300 [00:00<00:01, 150.63it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  20%|██        | 60/300 [00:00<00:02, 119.83it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  24%|██▍       | 73/300 [00:00<00:01, 122.46it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  29%|██▊       | 86/300 [00:00<00:01, 124.21it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  33%|███▎      | 99/300 [00:00<00:01, 122.87it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  28%|██▊       | 85/300 [00:00<00:01, 145.12it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  37%|███▋      | 112/300 [00:00<00:01, 123.55it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  33%|███▎      | 100/300 [00:00<00:01, 135.31it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  38%|███▊      | 114/300 [00:00<00:01, 136.66it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  43%|████▎     | 128/300 [00:00<00:01, 137.52it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  43%|████▎     | 130/300 [00:01<00:01, 130.66it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  49%|████▉     | 148/300 [00:01<00:01, 143.62it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  47%|████▋     | 142/300 [00:01<00:01, 130.23it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  52%|█████▏    | 157/300 [00:01<00:01, 133.92it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  54%|█████▍    | 163/300 [00:01<00:01, 131.82it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  59%|█████▉    | 177/300 [00:01<00:00, 131.84it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  57%|█████▋    | 171/300 [00:01<00:00, 134.34it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  62%|██████▏   | 186/300 [00:01<00:00, 137.72it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  64%|██████▎   | 191/300 [00:01<00:00, 122.37it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  68%|██████▊   | 204/300 [00:01<00:00, 124.15it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  72%|███████▏  | 217/300 [00:01<00:00, 125.44it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  67%|██████▋   | 200/300 [00:01<00:00, 130.20it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  72%|███████▏  | 215/300 [00:01<00:00, 133.97it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  76%|███████▋  | 229/300 [00:01<00:00, 135.56it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  77%|███████▋  | 230/300 [00:01<00:00, 118.46it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  81%|████████  | 243/300 [00:01<00:00, 120.95it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  86%|████████▌ | 257/300 [00:02<00:00, 125.49it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
                                                 [A
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [AMeta-train:  81%|████████  | 243/300 [00:01<00:00, 129.31it/s]
-Meta-eval:   0%|          | 0/3 [00:00<?, ?it/s][A
-                                                [A                                                              Context-adapt:   0%|          | 0/7 [00:00<?, ?it/s]                                                    Meta-eval:   0%|          | 0/10 [00:00<?, ?it/s]                                                 [ActiveEvaluator] Meta-test MAE: 0.1195
-Transfer-eval:   0%|          | 0/10 [00:00<?, ?it/s]                                                     [ActiveEvaluator] Real-test MAE: 0.2776
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  90%|█████████ | 270/300 [00:02<00:00, 115.22it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  94%|█████████▍| 282/300 [00:02<00:00, 116.42it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [AMeta-train:  99%|█████████▉| 297/300 [00:02<00:00, 125.31it/s]
+Meta-eval:   0%|          | 0/4 [00:00<?, ?it/s][A
+                                                [A                                                              Context-adapt:   0%|          | 0/6 [00:00<?, ?it/s]                                                    Meta-eval:   0%|          | 0/10 [00:00<?, ?it/s]                                                 [ActiveEvaluator] Meta-test MAE: 0.0956
+Transfer-eval:   0%|          | 0/10 [00:00<?, ?it/s]                                                     [ActiveEvaluator] Real-test MAE: 0.2849
 [ActiveEvaluator] Adapting to 5 held-out model(s).
-Build tasks:   0%|          | 0/5 [00:00<?, ?it/s]Build tasks:  20%|██        | 1/5 [00:01<00:06,  1.75s/it]Build tasks:  40%|████      | 2/5 [00:02<00:03,  1.08s/it]Build tasks:  60%|██████    | 3/5 [00:03<00:01,  1.13it/s]Build tasks:  80%|████████  | 4/5 [00:03<00:00,  1.25it/s]Build tasks: 100%|██████████| 5/5 [00:07<00:00,  1.74s/it]                                                          Meta-eval:   0%|          | 0/5 [00:00<?, ?it/s]                                                Transfer-eval:   0%|          | 0/5 [00:00<?, ?it/s]                                                    [ActiveEvaluator] Held-out Meta-test MAE: 0.0869
-[ActiveEvaluator] Held-out Real-test MAE: 0.3991
+Build tasks:   0%|          | 0/5 [00:00<?, ?it/s]Build tasks:  20%|██        | 1/5 [00:01<00:06,  1.73s/it]Build tasks:  40%|████      | 2/5 [00:02<00:03,  1.08s/it]Build tasks:  60%|██████    | 3/5 [00:02<00:01,  1.15it/s]Build tasks:  80%|████████  | 4/5 [00:04<00:01,  1.30s/it]Build tasks: 100%|██████████| 5/5 [00:08<00:00,  2.08s/it]                                                          Meta-eval:   0%|          | 0/5 [00:00<?, ?it/s]                                                Transfer-eval:   0%|          | 0/5 [00:00<?, ?it/s]                                                    [ActiveEvaluator] Held-out Meta-test MAE: 0.1135
+[ActiveEvaluator] Held-out Real-test MAE: 0.4435

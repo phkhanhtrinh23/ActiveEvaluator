@@ -696,7 +696,9 @@ def main() -> None:
         # Hold out a meaningful chunk so the active-selection val_V (and the
         # narrowed V_T) is non-trivial. With max(3, n//3) you get >=3 val tasks
         # whenever total tasks >= 4.
-        val_size = max(3, len(tasks) // 3) if len(tasks) >= 4 else 1
+        # Bumped from len//3 to 2*len//5 so V_T grows faster with the pool;
+        # (n=10 → 4, n=13 → 5, n=15 → 6) gives V2/V3 a meaningful eval set.
+        val_size = max(3, 2 * len(tasks) // 5) if len(tasks) >= 4 else 1
         val_size = min(val_size, len(tasks) - 1)  # keep at least 1 train task
         val_tasks = tasks[:val_size]
         train_tasks = tasks[val_size:]

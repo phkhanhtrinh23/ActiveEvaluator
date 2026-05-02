@@ -2,63 +2,63 @@
   "results": [
     {
       "model": "cycloneboy/SLM-SQL-0.5B",
-      "predicted_accuracy": 0.17560604214668274,
+      "predicted_accuracy": 0.2645103633403778,
       "true_accuracy": 0.30666667222976685,
-      "mae": 0.1310606300830841
+      "mae": 0.04215630888938904
     },
     {
       "model": "cycloneboy/SLM-SQL-0.6B",
-      "predicted_accuracy": 0.09438326954841614,
+      "predicted_accuracy": 0.10826095938682556,
       "true_accuracy": 0.0,
-      "mae": 0.09438326954841614
+      "mae": 0.10826095938682556
     },
     {
       "model": "cycloneboy/CscSQL-Merge-Qwen2.5-Coder-0.5B-Instruct",
-      "predicted_accuracy": 0.12646128237247467,
+      "predicted_accuracy": 0.14919419586658478,
       "true_accuracy": 0.06333333253860474,
-      "mae": 0.06312794983386993
+      "mae": 0.08586086332798004
     },
     {
       "model": "Qwen/Qwen2-0.5B",
-      "predicted_accuracy": 0.12505730986595154,
+      "predicted_accuracy": 0.1582360863685608,
       "true_accuracy": 0.07333333045244217,
-      "mae": 0.05172397941350937
+      "mae": 0.08490275591611862
     },
     {
       "model": "Qwen/Qwen2.5-Coder-1.5B",
-      "predicted_accuracy": 0.21974928677082062,
+      "predicted_accuracy": 0.36032748222351074,
       "true_accuracy": 0.5,
-      "mae": 0.2802507281303406
+      "mae": 0.13967251777648926
     },
     {
       "model": "TinyLlama/TinyLlama_v1.1",
-      "predicted_accuracy": 0.08753807097673416,
+      "predicted_accuracy": 0.09670958667993546,
       "true_accuracy": 0.0,
-      "mae": 0.08753807097673416
+      "mae": 0.09670958667993546
     },
     {
       "model": "deepseek-ai/deepseek-coder-1.3b-base",
-      "predicted_accuracy": 0.08016910403966904,
+      "predicted_accuracy": 0.0892639011144638,
       "true_accuracy": 0.0,
-      "mae": 0.08016910403966904
+      "mae": 0.0892639011144638
     },
     {
       "model": "Qwen/Qwen2.5-1.5B",
-      "predicted_accuracy": 0.1698019802570343,
+      "predicted_accuracy": 0.2858833968639374,
       "true_accuracy": 0.38999998569488525,
-      "mae": 0.22019800543785095
+      "mae": 0.10411658883094788
     },
     {
       "model": "HuggingFaceTB/SmolLM-1.7B",
-      "predicted_accuracy": 0.08095505088567734,
+      "predicted_accuracy": 0.08943982422351837,
       "true_accuracy": 0.0,
-      "mae": 0.08095505088567734
+      "mae": 0.08943982422351837
     },
     {
       "model": "stabilityai/stablelm-2-zephyr-1_6b",
-      "predicted_accuracy": 0.10516511648893356,
+      "predicted_accuracy": 0.1157272607088089,
       "true_accuracy": 0.0,
-      "mae": 0.10516511648893356
+      "mae": 0.1157272607088089
     }
   ]
 }

@@ -2,40 +2,40 @@
 
 | Run | Seen meta-test MAE | Seen real-test MAE | Unseen meta-test MAE | Unseen real-test MAE |
 | --- | --- | --- | --- | --- |
-| baseline | 0.1195 | 0.2776 | 0.0869 | 0.3991 |
-| v1_facility | 0.1198 | 0.2635 | 0.1182 | 0.3748 |
-| v2_direct | 0.1124 | 0.2784 | 0.1013 | 0.4085 |
-| v3_gradmatch | 0.1094 | 0.2831 | 0.1090 | 0.4147 |
+| baseline | 0.0956 | 0.2849 | 0.1135 | 0.4435 |
+| v1_facility | 0.1140 | 0.2790 | 0.1376 | 0.4305 |
+| v2_direct | 0.0767 | 0.2611 | 0.1140 | 0.4207 |
+| v3_gradmatch | 0.1170 | 0.2946 | 0.1435 | 0.4475 |
 
 ## Per-test-model real-test predictions (unseen)
 
 | Model | True | BL pred | BL MAE | V1 pred | V1 MAE | V2 pred | V2 MAE | V3 pred | V3 MAE |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Qwen/Qwen2.5-Coder-1.5B-Instruct | 0.003 | 0.431 | 0.427 | 0.393 | 0.390 | 0.438 | 0.435 | 0.457 | 0.453 |
-| Qwen/Qwen2.5-0.5B-Instruct | 0.000 | 0.431 | 0.431 | 0.405 | 0.405 | 0.446 | 0.446 | 0.447 | 0.447 |
-| Gensyn/Qwen2.5-0.5B-Instruct | 0.000 | 0.431 | 0.431 | 0.405 | 0.405 | 0.446 | 0.446 | 0.447 | 0.447 |
-| Qwen/Qwen2.5-Coder-0.5B-Instruct | 0.080 | 0.433 | 0.353 | 0.408 | 0.328 | 0.437 | 0.357 | 0.453 | 0.373 |
-| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | 0.047 | 0.400 | 0.353 | 0.392 | 0.346 | 0.406 | 0.359 | 0.400 | 0.353 |
+| Qwen/Qwen2.5-Coder-1.5B-Instruct | 0.003 | 0.484 | 0.481 | 0.455 | 0.452 | 0.460 | 0.457 | 0.480 | 0.476 |
+| Qwen/Qwen2.5-0.5B-Instruct | 0.000 | 0.485 | 0.485 | 0.471 | 0.471 | 0.472 | 0.472 | 0.484 | 0.484 |
+| Gensyn/Qwen2.5-0.5B-Instruct | 0.000 | 0.485 | 0.485 | 0.471 | 0.471 | 0.472 | 0.472 | 0.484 | 0.484 |
+| Qwen/Qwen2.5-Coder-0.5B-Instruct | 0.080 | 0.487 | 0.407 | 0.473 | 0.393 | 0.468 | 0.388 | 0.483 | 0.403 |
+| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | 0.047 | 0.406 | 0.359 | 0.411 | 0.365 | 0.361 | 0.314 | 0.437 | 0.390 |
 
 ## V1 vs V2 per-model winner (smaller real-test MAE wins)
 
 | Model | V1 MAE | V2 MAE | Winner |
 | --- | --- | --- | --- |
-| Qwen/Qwen2.5-Coder-1.5B-Instruct | 0.3896 | 0.4349 | V1 |
-| Qwen/Qwen2.5-0.5B-Instruct | 0.4050 | 0.4456 | V1 |
-| Gensyn/Qwen2.5-0.5B-Instruct | 0.4050 | 0.4456 | V1 |
-| Qwen/Qwen2.5-Coder-0.5B-Instruct | 0.3285 | 0.3573 | V1 |
-| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | 0.3458 | 0.3590 | V1 |
+| Qwen/Qwen2.5-Coder-1.5B-Instruct | 0.4517 | 0.4566 | V1 |
+| Qwen/Qwen2.5-0.5B-Instruct | 0.4715 | 0.4723 | V1 |
+| Gensyn/Qwen2.5-0.5B-Instruct | 0.4715 | 0.4723 | V1 |
+| Qwen/Qwen2.5-Coder-0.5B-Instruct | 0.3931 | 0.3880 | V2 |
+| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | 0.3647 | 0.3140 | V2 |
 
-**V1 wins: 5 | V2 wins: 0 | Ties: 0**
+**V1 wins: 3 | V2 wins: 2 | Ties: 0**
 
 ## Selection economics (per test model, averaged)
 
 | Run | Budget | Cost paid | n picked | Gain total | Final val loss | Sel. time |
 | --- | --- | --- | --- | --- | --- | --- |
-| v1_facility | 4.0 | 1.6 | 1.6 | 0.044 | 0.0151 | 0.04s |
-| v2_direct | 4.0 | 2.6 | 2.6 | 0.003 | 0.0138 | 0.12s |
-| v3_gradmatch | 4.0 | 4.0 | 4.0 | 0.000 | 0.0143 | 0.06s |
+| v1_facility | 4.0 | 1.2 | 1.2 | 0.059 | 0.0160 | 0.04s |
+| v2_direct | 4.0 | 2.4 | 2.4 | 0.003 | 0.0162 | 0.19s |
+| v3_gradmatch | 4.0 | 4.0 | 4.0 | 0.000 | 0.0164 | 0.07s |
 
 ## Most-picked training models (across all test models)
 
@@ -43,33 +43,26 @@
 
 | Source training model | Times picked |
 | --- | --- |
-| Qwen/Qwen2.5-Coder-1.5B | 3 |
-| Qwen/Qwen2-0.5B | 3 |
-| stabilityai/stablelm-2-zephyr-1_6b | 1 |
-| Qwen/Qwen2.5-1.5B | 1 |
+| Qwen/Qwen2.5-Coder-1.5B | 4 |
+| stabilityai/stablelm-2-zephyr-1_6b | 2 |
 
 ### v2_direct
 
 | Source training model | Times picked |
 | --- | --- |
-| Qwen/Qwen2.5-1.5B | 4 |
-| stabilityai/stablelm-2-zephyr-1_6b | 3 |
-| Qwen/Qwen2-0.5B | 2 |
-| TinyLlama/TinyLlama_v1.1 | 2 |
-| HuggingFaceTB/SmolLM-1.7B | 1 |
-| deepseek-ai/deepseek-coder-1.3b-base | 1 |
+| stabilityai/stablelm-2-zephyr-1_6b | 5 |
+| TinyLlama/TinyLlama_v1.1 | 3 |
+| Qwen/Qwen2.5-1.5B | 2 |
+| HuggingFaceTB/SmolLM-1.7B | 2 |
 
 ### v3_gradmatch
 
 | Source training model | Times picked |
 | --- | --- |
+| Qwen/Qwen2.5-Coder-1.5B | 5 |
 | Qwen/Qwen2.5-1.5B | 5 |
-| Qwen/Qwen2.5-Coder-1.5B | 4 |
-| stabilityai/stablelm-2-zephyr-1_6b | 4 |
-| Qwen/Qwen2-0.5B | 3 |
-| TinyLlama/TinyLlama_v1.1 | 2 |
-| HuggingFaceTB/SmolLM-1.7B | 1 |
-| deepseek-ai/deepseek-coder-1.3b-base | 1 |
+| stabilityai/stablelm-2-zephyr-1_6b | 5 |
+| TinyLlama/TinyLlama_v1.1 | 5 |
 
 
 Full comparison written to outputs/comparison.json

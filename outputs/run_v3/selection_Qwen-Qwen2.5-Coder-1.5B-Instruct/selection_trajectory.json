@@ -13,9 +13,9 @@
         {
           "pool_index": 0,
           "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
-          "inner_product_score": 0.0022600237280130386,
-          "weight": 0.018960338085889816,
-          "residual_norm_after": 0.0028796580154448748,
+          "inner_product_score": -0.01273171603679657,
+          "weight": -0.09886565059423447,
+          "residual_norm_after": 0.0006534790154546499,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -25,19 +25,19 @@
       "round_cost_paid": 1.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.10078808665275574,
-        "min": 0.0703967958688736,
-        "max": 0.16119526326656342,
-        "n": 3
+        "mean": 0.1061544120311737,
+        "min": 0.07336721569299698,
+        "max": 0.14108827710151672,
+        "n": 4
       },
-      "val_loss_before": 0.013488801196217537,
-      "val_loss_after": 0.01596948131918907,
-      "elapsed_seconds": 0.10128140449523926,
+      "val_loss_before": 0.011722736060619354,
+      "val_loss_after": 0.019467152655124664,
+      "elapsed_seconds": 0.0952918529510498,
       "timings": {
-        "adapt_seconds": 0.021143436431884766,
-        "embed_seconds": 0.00040841102600097656,
-        "influence_seconds": 0.017191648483276367,
-        "greedy_seconds": 0.04670453071594238
+        "adapt_seconds": 0.020898103713989258,
+        "embed_seconds": 0.0004582405090332031,
+        "influence_seconds": 0.01730489730834961,
+        "greedy_seconds": 0.04120135307312012
       }
     },
     {
@@ -51,11 +51,11 @@
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 2,
           "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
-          "inner_product_score": -0.01840773969888687,
-          "weight": -0.20589493215084076,
-          "residual_norm_after": 0.00208620959892869,
+          "inner_product_score": -0.033926285803318024,
+          "weight": -0.43513497710227966,
+          "residual_norm_after": 0.00778671819716692,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -65,19 +65,19 @@
       "round_cost_paid": 1.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.1526225507259369,
-        "min": 0.13598406314849854,
-        "max": 0.16212806105613708,
-        "n": 3
+        "mean": 0.16930632293224335,
+        "min": 0.09338696300983429,
+        "max": 0.2105657309293747,
+        "n": 4
       },
-      "val_loss_before": 0.015911873430013657,
-      "val_loss_after": 0.017422854900360107,
-      "elapsed_seconds": 0.013929367065429688,
+      "val_loss_before": 0.019847914576530457,
+      "val_loss_after": 0.022516116499900818,
+      "elapsed_seconds": 0.019623994827270508,
       "timings": {
-        "adapt_seconds": 0.0048770904541015625,
-        "embed_seconds": 0.00029754638671875,
-        "influence_seconds": 0.0009288787841796875,
-        "greedy_seconds": 0.002279520034790039
+        "adapt_seconds": 0.0066106319427490234,
+        "embed_seconds": 0.0003948211669921875,
+        "influence_seconds": 0.0015676021575927734,
+        "greedy_seconds": 0.0037119388580322266
       }
     },
     {
@@ -93,11 +93,11 @@
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 3,
           "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
-          "inner_product_score": 0.01732134073972702,
-          "weight": 0.393291175365448,
-          "residual_norm_after": 0.0027159815654158592,
+          "inner_product_score": 0.039580442011356354,
+          "weight": 0.5643686056137085,
+          "residual_norm_after": 0.0052038501016795635,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -106,9 +106,9 @@
         {
           "pool_index": 0,
           "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
-          "inner_product_score": 0.000318550446536392,
-          "weight": 0.18852147459983826,
-          "residual_norm_after": 0.0024780621752142906,
+          "inner_product_score": 0.00044859046465717256,
+          "weight": 0.24612514674663544,
+          "residual_norm_after": 0.006722692400217056,
           "cost": 1.0,
           "cumulative_cost_in_round": 2.0,
           "rank_in_round": 1,
@@ -118,22 +118,22 @@
       "round_cost_paid": 2.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.1664557307958603,
-        "min": 0.12433319538831711,
-        "max": 0.19028149545192719,
-        "n": 3
+        "mean": 0.1883334368467331,
+        "min": 0.07523326575756073,
+        "max": 0.2458227276802063,
+        "n": 4
       },
-      "val_loss_before": 0.01750808395445347,
-      "val_loss_after": 0.014380326494574547,
-      "elapsed_seconds": 0.013292789459228516,
+      "val_loss_before": 0.023458022624254227,
+      "val_loss_after": 0.016357693821191788,
+      "elapsed_seconds": 0.019139528274536133,
       "timings": {
-        "adapt_seconds": 0.00475311279296875,
-        "embed_seconds": 0.00024509429931640625,
-        "influence_seconds": 0.000881195068359375,
-        "greedy_seconds": 0.002027273178100586
+        "adapt_seconds": 0.0064945220947265625,
+        "embed_seconds": 0.0002961158752441406,
+        "influence_seconds": 0.0015158653259277344,
+        "greedy_seconds": 0.003660917282104492
       }
     }
   ],
-  "tau": 0.18852612376213074,
+  "tau": 0.142843097448349,
   "method": "v3_gradmatch"
 }

@@ -11,34 +11,34 @@
       ],
       "picks": [
         {
-          "pool_index": 3,
+          "pool_index": 5,
           "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
-          "marginal_gain": 0.019092228263616562,
+          "marginal_gain": 0.03876543790102005,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "max_sim_to_VT": 0.7333912253379822,
-          "mean_sim_to_VT": 0.3179621696472168,
+          "max_sim_to_VT": 0.7497754693031311,
+          "mean_sim_to_VT": 0.3708326816558838,
           "most_influential_v_index": 1,
           "rank_in_round": 0,
           "source_model": "stabilityai/stablelm-2-zephyr-1_6b"
         }
       ],
       "round_cost_paid": 1.0,
-      "round_gain_total": 0.019092228263616562,
+      "round_gain_total": 0.03876543790102005,
       "influence_stats": {
-        "mean": 0.10134202241897583,
-        "min": 0.08293543010950089,
-        "max": 0.13746444880962372,
-        "n": 3
+        "mean": 0.10062205791473389,
+        "min": 0.06617556512355804,
+        "max": 0.14141184091567993,
+        "n": 4
       },
-      "val_loss_before": 0.01352382730692625,
-      "val_loss_after": 0.013545803725719452,
-      "elapsed_seconds": 0.05604410171508789,
+      "val_loss_before": 0.011080095544457436,
+      "val_loss_after": 0.011117213405668736,
+      "elapsed_seconds": 0.05756211280822754,
       "timings": {
-        "adapt_seconds": 0.017763614654541016,
-        "embed_seconds": 0.0003464221954345703,
-        "influence_seconds": 0.014513492584228516,
-        "greedy_seconds": 0.010043621063232422
+        "adapt_seconds": 0.018012285232543945,
+        "embed_seconds": 0.0004031658172607422,
+        "influence_seconds": 0.014721870422363281,
+        "greedy_seconds": 0.009967803955078125
       }
     },
     {
@@ -50,19 +50,19 @@
       "round_cost_paid": 0.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.10031652450561523,
-        "min": 0.08118277043104172,
-        "max": 0.1379505693912506,
-        "n": 3
+        "mean": 0.09983652830123901,
+        "min": 0.0650530681014061,
+        "max": 0.14184360206127167,
+        "n": 4
       },
-      "val_loss_before": 0.013497519306838512,
-      "val_loss_after": 0.013515092432498932,
-      "elapsed_seconds": 0.010074853897094727,
+      "val_loss_before": 0.011030381545424461,
+      "val_loss_after": 0.010905468836426735,
+      "elapsed_seconds": 0.010766267776489258,
       "timings": {
-        "adapt_seconds": 0.004221677780151367,
-        "embed_seconds": 0.00025177001953125,
-        "influence_seconds": 0.0008275508880615234,
-        "greedy_seconds": 0.0001354217529296875
+        "adapt_seconds": 0.004337787628173828,
+        "embed_seconds": 0.00034117698669433594,
+        "influence_seconds": 0.0010864734649658203,
+        "greedy_seconds": 0.00022101402282714844
       }
     },
     {
@@ -74,22 +74,22 @@
       "round_cost_paid": 0.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.1017628163099289,
-        "min": 0.08367329835891724,
-        "max": 0.1372942328453064,
-        "n": 3
+        "mean": 0.10097204148769379,
+        "min": 0.06664527952671051,
+        "max": 0.14128044247627258,
+        "n": 4
       },
-      "val_loss_before": 0.013537835329771042,
-      "val_loss_after": 0.01351320743560791,
-      "elapsed_seconds": 0.00986933708190918,
+      "val_loss_before": 0.011102740652859211,
+      "val_loss_after": 0.011042243801057339,
+      "elapsed_seconds": 0.010517120361328125,
       "timings": {
-        "adapt_seconds": 0.004134416580200195,
-        "embed_seconds": 0.00022125244140625,
-        "influence_seconds": 0.0007812976837158203,
-        "greedy_seconds": 0.00011396408081054688
+        "adapt_seconds": 0.004171609878540039,
+        "embed_seconds": 0.0002548694610595703,
+        "influence_seconds": 0.0010190010070800781,
+        "greedy_seconds": 0.0001697540283203125
       }
     }
   ],
-  "tau": 0.1447964906692505,
+  "tau": 0.22762209177017212,
   "method": "v1_facility"
 }

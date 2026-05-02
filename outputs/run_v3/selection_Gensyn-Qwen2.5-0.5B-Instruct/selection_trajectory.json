@@ -11,11 +11,11 @@
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 0,
           "candidate_key": "Qwen/Qwen2.5-Coder-1.5B::train_support",
-          "inner_product_score": 0.003700314089655876,
-          "weight": 0.032787516713142395,
-          "residual_norm_after": 0.003073750762268901,
+          "inner_product_score": -0.009853473864495754,
+          "weight": -0.079649917781353,
+          "residual_norm_after": 0.000784574483986944,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -25,19 +25,19 @@
       "round_cost_paid": 1.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.09643301367759705,
-        "min": 0.06343453377485275,
-        "max": 0.16141459345817566,
-        "n": 3
+        "mean": 0.10014667361974716,
+        "min": 0.06493150442838669,
+        "max": 0.14408047497272491,
+        "n": 4
       },
-      "val_loss_before": 0.013593096286058426,
-      "val_loss_after": 0.015561792999505997,
-      "elapsed_seconds": 0.012984514236450195,
+      "val_loss_before": 0.011320039629936218,
+      "val_loss_after": 0.018648207187652588,
+      "elapsed_seconds": 0.0175018310546875,
       "timings": {
-        "adapt_seconds": 0.004638671875,
-        "embed_seconds": 0.00024509429931640625,
-        "influence_seconds": 0.0008265972137451172,
-        "greedy_seconds": 0.002082347869873047
+        "adapt_seconds": 0.005945920944213867,
+        "embed_seconds": 0.00027632713317871094,
+        "influence_seconds": 0.0013649463653564453,
+        "greedy_seconds": 0.003455638885498047
       }
     },
     {
@@ -51,11 +51,11 @@
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 2,
           "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
-          "inner_product_score": -0.016400974243879318,
-          "weight": -0.18655197322368622,
-          "residual_norm_after": 0.0016638312954455614,
+          "inner_product_score": -0.03194234147667885,
+          "weight": -0.4093605875968933,
+          "residual_norm_after": 0.007261359598487616,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -65,19 +65,19 @@
       "round_cost_paid": 1.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.14849349856376648,
-        "min": 0.13924141228199005,
-        "max": 0.154027059674263,
-        "n": 3
+        "mean": 0.16439005732536316,
+        "min": 0.0979979857802391,
+        "max": 0.201739102602005,
+        "n": 4
       },
-      "val_loss_before": 0.015506829135119915,
-      "val_loss_after": 0.017047882080078125,
-      "elapsed_seconds": 0.012517929077148438,
+      "val_loss_before": 0.018991926684975624,
+      "val_loss_after": 0.021834846585989,
+      "elapsed_seconds": 0.017194032669067383,
       "timings": {
-        "adapt_seconds": 0.00446009635925293,
-        "embed_seconds": 0.00023603439331054688,
-        "influence_seconds": 0.0008308887481689453,
-        "greedy_seconds": 0.0018758773803710938
+        "adapt_seconds": 0.0058612823486328125,
+        "embed_seconds": 0.0002803802490234375,
+        "influence_seconds": 0.001344919204711914,
+        "greedy_seconds": 0.003177165985107422
       }
     },
     {
@@ -85,19 +85,19 @@
       "round_budget": 2,
       "selected_keys": [
         "stabilityai/stablelm-2-zephyr-1_6b::train_support",
-        "Qwen/Qwen2-0.5B::train_support"
+        "TinyLlama/TinyLlama_v1.1::train_support"
       ],
       "selected_source_models": [
         "stabilityai/stablelm-2-zephyr-1_6b",
-        "Qwen/Qwen2-0.5B"
+        "TinyLlama/TinyLlama_v1.1"
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 3,
           "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
-          "inner_product_score": 0.015766387805342674,
-          "weight": 0.381094366312027,
-          "residual_norm_after": 0.0026346156373620033,
+          "inner_product_score": 0.037117600440979004,
+          "weight": 0.5574384331703186,
+          "residual_norm_after": 0.00503615103662014,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
           "rank_in_round": 0,
@@ -105,35 +105,35 @@
         },
         {
           "pool_index": 0,
-          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
-          "inner_product_score": 0.0002687363885343075,
-          "weight": 0.17932941019535065,
-          "residual_norm_after": 0.002074057934805751,
+          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
+          "inner_product_score": 0.00044256445835344493,
+          "weight": 0.24478444457054138,
+          "residual_norm_after": 0.006458029616624117,
           "cost": 1.0,
           "cumulative_cost_in_round": 2.0,
           "rank_in_round": 1,
-          "source_model": "Qwen/Qwen2-0.5B"
+          "source_model": "TinyLlama/TinyLlama_v1.1"
         }
       ],
       "round_cost_paid": 2.0,
       "round_gain_total": 0.0,
       "influence_stats": {
-        "mean": 0.1633242666721344,
-        "min": 0.12717974185943604,
-        "max": 0.1838294416666031,
-        "n": 3
+        "mean": 0.18460199236869812,
+        "min": 0.07898622751235962,
+        "max": 0.2388911098241806,
+        "n": 4
       },
-      "val_loss_before": 0.017116200178861618,
-      "val_loss_after": 0.014339897781610489,
-      "elapsed_seconds": 0.012964487075805664,
+      "val_loss_before": 0.022707916796207428,
+      "val_loss_after": 0.016105301678180695,
+      "elapsed_seconds": 0.016729354858398438,
       "timings": {
-        "adapt_seconds": 0.004904270172119141,
-        "embed_seconds": 0.0002338886260986328,
-        "influence_seconds": 0.0008244514465332031,
-        "greedy_seconds": 0.0019104480743408203
+        "adapt_seconds": 0.005663633346557617,
+        "embed_seconds": 0.0002675056457519531,
+        "influence_seconds": 0.0013120174407958984,
+        "greedy_seconds": 0.003075122833251953
       }
     }
   ],
-  "tau": 0.3174978196620941,
+  "tau": 0.24298350512981415,
   "method": "v3_gradmatch"
 }

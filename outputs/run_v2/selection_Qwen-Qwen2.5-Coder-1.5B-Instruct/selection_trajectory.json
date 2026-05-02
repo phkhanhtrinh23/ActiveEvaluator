@@ -4,63 +4,6 @@
       "round": 0,
       "round_budget": 2,
       "selected_keys": [
-        "Qwen/Qwen2.5-1.5B::train_support",
-        "TinyLlama/TinyLlama_v1.1::train_support"
-      ],
-      "selected_source_models": [
-        "Qwen/Qwen2.5-1.5B",
-        "TinyLlama/TinyLlama_v1.1"
-      ],
-      "picks": [
-        {
-          "pool_index": 2,
-          "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
-          "loss_before": 0.01508423499763012,
-          "loss_after": 0.013641664758324623,
-          "loss_reduction": 0.0014425702393054962,
-          "marginal_gain": 0.0014425702393054962,
-          "cost": 1.0,
-          "cumulative_cost_in_round": 1.0,
-          "n_candidates_evaluated": 4,
-          "rank_in_round": 0,
-          "source_model": "Qwen/Qwen2.5-1.5B"
-        },
-        {
-          "pool_index": 1,
-          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
-          "loss_before": 0.013641664758324623,
-          "loss_after": 0.013514022342860699,
-          "loss_reduction": 0.0001276424154639244,
-          "marginal_gain": 0.0001276424154639244,
-          "cost": 1.0,
-          "cumulative_cost_in_round": 2.0,
-          "n_candidates_evaluated": 3,
-          "rank_in_round": 1,
-          "source_model": "TinyLlama/TinyLlama_v1.1"
-        }
-      ],
-      "round_cost_paid": 2.0,
-      "round_gain_total": 0.0015702126547694206,
-      "influence_stats": {
-        "mean": 0.07089244574308395,
-        "min": 0.0302128829061985,
-        "max": 0.1475038081407547,
-        "n": 3
-      },
-      "val_loss_before": 0.014918671920895576,
-      "val_loss_after": 0.01445507537573576,
-      "elapsed_seconds": 0.11018133163452148,
-      "timings": {
-        "adapt_seconds": 0.020322799682617188,
-        "embed_seconds": 0.0003409385681152344,
-        "influence_seconds": 0.014332294464111328,
-        "greedy_seconds": 0.06540679931640625
-      }
-    },
-    {
-      "round": 1,
-      "round_budget": 2,
-      "selected_keys": [
         "stabilityai/stablelm-2-zephyr-1_6b::train_support"
       ],
       "selected_source_models": [
@@ -68,38 +11,62 @@
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 5,
           "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
-          "loss_before": 0.0159959364682436,
-          "loss_after": 0.014165109023451805,
-          "loss_reduction": 0.0018308274447917938,
-          "marginal_gain": 0.0018308274447917938,
+          "loss_before": 0.009030119515955448,
+          "loss_after": 0.009026396088302135,
+          "loss_reduction": 3.723427653312683e-06,
+          "marginal_gain": 3.723427653312683e-06,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "n_candidates_evaluated": 2,
+          "n_candidates_evaluated": 6,
           "rank_in_round": 0,
           "source_model": "stabilityai/stablelm-2-zephyr-1_6b"
         }
       ],
       "round_cost_paid": 1.0,
-      "round_gain_total": 0.0018308274447917938,
+      "round_gain_total": 3.723427653312683e-06,
       "influence_stats": {
-        "mean": 0.14180251955986023,
-        "min": 0.12762267887592316,
-        "max": 0.15091991424560547,
-        "n": 3
+        "mean": 0.08400435000658035,
+        "min": 0.04943874105811119,
+        "max": 0.13098476827144623,
+        "n": 4
       },
-      "val_loss_before": 0.01588626764714718,
-      "val_loss_after": 0.013844192028045654,
-      "elapsed_seconds": 0.05032849311828613,
+      "val_loss_before": 0.00940917618572712,
+      "val_loss_after": 0.013895869255065918,
+      "elapsed_seconds": 0.1609501838684082,
       "timings": {
-        "adapt_seconds": 0.009335041046142578,
-        "embed_seconds": 0.0002422332763671875,
-        "influence_seconds": 0.0010249614715576172,
-        "greedy_seconds": 0.029421567916870117
+        "adapt_seconds": 0.02941107749938965,
+        "embed_seconds": 0.00039196014404296875,
+        "influence_seconds": 0.014887332916259766,
+        "greedy_seconds": 0.10840940475463867
+      }
+    },
+    {
+      "round": 1,
+      "round_budget": 2,
+      "selected_keys": [],
+      "selected_source_models": [],
+      "picks": [],
+      "round_cost_paid": 0.0,
+      "round_gain_total": 0.0,
+      "influence_stats": {
+        "mean": 0.08016052842140198,
+        "min": 0.04360667243599892,
+        "max": 0.13463135063648224,
+        "n": 4
+      },
+      "val_loss_before": 0.009210679680109024,
+      "val_loss_after": 0.013792157173156738,
+      "elapsed_seconds": 0.048178911209106445,
+      "timings": {
+        "adapt_seconds": 0.00716090202331543,
+        "embed_seconds": 0.00031566619873046875,
+        "influence_seconds": 0.0010952949523925781,
+        "greedy_seconds": 0.032140493392944336
       }
     }
   ],
-  "tau": 0.17405138909816742,
+  "tau": 0.33643361926078796,
   "method": "v2_direct"
 }

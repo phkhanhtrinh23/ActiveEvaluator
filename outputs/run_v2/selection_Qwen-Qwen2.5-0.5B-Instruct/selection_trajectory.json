@@ -5,101 +5,116 @@
       "round_budget": 2,
       "selected_keys": [
         "Qwen/Qwen2.5-1.5B::train_support",
-        "Qwen/Qwen2-0.5B::train_support"
+        "TinyLlama/TinyLlama_v1.1::train_support"
       ],
       "selected_source_models": [
         "Qwen/Qwen2.5-1.5B",
-        "Qwen/Qwen2-0.5B"
+        "TinyLlama/TinyLlama_v1.1"
       ],
       "picks": [
         {
-          "pool_index": 2,
+          "pool_index": 3,
           "candidate_key": "Qwen/Qwen2.5-1.5B::train_support",
-          "loss_before": 0.01618947833776474,
-          "loss_after": 0.013680541887879372,
-          "loss_reduction": 0.0025089364498853683,
-          "marginal_gain": 0.0025089364498853683,
+          "loss_before": 0.009482355788350105,
+          "loss_after": 0.009139342233538628,
+          "loss_reduction": 0.00034301355481147766,
+          "marginal_gain": 0.00034301355481147766,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "n_candidates_evaluated": 4,
+          "n_candidates_evaluated": 6,
           "rank_in_round": 0,
           "source_model": "Qwen/Qwen2.5-1.5B"
         },
         {
-          "pool_index": 0,
-          "candidate_key": "Qwen/Qwen2-0.5B::train_support",
-          "loss_before": 0.013680541887879372,
-          "loss_after": 0.013549735769629478,
-          "loss_reduction": 0.0001308061182498932,
-          "marginal_gain": 0.0001308061182498932,
+          "pool_index": 1,
+          "candidate_key": "TinyLlama/TinyLlama_v1.1::train_support",
+          "loss_before": 0.009139342233538628,
+          "loss_after": 0.009128895588219166,
+          "loss_reduction": 1.0446645319461823e-05,
+          "marginal_gain": 1.0446645319461823e-05,
           "cost": 1.0,
           "cumulative_cost_in_round": 2.0,
-          "n_candidates_evaluated": 3,
+          "n_candidates_evaluated": 5,
           "rank_in_round": 1,
-          "source_model": "Qwen/Qwen2-0.5B"
+          "source_model": "TinyLlama/TinyLlama_v1.1"
         }
       ],
       "round_cost_paid": 2.0,
-      "round_gain_total": 0.0026397425681352615,
+      "round_gain_total": 0.0003534602001309395,
       "influence_stats": {
-        "mean": 0.06244030222296715,
-        "min": 0.019468409940600395,
-        "max": 0.1417236477136612,
-        "n": 3
+        "mean": 0.06202942878007889,
+        "min": 0.017584718763828278,
+        "max": 0.14546635746955872,
+        "n": 4
       },
-      "val_loss_before": 0.015932422131299973,
-      "val_loss_after": 0.014298893511295319,
-      "elapsed_seconds": 0.07939577102661133,
+      "val_loss_before": 0.009263920597732067,
+      "val_loss_after": 0.022103652358055115,
+      "elapsed_seconds": 0.07406473159790039,
       "timings": {
-        "adapt_seconds": 0.009346723556518555,
-        "embed_seconds": 0.00023651123046875,
-        "influence_seconds": 0.0010232925415039062,
-        "greedy_seconds": 0.059316396713256836
+        "adapt_seconds": 0.011441469192504883,
+        "embed_seconds": 0.0003070831298828125,
+        "influence_seconds": 0.001245737075805664,
+        "greedy_seconds": 0.05115866661071777
       }
     },
     {
       "round": 1,
       "round_budget": 2,
       "selected_keys": [
-        "stabilityai/stablelm-2-zephyr-1_6b::train_support"
+        "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+        "HuggingFaceTB/SmolLM-1.7B::train_support"
       ],
       "selected_source_models": [
-        "stabilityai/stablelm-2-zephyr-1_6b"
+        "stabilityai/stablelm-2-zephyr-1_6b",
+        "HuggingFaceTB/SmolLM-1.7B"
       ],
       "picks": [
         {
-          "pool_index": 1,
+          "pool_index": 3,
           "candidate_key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
-          "loss_before": 0.015865813940763474,
-          "loss_after": 0.014078243635594845,
-          "loss_reduction": 0.0017875703051686287,
-          "marginal_gain": 0.0017875703051686287,
+          "loss_before": 0.017909888178110123,
+          "loss_after": 0.012988840229809284,
+          "loss_reduction": 0.0049210479483008385,
+          "marginal_gain": 0.0049210479483008385,
           "cost": 1.0,
           "cumulative_cost_in_round": 1.0,
-          "n_candidates_evaluated": 2,
+          "n_candidates_evaluated": 4,
           "rank_in_round": 0,
           "source_model": "stabilityai/stablelm-2-zephyr-1_6b"
+        },
+        {
+          "pool_index": 2,
+          "candidate_key": "HuggingFaceTB/SmolLM-1.7B::train_support",
+          "loss_before": 0.012988840229809284,
+          "loss_after": 0.012287777848541737,
+          "loss_reduction": 0.0007010623812675476,
+          "marginal_gain": 0.0007010623812675476,
+          "cost": 1.0,
+          "cumulative_cost_in_round": 2.0,
+          "n_candidates_evaluated": 3,
+          "rank_in_round": 1,
+          "source_model": "HuggingFaceTB/SmolLM-1.7B"
         }
       ],
-      "round_cost_paid": 1.0,
-      "round_gain_total": 0.0017875703051686287,
+      "round_cost_paid": 2.0,
+      "round_gain_total": 0.005622110329568386,
       "influence_stats": {
-        "mean": 0.14119639992713928,
-        "min": 0.1287243813276291,
-        "max": 0.15000389516353607,
-        "n": 3
+        "mean": 0.13673746585845947,
+        "min": 0.0636729896068573,
+        "max": 0.20396533608436584,
+        "n": 4
       },
-      "val_loss_before": 0.015830740332603455,
-      "val_loss_after": 0.01378848310559988,
-      "elapsed_seconds": 0.04476332664489746,
+      "val_loss_before": 0.018082452937960625,
+      "val_loss_after": 0.01870572380721569,
+      "elapsed_seconds": 0.09749221801757812,
       "timings": {
-        "adapt_seconds": 0.009536027908325195,
-        "embed_seconds": 0.00023174285888671875,
-        "influence_seconds": 0.0010409355163574219,
-        "greedy_seconds": 0.024404287338256836
+        "adapt_seconds": 0.009408950805664062,
+        "embed_seconds": 0.0002560615539550781,
+        "influence_seconds": 0.0012748241424560547,
+        "greedy_seconds": 0.07705092430114746
       }
     }
   ],
-  "tau": 0.2884707450866699,
+  "tau": 0.5997593402862549,
   "method": "v2_direct"
 }

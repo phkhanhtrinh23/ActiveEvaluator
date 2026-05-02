@@ -18,7 +18,7 @@ python -m active_evaluator.pipeline \
   --selection-n-rounds 2 \
   --selection-budget-absolute 4 \
   --selection-narrowing-quantile 0.0 \
-  --selection-pool-narrow-quantile 0.5 \
+  --selection-pool-narrow-quantile 0.0 \
   --selection-K-steps 25 \
   --selection-max-candidates-evaluated 8 \
   --selection-weight-decay 1e-2 \

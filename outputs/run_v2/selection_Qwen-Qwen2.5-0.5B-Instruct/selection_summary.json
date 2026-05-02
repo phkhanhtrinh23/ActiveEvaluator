@@ -1,22 +1,23 @@
 {
   "method": "v2_direct",
-  "tau": 0.2884707450866699,
+  "tau": 0.5997593402862549,
   "cost_fn_name": "cardinality",
   "budget_total": 4,
-  "cost_paid_total": 3.0,
-  "cost_remaining": 1.0,
-  "gain_total": 0.00442731287330389,
-  "n_selected": 3,
-  "pool_size": 4,
-  "val_size": 3,
-  "val_VT_size": 3,
-  "final_val_loss": 0.01378848310559988,
-  "total_selection_seconds": 0.12415909767150879,
+  "cost_paid_total": 4.0,
+  "cost_remaining": 0.0,
+  "gain_total": 0.0059755705296993256,
+  "n_selected": 4,
+  "pool_size": 6,
+  "val_size": 4,
+  "val_VT_size": 4,
+  "final_val_loss": 0.01870572380721569,
+  "total_selection_seconds": 0.17155694961547852,
   "n_rounds_executed": 2,
   "source_models_chosen": [
     "Qwen/Qwen2.5-1.5B",
-    "Qwen/Qwen2-0.5B",
-    "stabilityai/stablelm-2-zephyr-1_6b"
+    "TinyLlama/TinyLlama_v1.1",
+    "stabilityai/stablelm-2-zephyr-1_6b",
+    "HuggingFaceTB/SmolLM-1.7B"
   ],
   "rationale": "V2 picks maximize per-cost reduction in validation loss after K-step adaptation on S_0 \u222a S \u222a {candidate}. Candidates are pre-filtered by V1 ranking (FASS) and only the top-N are K-step-evaluated. Cost is c(s)=1 by default."
 }

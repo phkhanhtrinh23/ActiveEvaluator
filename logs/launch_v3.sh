@@ -17,7 +17,7 @@ python -m active_evaluator.pipeline \
   --selection-n-rounds 3 \
   --selection-budget-absolute 4 \
   --selection-narrowing-quantile 0.0 \
-  --selection-pool-narrow-quantile 0.5 \
+  --selection-pool-narrow-quantile 0.0 \
   --selection-K-steps 15 \
   --selection-gradmatch-lambda 1e-3 \
   --model-ids \

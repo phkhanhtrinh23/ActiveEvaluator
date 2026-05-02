@@ -1,19 +1,14 @@
 {
   "V": {
-    "n_val": 3,
-    "n_val_narrowed": 3,
+    "n_val": 4,
+    "n_val_narrowed": 4,
     "quantile_q": 0.0,
-    "rho_threshold": 0.2953294515609741,
-    "rho_mean": 0.4305269718170166,
-    "rho_min": 0.2953294515609741,
-    "rho_max": 0.5026819109916687
+    "rho_threshold": 0.26321685314178467,
+    "rho_mean": 0.5717160701751709,
+    "rho_min": 0.26321685314178467,
+    "rho_max": 0.9805608987808228
   },
   "pool": {
-    "applied": true,
-    "pool_size_before": 7,
-    "pool_size_after": 4,
-    "quantile_q": 0.5,
-    "rho_threshold": 0.06280851364135742,
-    "rho_mean": 0.3455103933811188
+    "applied": false
   }
 }

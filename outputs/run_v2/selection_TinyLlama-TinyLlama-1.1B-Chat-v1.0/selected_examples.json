@@ -1,34 +1,13 @@
 {
   "selected": [
     {
-      "key": "Qwen/Qwen2.5-1.5B::train_support",
-      "source_model": "Qwen/Qwen2.5-1.5B",
-      "true_label": 0.38333332538604736,
-      "cost": 1.0
-    },
-    {
-      "key": "TinyLlama/TinyLlama_v1.1::train_support",
-      "source_model": "TinyLlama/TinyLlama_v1.1",
-      "true_label": 0.0,
-      "cost": 1.0
-    },
-    {
-      "key": "HuggingFaceTB/SmolLM-1.7B::train_support",
-      "source_model": "HuggingFaceTB/SmolLM-1.7B",
-      "true_label": 0.0,
-      "cost": 1.0
-    },
-    {
-      "key": "deepseek-ai/deepseek-coder-1.3b-base::train_support",
-      "source_model": "deepseek-ai/deepseek-coder-1.3b-base",
+      "key": "stabilityai/stablelm-2-zephyr-1_6b::train_support",
+      "source_model": "stabilityai/stablelm-2-zephyr-1_6b",
       "true_label": 0.0,
       "cost": 1.0
     }
   ],
   "selected_keys": [
-    "Qwen/Qwen2.5-1.5B::train_support",
-    "TinyLlama/TinyLlama_v1.1::train_support",
-    "HuggingFaceTB/SmolLM-1.7B::train_support",
-    "deepseek-ai/deepseek-coder-1.3b-base::train_support"
+    "stabilityai/stablelm-2-zephyr-1_6b::train_support"
   ]
 }
