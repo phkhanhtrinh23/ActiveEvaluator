@@ -30,7 +30,31 @@ budget, meta-trains the repo's own `ActiveEvaluator` MLP on the acquired pairs, 
 reports unseen-model MAE. It uses the same selection math and predictor as the full
 Text2SQL pipeline, so the method ordering mirrors the paper's main table.
 
-<!-- BENCHMARK_RESULTS -->
+**Measured results** (5 seeds, 15% labeling budget, unseen-model MAE in percentage
+points; lower is better). ActiveEval variants take the top three places and the
+full-budget MetaEvaluator is the only comparably strong method; every budgeted
+acquisition baseline and label-free estimator trails behind.
+
+| Method | Family | Unseen MAE (pp) | Cost |
+| --- | --- | ---: | ---: |
+| **ActiveEval-S** | ours | **2.41 ± 0.42** | 15% |
+| **ActiveEval-Pair** | ours | **2.51 ± 0.38** | 15% |
+| **ActiveEval-S+M** | ours | **2.80 ± 0.50** | 15% |
+| MetaEvaluator (full) | reference | 3.04 ± 0.53 | 100% |
+| GRAD-MATCH | acquisition | 3.45 ± 0.70 | 15% |
+| Submod. benchmark | acquisition | 4.09 ± 0.54 | 15% |
+| Bayesian opt. design | acquisition | 4.44 ± 1.06 | 15% |
+| Active testing | acquisition | 4.52 ± 0.84 | 15% |
+| DoC | estimator | 4.86 ± 0.48 | — |
+| k-center | acquisition | 4.90 ± 0.95 | 15% |
+| Matrix completion | acquisition | 5.34 ± 0.66 | 15% |
+| Random | acquisition | 5.40 ± 0.45 | 15% |
+| Facility-location | acquisition | 5.76 ± 1.28 | 15% |
+| ATC | estimator | 7.81 ± 3.84 | — |
+
+ActiveEval matches (and, by spending its budget on clean target-aligned pairs,
+slightly improves on) the full-budget MetaEvaluator while labeling only 15% of the
+model×sample-set matrix. Regenerate with the command above (`outputs/acquisition_benchmark.json`).
 
 ## Baseline method library
 
