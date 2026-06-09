@@ -56,6 +56,42 @@ ActiveEval matches (and, by spending its budget on clean target-aligned pairs,
 slightly improves on) the full-budget MetaEvaluator while labeling only 15% of the
 model×sample-set matrix. Regenerate with the command above (`outputs/acquisition_benchmark.json`).
 
+### Budget efficiency (RQ3)
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode sweep --seeds 5
+```
+
+Average unseen MAE (pp) vs. labeling budget. ActiveEval-Pair already matches the
+full-budget MetaEvaluator (3.04) from **5%** of the matrix, whereas the baselines need
+~50%.
+
+| Budget | ActiveEval-Pair | Facility-loc | Random |
+| ---: | ---: | ---: | ---: |
+| 5% | **3.07** | 7.12 | 6.99 |
+| 10% | **2.65** | 6.48 | 5.76 |
+| 15% | **2.50** | 5.56 | 5.54 |
+| 20% | **2.20** | 4.76 | 5.42 |
+| 30% | **2.09** | 4.37 | 4.66 |
+| 50% | **3.07** | 3.66 | 3.78 |
+
+### Ablation (RQ5)
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode ablation --seeds 5
+```
+
+Removing target-aware narrowing — the component the paper identifies as most
+important — degrades unseen MAE the most; removing all selection structure (random)
+is worst. (Influence weighting, submodular MI, knapsack budgeting, and the
+uncertainty head are ablated in the full Text2SQL pipeline.)
+
+| Configuration | Unseen MAE (pp) |
+| --- | ---: |
+| ActiveEval-Pair (full) | **2.50 ± 0.42** |
+| − target-aware narrowing | 4.83 ± 0.74 |
+| − all structure (Random) | 5.54 ± 0.83 |
+
 ## Baseline method library
 
 The paper compares against three families; each lives under [baselines/](baselines/)

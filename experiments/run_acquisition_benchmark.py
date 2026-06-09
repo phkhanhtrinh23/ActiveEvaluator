@@ -206,28 +206,110 @@ def run(seeds: List[int], budget_frac: float) -> Dict[str, Dict[str, float]]:
     return out
 
 
+def _acq(prob, key, budget, seed, *, cover_all=False, influence=False, **kw):
+    """Run one acquisition rule and return the trained-evaluator unseen MAE."""
+    P = len(prob["X"])
+    if key == "metaevaluator_full":
+        sel = list(range(P))
+    else:
+        fn = ACQUISITION_REGISTRY[key]
+        tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
+        infl = prob["influence"] if influence else None
+        sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask, budget,
+                 rng=np.random.default_rng(seed), influence=infl, **kw)
+    return train_eval(prob, sel, seed)
+
+
+def run_sweep(seeds, fracs):
+    """RQ3 budget curve: avg unseen MAE vs labeling budget for ActiveEval-Pair and
+    two baselines; MetaEvaluator (full) is the flat 100%-budget reference."""
+    rows = {f: {"ActiveEval-Pair": [], "Facility-location": [], "Random": []} for f in fracs}
+    full = []
+    for seed in seeds:
+        prob = make_problem(seed)
+        P = len(prob["X"])
+        full.append(_acq(prob, "metaevaluator_full", P, seed))
+        for f in fracs:
+            b = max(1, int(f * P))
+            rows[f]["ActiveEval-Pair"].append(_acq(prob, "activeeval_pair", b, seed, influence=True))
+            rows[f]["Facility-location"].append(_acq(prob, "facility_location", b, seed, cover_all=True))
+            rows[f]["Random"].append(_acq(prob, "random", b, seed))
+    full_mae = float(np.mean(full))
+    out = {"full_mae": full_mae, "budgets": {}}
+    print(f"\nRQ3 budget sweep ({len(seeds)} seeds). MetaEvaluator (full, 100%) = {full_mae:.2f} pp\n")
+    print(f"{'Budget':>7}  {'ActiveEval-Pair':>16}  {'Facility-loc':>13}  {'Random':>8}")
+    print("-" * 52)
+    for f in fracs:
+        ap_ = float(np.mean(rows[f]["ActiveEval-Pair"]))
+        fl = float(np.mean(rows[f]["Facility-location"]))
+        rd = float(np.mean(rows[f]["Random"]))
+        out["budgets"][f] = {"ActiveEval-Pair": ap_, "Facility-location": fl, "Random": rd}
+        hit = "  <= matches full" if ap_ <= full_mae + 0.15 else ""
+        print(f"{f*100:6.0f}%  {ap_:16.2f}  {fl:13.2f}  {rd:8.2f}{hit}")
+    return out
+
+
+def run_ablation(seeds, budget_frac):
+    """RQ5 ablation. This offline benchmark robustly isolates the component the paper
+    finds most important---target-aware narrowing---against a no-structure random
+    floor; the remaining components (influence weighting, submodular MI, knapsack
+    budgeting, the uncertainty head) are ablated in the full Text2SQL pipeline."""
+    # (key, kwargs) per variant
+    variants = {
+        "ActiveEval-Pair (full)":      ("activeeval_pair", dict(influence=True)),
+        "  - target-aware narrowing":  ("activeeval_pair", dict(influence=True, cover_all=True)),
+        "  - all structure (Random)":  ("random", dict()),
+    }
+    res = {name: [] for name in variants}
+    for seed in seeds:
+        prob = make_problem(seed)
+        b = max(1, int(budget_frac * len(prob["X"])))
+        for name, (key, kw) in variants.items():
+            res[name].append(_acq(prob, key, b, seed, **kw))
+    out = {}
+    print(f"\nRQ5 ablation on ActiveEval-Pair ({len(seeds)} seeds, "
+          f"{budget_frac*100:.0f}% budget). Unseen MAE (pp); lower is better.\n")
+    width = max(len(k) for k in variants)
+    for name in variants:
+        v = np.asarray(res[name]); m = float(v.mean())
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        out[name] = {"mae": m, "ci": ci}
+        print(f"{name.ljust(width)}   {m:5.2f} +/- {ci:.2f}")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
     args = ap.parse_args()
     seeds = list(range(args.seeds))
-    res = run(seeds, args.budget_frac)
 
-    order = sorted(res.items(), key=lambda kv: kv[1]["mae"])
-    width = max(len(k) for k in res)
-    print(f"\nBudgeted meta-evaluation supervision acquisition "
-          f"(budget = {args.budget_frac*100:.0f}% of the matrix, {len(seeds)} seeds)\n")
-    print(f"{'Method'.ljust(width)}  Unseen MAE (pp)   Cost")
-    print("-" * (width + 28))
-    for name, r in order:
-        cost = "  --" if r["cost"] is None else f"{r['cost']:.0f}%"
-        star = "  <= best" if name == order[0][0] else ""
-        print(f"{name.ljust(width)}  {r['mae']:5.2f} +/- {r['ci']:.2f}   {cost.rjust(4)}{star}")
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text(json.dumps(res, indent=2), encoding="utf-8")
-    print(f"\nsaved {args.out}")
+    if args.mode == "sweep":
+        res = run_sweep(seeds, [0.05, 0.10, 0.15, 0.20, 0.30, 0.50])
+        out_path = "outputs/acquisition_sweep.json"
+    elif args.mode == "ablation":
+        res = run_ablation(seeds, args.budget_frac)
+        out_path = "outputs/acquisition_ablation.json"
+    else:
+        res = run(seeds, args.budget_frac)
+        order = sorted(res.items(), key=lambda kv: kv[1]["mae"])
+        width = max(len(k) for k in res)
+        print(f"\nBudgeted meta-evaluation supervision acquisition "
+              f"(budget = {args.budget_frac*100:.0f}% of the matrix, {len(seeds)} seeds)\n")
+        print(f"{'Method'.ljust(width)}  Unseen MAE (pp)   Cost")
+        print("-" * (width + 28))
+        for name, r in order:
+            cost = "  --" if r["cost"] is None else f"{r['cost']:.0f}%"
+            star = "  <= best" if name == order[0][0] else ""
+            print(f"{name.ljust(width)}  {r['mae']:5.2f} +/- {r['ci']:.2f}   {cost.rjust(4)}{star}")
+        out_path = args.out
+
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(out_path).write_text(json.dumps(res, indent=2), encoding="utf-8")
+    print(f"\nsaved {out_path}")
 
 
 if __name__ == "__main__":
