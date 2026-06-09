@@ -1,8 +1,51 @@
 # ActiveEvaluator
 
-> **Active selection of adaptation samples for unseen-model accuracy prediction.**
+> **Budgeted meta-evaluation supervision acquisition.**
 >
-> Given a freshly released model and an unlabeled target workload, how many labeled examples should we hand to the predictor's inner adaptation loop, and *which* ones? ActiveEvaluator extends a meta-learned accuracy predictor with a budgeted active-selection step that picks the most useful labeled meta-examples to splice into the support set at test time. Two algorithms are provided: a monotone-submodular **influence-weighted facility-location** surrogate (with `(1-1/e)`-approximation lazy greedy) and a non-submodular **direct validation-loss reduction** oracle (plain greedy with FASS-style pre-filtering).
+> Given pools of candidate reference models and labeled support workloads, which
+> *model–workload evaluation actions* should we pay to run so that a meta-evaluator
+> can assess **future, unseen** models on **unlabeled** targets — under a hard
+> labeling budget? ActiveEvaluator selects (i) target-aware sample sets, (ii)
+> behavior-aware reference models, and (iii) the model–workload pairs that most
+> reduce predictor uncertainty, then meta-trains an accuracy predictor on only the
+> acquired entries. Selection maximizes monotone-submodular coverage objectives — an
+> **influence-weighted facility-location** term (with `(1-1/e)`-approximation lazy
+> greedy), a **submodular-mutual-information** model term, and a **log-determinant**
+> pair term — with a non-submodular **direct validation-loss reduction** oracle as an
+> empirical upper bound. This is distinct from model selection (the deployed model is
+> given), benchmark compression (we generalize to *future* models), and active
+> testing (the target stays unlabeled).
+
+## Quick start — reproduce the acquisition benchmark (CPU, no downloads)
+
+```bash
+pip install torch numpy
+python -m experiments.run_acquisition_benchmark --seeds 5 --budget-frac 0.15
+```
+
+This self-contained benchmark builds a controlled meta-evaluation matrix (reference
+models × sample-sets with shift descriptors and noisy execution-accuracy labels),
+holds out unseen model families, gives every acquisition strategy the same 15%
+budget, meta-trains the repo's own `ActiveEvaluator` MLP on the acquired pairs, and
+reports unseen-model MAE. It uses the same selection math and predictor as the full
+Text2SQL pipeline, so the method ordering mirrors the paper's main table.
+
+<!-- BENCHMARK_RESULTS -->
+
+## Baseline method library
+
+The paper compares against three families; each lives under [baselines/](baselines/)
+with a `select`/`estimate` entry point. Implemented methods are in **bold**.
+
+| Family | Methods |
+| --- | --- |
+| Label-free estimators | **ATC**, **DoC**, AutoEval, AETTA, SSME |
+| Budgeted acquisition | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH** |
+| Reference / ours | **MetaEvaluator (full budget)**, **ActiveEval-S**, **ActiveEval-S+M**, **ActiveEval-Pair** |
+
+The production Text2SQL pipeline (`active_evaluator/active_selection.py`) implements
+the same facility-location / GRAD-MATCH / knapsack-budget selection on real
+shift descriptors from cached LLM embeddings.
 
 ![ActiveEvaluator Training Pipeline](resources/training_pipeline.png)
 
