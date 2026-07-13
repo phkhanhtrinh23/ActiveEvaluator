@@ -243,6 +243,144 @@ def select_gradmatch(X, pair_model, pair_sample, target_mask, budget, *, rng, la
 
 
 # ---------------------------------------------------------------------------
+# Greedy entropy / mutual information (Alg. 1 / Alg. 2 of the benchmark-
+# selection paper; see benchmark-selection/code/greedy_select.py). There the
+# algorithms greedily pivot an N x N benchmark correlation matrix; here the
+# analogous PSD matrix is an RBF kernel over the candidate pair descriptors,
+# restricted to the target-aligned pool (same q_idx pattern as select_facility).
+# ---------------------------------------------------------------------------
+
+def _target_universe(n: int, target_mask, rng: np.random.Generator, cap: int | None = 200) -> np.ndarray:
+    """Target-aligned candidate indices, sub-sampled to `cap` for tractability.
+
+    greedy_mi's per-step complement refactorization is cubic in the universe
+    size, so leaving it uncapped against the full pair pool (often 1000s of
+    pairs) would make this baseline far slower than every other method.
+    Pass ``cap=None`` to use the full target-aligned pool (e.g. for a
+    dedicated entropy-vs-MI comparison where budgets stay within the pool).
+    """
+    q_idx = np.where(target_mask)[0]
+    if q_idx.size == 0:
+        q_idx = np.arange(n)
+    if cap is not None and q_idx.size > cap:
+        q_idx = np.sort(rng.choice(q_idx, size=cap, replace=False))
+    return q_idx
+
+
+def _pivoted_cholesky_entropy(Sigma: np.ndarray, k: int) -> List[int]:
+    """Algorithm 1 (greedy entropy): pivot on argmax conditional variance,
+    with a rank-1 Cholesky update of the residual diagonal after each pick."""
+    N = Sigma.shape[0]
+    k = min(k, N)
+    d = np.diag(Sigma).copy().astype(np.float64)
+    L = np.zeros((N, k), dtype=np.float64)
+    selected: List[int] = []
+    selected_set = set()
+    for t in range(k):
+        d_masked = d.copy()
+        if selected:
+            d_masked[list(selected_set)] = -np.inf
+        j_star = int(np.argmax(d_masked))
+        selected.append(j_star)
+        selected_set.add(j_star)
+        sqrt_d = np.sqrt(max(d[j_star], 1e-300))
+        for j in range(N):
+            if j in selected_set and j != j_star:
+                continue
+            L[j, t] = (Sigma[j, j_star] - L[j, :t] @ L[j_star, :t]) / sqrt_d
+            if j != j_star:
+                d[j] -= L[j, t] ** 2
+    return selected
+
+
+def _complement_precision_diag(Sigma: np.ndarray, comp: np.ndarray) -> np.ndarray:
+    """Diagonal of (Sigma[comp, comp])^{-1}, via Cholesky (eigh fallback)."""
+    m = len(comp)
+    Sigma_sub = Sigma[np.ix_(comp, comp)]
+    try:
+        L = np.linalg.cholesky(Sigma_sub)
+        L_inv = np.linalg.solve(L, np.eye(m))
+        return np.sum(L_inv ** 2, axis=0)
+    except np.linalg.LinAlgError:
+        eigvals, eigvecs = np.linalg.eigh(Sigma_sub)
+        eigvals = np.maximum(eigvals, 1e-10)
+        return np.sum(eigvecs ** 2 / eigvals[None, :], axis=1)
+
+
+def _pivoted_cholesky_mi(Sigma: np.ndarray, k: int) -> List[int]:
+    """Algorithm 2 (greedy mutual information): pivot on
+    argmax_v [log sigma^2_{v|S} + log P_vv], where P_vv is the v-th diagonal
+    entry of the precision matrix of the currently-unselected complement."""
+    N = Sigma.shape[0]
+    k = min(k, N)
+    d = np.diag(Sigma).copy().astype(np.float64)
+    L = np.zeros((N, k), dtype=np.float64)
+    selected: List[int] = []
+    selected_set = set()
+    for t in range(k):
+        comp = np.array([j for j in range(N) if j not in selected_set])
+        P_diag_comp = _complement_precision_diag(Sigma, comp)
+        P_full = np.zeros(N)
+        P_full[comp] = P_diag_comp
+        scores = np.full(N, -np.inf)
+        valid = (d > 1e-300) & (P_full > 1e-300)
+        valid[list(selected_set)] = False
+        scores[valid] = np.log(d[valid]) + np.log(P_full[valid])
+        j_star = int(np.argmax(scores))
+        selected.append(j_star)
+        selected_set.add(j_star)
+        sqrt_d = np.sqrt(max(d[j_star], 1e-300))
+        for j in range(N):
+            if j in selected_set and j != j_star:
+                continue
+            L[j, t] = (Sigma[j, j_star] - L[j, :t] @ L[j_star, :t]) / sqrt_d
+            if j != j_star:
+                d[j] -= L[j, t] ** 2
+    return selected
+
+
+def select_greedy_entropy(X, pair_model, pair_sample, target_mask, budget, *, rng,
+                          cap: int | None = 200, **kw) -> List[int]:
+    """Greedy entropy (Alg. 1): pivoted-Cholesky greedy maximization of
+    log det(Sigma_S) over an RBF kernel restricted to the target-aligned pool."""
+    n = len(X)
+    budget = min(budget, n)
+    q_idx = _target_universe(n, target_mask, rng, cap=cap)
+    tau = _median_bandwidth(X[q_idx], rng)
+    Sigma = _rbf(X[q_idx], X[q_idx], tau) + 1e-6 * np.eye(len(q_idx))
+    local = _pivoted_cholesky_entropy(Sigma, budget)
+    chosen = list(q_idx[local])
+    if len(chosen) < budget:
+        avail = np.ones(n, bool)
+        avail[chosen] = False
+        rest = list(np.where(avail)[0])
+        rng.shuffle(rest)
+        chosen.extend(rest[: budget - len(chosen)])
+    return chosen
+
+
+def select_greedy_mi(X, pair_model, pair_sample, target_mask, budget, *, rng,
+                     cap: int | None = 200, **kw) -> List[int]:
+    """Greedy mutual information (Alg. 2): pivoted-Cholesky greedy
+    maximization of I(X_S; X_{V\\S}) over an RBF kernel restricted to the
+    target-aligned pool."""
+    n = len(X)
+    budget = min(budget, n)
+    q_idx = _target_universe(n, target_mask, rng, cap=cap)
+    tau = _median_bandwidth(X[q_idx], rng)
+    Sigma = _rbf(X[q_idx], X[q_idx], tau) + 1e-6 * np.eye(len(q_idx))
+    local = _pivoted_cholesky_mi(Sigma, budget)
+    chosen = list(q_idx[local])
+    if len(chosen) < budget:
+        avail = np.ones(n, bool)
+        avail[chosen] = False
+        rest = list(np.where(avail)[0])
+        rng.shuffle(rest)
+        chosen.extend(rest[: budget - len(chosen)])
+    return chosen
+
+
+# ---------------------------------------------------------------------------
 # ActiveEval (ours): combine target coverage + diversity + the model axis
 # ---------------------------------------------------------------------------
 
@@ -324,6 +462,8 @@ ACQUISITION_REGISTRY = {
     "bayesian_design": select_bayesian_design,
     "submodular_benchmark": select_logdet,
     "gradmatch": select_gradmatch,
+    "greedy_entropy": select_greedy_entropy,
+    "greedy_mi": select_greedy_mi,
     "activeeval_s": select_activeeval_sample,
     "activeeval_sm": select_activeeval_sm,
     "activeeval_pair": select_activeeval_pair,

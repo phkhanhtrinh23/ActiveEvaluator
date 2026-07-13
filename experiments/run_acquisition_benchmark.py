@@ -170,6 +170,8 @@ METHODS = [
     ("Bayesian opt. design", "acq", "bayesian_design", {}),
     ("Submod. benchmark", "acq", "submodular_benchmark", {}),
     ("GRAD-MATCH", "acq", "gradmatch", {}),
+    ("Greedy entropy (Alg. 1)", "acq", "greedy_entropy", {}),
+    ("Greedy MI (Alg. 2)", "acq", "greedy_mi", {}),
     ("MetaEvaluator (full)", "acq", "metaevaluator_full", {}),
     ("ActiveEval-S", "acq", "activeeval_s", {"influence": True}),
     ("ActiveEval-S+M", "acq", "activeeval_sm", {"influence": True}),
@@ -249,6 +251,50 @@ def run_sweep(seeds, fracs):
     return out
 
 
+def run_entropy_mi_sweep(seeds, k_fracs):
+    """Greedy entropy (Alg. 1) vs greedy MI (Alg. 2) as k grows.
+
+    Mirrors benchmark-selection/code/eval_entropy_vs_mi.py's k-sweep: k is
+    expressed as a fraction of the *target-aligned candidate pool* T (not the
+    full action space P), since that pool is the fixed item set the two
+    algorithms actually search over. Uses ``cap=None`` so both methods see the
+    whole pool -- the registry default (``cap=200``) exists only to keep
+    greedy MI's cubic per-step cost bounded in the main/sweep/ablation
+    benchmarks, where T can run into the thousands.
+    """
+    rows = {f: {"Greedy entropy": [], "Greedy MI": []} for f in k_fracs}
+    for seed in seeds:
+        prob = make_problem(seed)
+        T = int(prob["target_mask"].sum())
+        for f in k_fracs:
+            b = max(1, round(f * T))
+            rows[f]["Greedy entropy"].append(_acq(prob, "greedy_entropy", b, seed, cap=None))
+            rows[f]["Greedy MI"].append(_acq(prob, "greedy_mi", b, seed, cap=None))
+    def _mean_ci(vals):
+        v = np.asarray(vals)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    out = {"note": "k expressed as a fraction of the target-aligned pool", "k_fracs": {}}
+    print(f"\nGreedy entropy (Alg. 1) vs greedy MI (Alg. 2), {len(seeds)} seeds. "
+          f"k = fraction of the target-aligned pool.\n")
+    print(f"{'k (% of pool)':>14}  {'Entropy':>16}  {'MI':>16}  {'Leader':>8}")
+    print("-" * 62)
+    for f in k_fracs:
+        ent, ent_ci = _mean_ci(rows[f]["Greedy entropy"])
+        mi, mi_ci = _mean_ci(rows[f]["Greedy MI"])
+        out["k_fracs"][f] = {"Greedy entropy": ent, "Greedy entropy_ci": ent_ci,
+                             "Greedy MI": mi, "Greedy MI_ci": mi_ci}
+        if ent + ent_ci < mi - mi_ci:
+            leader = "entropy"
+        elif mi + mi_ci < ent - ent_ci:
+            leader = "MI"
+        else:
+            leader = "tie"
+        print(f"{f*100:13.0f}%  {ent:6.2f} +/- {ent_ci:4.2f}  {mi:6.2f} +/- {mi_ci:4.2f}  {leader:>8}")
+    return out
+
+
 def run_ablation(seeds, budget_frac):
     """RQ5 ablation. This offline benchmark robustly isolates the component the paper
     finds most important---target-aware narrowing---against a no-structure random
@@ -280,7 +326,7 @@ def run_ablation(seeds, budget_frac):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -293,6 +339,9 @@ def main():
     elif args.mode == "ablation":
         res = run_ablation(seeds, args.budget_frac)
         out_path = "outputs/acquisition_ablation.json"
+    elif args.mode == "entropy_mi_sweep":
+        res = run_entropy_mi_sweep(seeds, [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0])
+        out_path = "outputs/entropy_mi_sweep.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])

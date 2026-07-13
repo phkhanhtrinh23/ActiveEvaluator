@@ -16,6 +16,8 @@
 > given), benchmark compression (we generalize to *future* models), and active
 > testing (the target stays unlabeled).
 
+
+
 ## Quick start — reproduce the acquisition benchmark (CPU, no downloads)
 
 ```bash
@@ -35,22 +37,26 @@ points; lower is better). ActiveEval variants take the top three places and the
 full-budget MetaEvaluator is the only comparably strong method; every budgeted
 acquisition baseline and label-free estimator trails behind.
 
-| Method | Family | Unseen MAE (pp) | Cost |
-| --- | --- | ---: | ---: |
-| **ActiveEval-S** | ours | **2.41 ± 0.42** | 15% |
-| **ActiveEval-Pair** | ours | **2.51 ± 0.38** | 15% |
-| **ActiveEval-S+M** | ours | **2.80 ± 0.50** | 15% |
-| MetaEvaluator (full) | reference | 3.04 ± 0.53 | 100% |
-| GRAD-MATCH | acquisition | 3.45 ± 0.70 | 15% |
-| Submod. benchmark | acquisition | 4.09 ± 0.54 | 15% |
-| Bayesian opt. design | acquisition | 4.44 ± 1.06 | 15% |
-| Active testing | acquisition | 4.52 ± 0.84 | 15% |
-| DoC | estimator | 4.86 ± 0.48 | — |
-| k-center | acquisition | 4.90 ± 0.95 | 15% |
-| Matrix completion | acquisition | 5.34 ± 0.66 | 15% |
-| Random | acquisition | 5.40 ± 0.45 | 15% |
-| Facility-location | acquisition | 5.76 ± 1.28 | 15% |
-| ATC | estimator | 7.81 ± 3.84 | — |
+
+| Method                  | Family      | Unseen MAE (pp) | Cost |
+| ----------------------- | ----------- | --------------- | ---- |
+| **ActiveEval-S**        | ours        | **2.41 ± 0.41** | 15%  |
+| **ActiveEval-Pair**     | ours        | **2.49 ± 0.43** | 15%  |
+| **ActiveEval-S+M**      | ours        | **2.98 ± 0.49** | 15%  |
+| MetaEvaluator (full)    | reference   | 3.08 ± 0.58     | 100% |
+| GRAD-MATCH              | acquisition | 3.55 ± 0.60     | 15%  |
+| Greedy entropy (Alg. 1) | acquisition | 3.66 ± 0.40     | 15%  |
+| Greedy MI (Alg. 2)      | acquisition | 3.73 ± 0.39     | 15%  |
+| Submod. benchmark       | acquisition | 4.08 ± 0.54     | 15%  |
+| Bayesian opt. design    | acquisition | 4.47 ± 1.05     | 15%  |
+| Active testing          | acquisition | 4.54 ± 0.85     | 15%  |
+| DoC                     | estimator   | 4.86 ± 0.48     | —    |
+| k-center                | acquisition | 4.90 ± 0.94     | 15%  |
+| Matrix completion       | acquisition | 5.34 ± 0.66     | 15%  |
+| Random                  | acquisition | 5.39 ± 0.44     | 15%  |
+| Facility-location       | acquisition | 5.75 ± 1.30     | 15%  |
+| ATC                     | estimator   | 7.81 ± 3.84     | —    |
+
 
 ActiveEval matches (and, by spending its budget on clean target-aligned pairs,
 slightly improves on) the full-budget MetaEvaluator while labeling only 15% of the
@@ -66,14 +72,18 @@ Average unseen MAE (pp) vs. labeling budget. ActiveEval-Pair already matches the
 full-budget MetaEvaluator (3.04) from **5%** of the matrix, whereas the baselines need
 ~50%.
 
+
 | Budget | ActiveEval-Pair | Facility-loc | Random |
-| ---: | ---: | ---: | ---: |
-| 5% | **3.07** | 7.12 | 6.99 |
-| 10% | **2.65** | 6.48 | 5.76 |
-| 15% | **2.50** | 5.56 | 5.54 |
-| 20% | **2.20** | 4.76 | 5.42 |
-| 30% | **2.09** | 4.37 | 4.66 |
-| 50% | **3.07** | 3.66 | 3.78 |
+| ------ | --------------- | ------------ | ------ |
+| 5%     | **3.07**        | 7.12         | 6.99   |
+| 10%    | **2.65**        | 6.48         | 5.76   |
+| 15%    | **2.50**        | 5.56         | 5.54   |
+| 20%    | **2.20**        | 4.76         | 5.42   |
+| 30%    | **2.09**        | 4.37         | 4.66   |
+| 50%    | **3.07**        | 3.66         | 3.78   |
+
+
+
 
 ### Ablation (RQ5)
 
@@ -86,40 +96,78 @@ important — degrades unseen MAE the most; removing all selection structure (ra
 is worst. (Influence weighting, submodular MI, knapsack budgeting, and the
 uncertainty head are ablated in the full Text2SQL pipeline.)
 
-| Configuration | Unseen MAE (pp) |
-| --- | ---: |
-| ActiveEval-Pair (full) | **2.50 ± 0.42** |
-| − target-aware narrowing | 4.83 ± 0.74 |
-| − all structure (Random) | 5.54 ± 0.83 |
+
+| Configuration            | Unseen MAE (pp) |
+| ------------------------ | --------------- |
+| ActiveEval-Pair (full)   | **2.50 ± 0.42** |
+| − target-aware narrowing | 4.83 ± 0.74     |
+| − all structure (Random) | 5.54 ± 0.83     |
+
+
+
+
+### Greedy entropy vs. greedy mutual information (exploratory)
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode entropy_mi_sweep --seeds 10
+```
+
+Ports Algorithm 1 (greedy entropy) and Algorithm 2 (greedy mutual information) from
+`benchmark-selection/code/greedy_select.py` — compared over a benchmark correlation
+matrix in `eval_entropy_vs_mi.py` — into this pair-acquisition setting, by building
+the same PSD kernel (`Sigma`, an RBF kernel over pair shift-descriptors) restricted
+to the target-aligned candidate pool, then running the identical pivoted-Cholesky
+selection loops. `k` is swept as a fraction of that pool with `cap=None` (no
+sub-sampling — unlike the `cap=200` default the two methods use as regular
+`ACQUISITION_REGISTRY` entries in the tables above).
+
+
+| k (% of pool) | Entropy (pp) | MI (pp)     | Leader |
+| ------------- | ------------ | ----------- | ------ |
+| 2%            | 7.78 ± 1.24  | 7.52 ± 1.35 | tie    |
+| 5%            | 5.92 ± 0.62  | 5.19 ± 0.68 | tie    |
+| 10%           | 4.46 ± 0.69  | 4.11 ± 0.42 | tie    |
+| 20%           | 3.47 ± 0.48  | 3.30 ± 0.36 | tie    |
+| 30%           | 3.23 ± 0.37  | 2.82 ± 0.29 | tie    |
+| 50%           | 2.66 ± 0.30  | 2.42 ± 0.26 | tie    |
+| 75%           | 2.30 ± 0.25  | 2.19 ± 0.27 | tie    |
+| 100%          | 2.13 ± 0.25  | 2.09 ± 0.24 | tie    |
+
+
+
 
 ## Baseline method library
 
 The paper compares against three families; each lives under [baselines/](baselines/)
 with a `select`/`estimate` entry point. Implemented methods are in **bold**.
 
-| Family | Methods |
-| --- | --- |
-| Label-free estimators | **ATC**, **DoC**, AutoEval, AETTA, SSME |
-| Budgeted acquisition | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH** |
-| Reference / ours | **MetaEvaluator (full budget)**, **ActiveEval-S**, **ActiveEval-S+M**, **ActiveEval-Pair** |
+
+| Family                | Methods                                                                                                                                                                                                                          |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Label-free estimators | **ATC**, **DoC**, AutoEval, AETTA, SSME                                                                                                                                                                                          |
+| Budgeted acquisition  | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH**, **Greedy entropy (Alg. 1)**, **Greedy MI (Alg. 2)** |
+| Reference / ours      | **MetaEvaluator (full budget)**, **ActiveEval-S**, **ActiveEval-S+M**, **ActiveEval-Pair**                                                                                                                                       |
+
 
 The production Text2SQL pipeline (`active_evaluator/active_selection.py`) implements
 the same facility-location / GRAD-MATCH / knapsack-budget selection on real
 shift descriptors from cached LLM embeddings.
 
-![ActiveEvaluator Training Pipeline](resources/training_pipeline.png)
+ActiveEvaluator Training Pipeline
 
 ## What's new in this version
 
 The repository has been renamed from `meta_evaluator` to `active_evaluator` and a new active-selection module has been added. The base pipeline (shift descriptors → meta-trained MLP predictor) is unchanged; the new code is a strictly additive layer that runs *between* meta-training and held-out evaluation.
 
-| Concern | Module | Class / function |
-| --- | --- | --- |
-| Budget arithmetic and per-round split | [active_evaluator/budget.py](active_evaluator/budget.py) | `BudgetPlan`, `compute_budget` |
-| Selection algorithms (V1 + V2) | [active_evaluator/active_selection.py](active_evaluator/active_selection.py) | `select_extension`, `lazy_greedy_facility`, `direct_greedy_validation` |
-| Pipeline wiring + CLI flags | [active_evaluator/pipeline.py](active_evaluator/pipeline.py) | `extend_test_tasks_with_active_selection` |
-| Unit tests for selection | [test/test_active_selection.py](test/test_active_selection.py) | 13 tests |
-| Unit tests for budget | [test/test_budget.py](test/test_budget.py) | 8 tests |
+
+| Concern                               | Module                                                                       | Class / function                                                       |
+| ------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Budget arithmetic and per-round split | [active_evaluator/budget.py](active_evaluator/budget.py)                     | `BudgetPlan`, `compute_budget`                                         |
+| Selection algorithms (V1 + V2)        | [active_evaluator/active_selection.py](active_evaluator/active_selection.py) | `select_extension`, `lazy_greedy_facility`, `direct_greedy_validation` |
+| Pipeline wiring + CLI flags           | [active_evaluator/pipeline.py](active_evaluator/pipeline.py)                 | `extend_test_tasks_with_active_selection`                              |
+| Unit tests for selection              | [test/test_active_selection.py](test/test_active_selection.py)               | 13 tests                                                               |
+| Unit tests for budget                 | [test/test_budget.py](test/test_budget.py)                                   | 8 tests                                                                |
+
 
 The previously-existing modules ([active_evaluator/meta_learning.py](active_evaluator/meta_learning.py), [active_evaluator/model.py](active_evaluator/model.py), [active_evaluator/pipeline.py](active_evaluator/pipeline.py), [shift_descriptor/](shift_descriptor/)) were renamed but kept their behavior. When `--use-active-selection` is *not* passed, the pipeline runs identically to before.
 
@@ -135,6 +183,8 @@ The previously-existing modules ([active_evaluator/meta_learning.py](active_eval
 - [scripts/](scripts/) — Helpers (`inspect_active_evaluator.py`, `rename_model_outputs.py`).
 - [test/](test/) — 24 unit tests (`test_active_selection.py`, `test_budget.py`, `test_active_learning.py`).
 
+
+
 ## Requirements
 
 ```bash
@@ -144,6 +194,8 @@ pip install torch transformers accelerate bitsandbytes scipy scikit-learn matplo
 `bitsandbytes` and `accelerate` are required for the 4-bit quantized SQL generator. Some checkpoints are gated on Hugging Face — pass `alias=model_id` to `--model-ids` to point at approved variants.
 
 ## Active Selection — the new contribution
+
+
 
 ### Problem statement
 
@@ -160,7 +212,7 @@ The invariant **S ∩ V = ∅** is enforced by an `assert` after every round.
 
 **V1 — Influence-weighted facility location** (`--selection-method v1_facility`, default)
 
-$$\tilde f_1(S) = \sum_{v \in V_T} I(v) \cdot \max_{s \in S \cup S_0} \exp\!\left(-\frac{\|\phi(v) - \phi(s)\|^2}{\tau}\right)$$
+$$\tilde f_1(S) = \sum_{v \in V_T} I(v) \cdot \max_{s \in S \cup S_0} \exp\left(-\frac{\phi(v) - \phi(s)^2}{\tau}\right)$$
 
 where `I(v) = ||∇φ L(h_φ; v)||₂` is the per-example gradient-norm influence weight and `τ` is the median-heuristic bandwidth. Monotone submodular by construction → lazy greedy is provably equivalent to plain greedy and gives a `(1 − 1/e)` approximation under cardinality (Nemhauser, Wolsey & Fisher 1978; Minoux 1978).
 
@@ -172,17 +224,21 @@ Non-submodular and non-monotone — uses plain greedy with a positive-gain abort
 
 ### CLI flags
 
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `--use-active-selection` | off | Enable the new test-time branch. |
-| `--selection-method` | `v1_facility` | `v1_facility` or `v2_direct`. |
-| `--selection-n-rounds` | `5` | Active-learning rounds. |
-| `--selection-budget-fraction` | `0.10` | Total budget as a fraction of `|U|`. |
-| `--selection-budget-absolute` | `None` | Absolute budget; overrides fraction when set. |
-| `--selection-K-steps` | `--eval-inner-steps` | Inner adaptation steps used for V2 oracle. |
-| `--selection-narrowing-quantile` | `0.7` | Keep V examples with ρ ≥ this quantile. |
-| `--selection-max-candidates-evaluated` | `100` | V2 FASS pre-filter cap. |
-| `--selection-seed` | `42` | RNG seed (bandwidth pair sampling, ties). |
+
+| Flag                                   | Default              | Meaning                                       |
+| -------------------------------------- | -------------------- | --------------------------------------------- |
+| `--use-active-selection`               | off                  | Enable the new test-time branch.              |
+| `--selection-method`                   | `v1_facility`        | `v1_facility` or `v2_direct`.                 |
+| `--selection-n-rounds`                 | `5`                  | Active-learning rounds.                       |
+| `--selection-budget-fraction`          | `0.10`               | Total budget as a fraction of `               |
+| `--selection-budget-absolute`          | `None`               | Absolute budget; overrides fraction when set. |
+| `--selection-K-steps`                  | `--eval-inner-steps` | Inner adaptation steps used for V2 oracle.    |
+| `--selection-narrowing-quantile`       | `0.7`                | Keep V examples with ρ ≥ this quantile.       |
+| `--selection-max-candidates-evaluated` | `100`                | V2 FASS pre-filter cap.                       |
+| `--selection-seed`                     | `42`                 | RNG seed (bandwidth pair sampling, ties).     |
+
+
+
 
 ### Output artifacts
 
@@ -217,14 +273,20 @@ python -m active_evaluator.pipeline \
   --test-model-ids Qwen/Qwen2.5-0.5B-Instruct ...
 ```
 
+
+
 ### Theoretical guarantees
 
-| Algorithm | Constraint | Guarantee | Reference |
-| --- | --- | --- | --- |
-| V1 lazy greedy | cardinality (`c(s)=1`) | `(1 − 1/e)` of OPT | Nemhauser, Wolsey & Fisher (1978) |
-| V1 cost-benefit greedy | knapsack | `½(1 − 1/e)` of OPT | Khuller, Moss & Naor (1999) |
-| V1 with partial enumeration | knapsack | `(1 − 1/e)` of OPT | Sviridenko (2004) |
-| V2 plain greedy | cardinality | none (non-submodular) | Wei, Iyer & Bilmes (2015) — empirical oracle |
+
+| Algorithm                   | Constraint             | Guarantee             | Reference                                    |
+| --------------------------- | ---------------------- | --------------------- | -------------------------------------------- |
+| V1 lazy greedy              | cardinality (`c(s)=1`) | `(1 − 1/e)` of OPT    | Nemhauser, Wolsey & Fisher (1978)            |
+| V1 cost-benefit greedy      | knapsack               | `½(1 − 1/e)` of OPT   | Khuller, Moss & Naor (1999)                  |
+| V1 with partial enumeration | knapsack               | `(1 − 1/e)` of OPT    | Sviridenko (2004)                            |
+| V2 plain greedy             | cardinality            | none (non-submodular) | Wei, Iyer & Bilmes (2015) — empirical oracle |
+
+
+
 
 ## Tests
 
@@ -234,12 +296,16 @@ python -m active_evaluator.pipeline \
 python -m pytest test/ -v
 ```
 
-| Group | Coverage |
-| --- | --- |
-| Budget arithmetic | fraction/absolute/min-floor/cap, JSON round-trip, consistency validation. |
-| V1 algorithmic | lazy-greedy ≡ plain-greedy on synthetic 20×5 pool; submodularity (marginal gains non-increasing); disjointness `S ∩ V = ∅`; budget cap; log emission. |
-| V2 algorithmic | budget cap; FASS pre-filter cap (verified via `eval_trace` hook); positive-gain abort rule; pipeline-wrapper smoke. |
-| Shared machinery | embedding shape; bandwidth scaling; narrowing produces `(1 − q) · |V|`; influence weights non-negative. |
+
+| Group             | Coverage                                                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Budget arithmetic | fraction/absolute/min-floor/cap, JSON round-trip, consistency validation.                                                                             |
+| V1 algorithmic    | lazy-greedy ≡ plain-greedy on synthetic 20×5 pool; submodularity (marginal gains non-increasing); disjointness `S ∩ V = ∅`; budget cap; log emission. |
+| V2 algorithmic    | budget cap; FASS pre-filter cap (verified via `eval_trace` hook); positive-gain abort rule; pipeline-wrapper smoke.                                   |
+| Shared machinery  | embedding shape; bandwidth scaling; narrowing produces `(1 − q) ·                                                                                     |
+
+
+
 
 ## Base Pipeline (unchanged behavior)
 
@@ -260,6 +326,8 @@ python -m active_evaluator.pipeline \
   --model-ids ... \
   [--test-model-ids ...]
 ```
+
+
 
 ## Shift Descriptor Pipeline (auxiliary)
 
@@ -292,28 +360,36 @@ For image classification backbones, standard PyTorch loaders (e.g. `torchvision.
 - Wei, Iyer & Bilmes (ICML 2015). "Submodularity in Data Subset Selection and Active Learning."
 - Park, Park & Lee (ICLR 2025). "Active Learning for Continual Learning: Keeping the Past Alive in the Present."
 
+
+
 ## Legacy benchmarks (pre-active-selection)
 
 The following tables report MAE numbers from the original MetaEvaluator paper (Text2SQL Spider→BIRD and image classification CIFAR→TinyImageNet transfer). They reflect the *base* predictor without active selection and are kept here for reference. New active-selection MAE numbers will be added once the scaled-up benchmark run completes.
 
 ### Text2SQL Model Pool (78 Total)
 
-| Category | Count | Families and Models |
-| --- | --- | --- |
-| Structured Text2SQL Parsers | 8 | RAT-SQL; LGESQL; SmBoP; RESDSQL; Clause-SmBoP; IRNet; BRIDGE; ValueNet / RYANSQL |
-| Encoder-Decoder Models | 10 | PICARD T5; FLAN-T5; BART NL2SQL; CodeT5p-770M; FronyAI/natural2sql-ko |
-| SQLCoder / SLM-SQL / CscSQL / Hrida | 24 | SQLCoder family; SLM-SQL family; CscSQL-Merge / CscSQL-Grpo; Hrida-T2SQL |
-| Other LLMs | 10 | DeepSeek-Coder; Snowflake Arctic-Text2SQL; DeepSeek-R1-Distill; WizardCoder; Mistral; Llama-3.1; Qwen2.5 |
-| Modern General LLM Backbones | 26 | DeepSeek-V3; OLMo-2; gemma-3; Mistral-Small-3.1; Llama-4; Qwen3; SmolLM3; Kimi-K2; GPT-OSS; GLM-4.5/4.6; MiniMax; RWKV; Mamba2 |
+
+| Category                            | Count | Families and Models                                                                                                            |
+| ----------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Structured Text2SQL Parsers         | 8     | RAT-SQL; LGESQL; SmBoP; RESDSQL; Clause-SmBoP; IRNet; BRIDGE; ValueNet / RYANSQL                                               |
+| Encoder-Decoder Models              | 10    | PICARD T5; FLAN-T5; BART NL2SQL; CodeT5p-770M; FronyAI/natural2sql-ko                                                          |
+| SQLCoder / SLM-SQL / CscSQL / Hrida | 24    | SQLCoder family; SLM-SQL family; CscSQL-Merge / CscSQL-Grpo; Hrida-T2SQL                                                       |
+| Other LLMs                          | 10    | DeepSeek-Coder; Snowflake Arctic-Text2SQL; DeepSeek-R1-Distill; WizardCoder; Mistral; Llama-3.1; Qwen2.5                       |
+| Modern General LLM Backbones        | 26    | DeepSeek-V3; OLMo-2; gemma-3; Mistral-Small-3.1; Llama-4; Qwen3; SmolLM3; Kimi-K2; GPT-OSS; GLM-4.5/4.6; MiniMax; RWKV; Mamba2 |
+
+
+
 
 ### Image Classification Model Pool (43 Total)
 
-| Category | Count | Families |
-| --- | --- | --- |
-| Classic CNN | 2 | LeNet-5; AlexNet |
-| VGG / Residual / Wide / Dense | 17 | VGG-11..19; ResNet-18..152; WideResNet; DenseNet |
-| Efficient Mobile CNNs | 10 | MobileNet-V1..V3; ShuffleNet-V2; EfficientNet-B0..B2 |
-| Scaled / Lightweight CNNs | 5 | SqueezeNet; RegNet |
-| CIFAR-Standard Robust Baselines | 9 | ResNet-20/56/110; PreAct-ResNet; PyramidNet; Shake-Shake; ResNeXt-29; DenseNet-BC; MobileNetV2 |
+
+| Category                        | Count | Families                                                                                       |
+| ------------------------------- | ----- | ---------------------------------------------------------------------------------------------- |
+| Classic CNN                     | 2     | LeNet-5; AlexNet                                                                               |
+| VGG / Residual / Wide / Dense   | 17    | VGG-11..19; ResNet-18..152; WideResNet; DenseNet                                               |
+| Efficient Mobile CNNs           | 10    | MobileNet-V1..V3; ShuffleNet-V2; EfficientNet-B0..B2                                           |
+| Scaled / Lightweight CNNs       | 5     | SqueezeNet; RegNet                                                                             |
+| CIFAR-Standard Robust Baselines | 9     | ResNet-20/56/110; PreAct-ResNet; PyramidNet; Shake-Shake; ResNeXt-29; DenseNet-BC; MobileNetV2 |
+
 
 Full per-model MAE tables (DoC / ATC / AGD / PseudoAutoEval / AutoEval / NL2SQL-BUGS / SelfTrainEns vs. ActiveEvaluator base) are preserved in the git history of this README prior to commit `<active-selection-rewrite>`.
