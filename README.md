@@ -136,6 +136,99 @@ sub-sampling — unlike the `cap=200` default the two methods use as regular
 
 
 
+## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
+
+```bash
+python -m experiments.run_image_classification_benchmark --seeds 5 --budget-frac 0.15
+```
+
+Re-themes the same self-contained benchmark for the image-classification side of the
+paper (CIFAR→TinyImageNet-style transfer over the README's 43-model pool: Classic CNN,
+VGG/Residual/Wide/Dense, Efficient Mobile CNNs, Scaled/Lightweight CNNs, CIFAR-Standard
+Robust Baselines). It reuses the exact selection math and meta-evaluator — `ActiveEvaluator`
+(`active_evaluator/model.py`) and `baselines.ACQUISITION_REGISTRY` / `ESTIMATOR_REGISTRY`
+are imported unchanged from the Text2SQL script — with `n_train_models=35` +
+`n_unseen_models=8` seen/held-out classifiers (43 total) and sample-sets framed as
+distribution-shift evaluation slices instead of Text2SQL workload slices. Same `--mode
+sweep|ablation|entropy_mi_sweep` options as the Text2SQL script (RQ3 budget curve, RQ5
+ablation, greedy entropy vs. greedy MI). Regenerate with the command above
+(`outputs/image_classification_acquisition_benchmark.json`); numbers are illustrative of
+the design until replaced with a real torchvision/timm pipeline for camera-ready figures.
+
+**Measured results** (5 seeds, 15% labeling budget, unseen-model MAE in percentage
+points; lower is better). ActiveEval-Pair and ActiveEval-S again take the top two
+places, ahead of both greedy submodular baselines and the full-budget MetaEvaluator.
+
+
+| Method                  | Family      | Unseen MAE (pp) | Cost |
+| ----------------------- | ----------- | ---------------- | ---- |
+| **ActiveEval-Pair**     | ours        | **2.93 ± 0.49**  | 15%  |
+| **ActiveEval-S**        | ours        | **3.01 ± 0.59**  | 15%  |
+| Greedy MI (Alg. 2)      | acquisition | 3.17 ± 0.55      | 15%  |
+| Greedy entropy (Alg. 1) | acquisition | 3.24 ± 0.44      | 15%  |
+| **ActiveEval-S+M**      | ours        | **3.45 ± 0.63**  | 15%  |
+| MetaEvaluator (full)    | reference   | 3.73 ± 0.39      | 100% |
+| GRAD-MATCH              | acquisition | 4.47 ± 0.56      | 15%  |
+| DoC                     | estimator   | 4.65 ± 0.32      | —    |
+| Submod. benchmark       | acquisition | 5.76 ± 1.01      | 15%  |
+| Matrix completion       | acquisition | 6.28 ± 0.60      | 15%  |
+| k-center                | acquisition | 6.39 ± 1.03      | 15%  |
+| Random                  | acquisition | 6.45 ± 0.64      | 15%  |
+| Facility-location       | acquisition | 6.56 ± 0.42      | 15%  |
+| Active testing          | acquisition | 6.72 ± 1.39      | 15%  |
+| Bayesian opt. design    | acquisition | 6.87 ± 1.22      | 15%  |
+| ATC                     | estimator   | 8.31 ± 2.15      | —    |
+
+
+Regenerate with the command above (`outputs/image_classification_acquisition_benchmark.json`).
+
+## Quick start — reproduce the node-classification acquisition benchmark (CPU, no downloads)
+
+```bash
+python -m experiments.run_node_classification_benchmark --seeds 5 --budget-frac 0.15
+```
+
+Re-themes the same self-contained benchmark for node classification: reference models are
+GNN architecture families (GCN, GraphSAGE, GAT, GIN, ChebNet, SGC, APPNP, JKNet, etc.) and
+sample-sets are graph-shift evaluation slices (e.g. homophily/heterophily buckets,
+feature-noise levels, or a citation-network-style transfer such as Cora → CiteSeer/PubMed)
+rather than Text2SQL workload slices or image corruption slices. It reuses the exact
+selection math and meta-evaluator — `ActiveEvaluator` (`active_evaluator/model.py`) and
+`baselines.ACQUISITION_REGISTRY` / `ESTIMATOR_REGISTRY` are imported unchanged from the
+Text2SQL script. No fixed model-pool size is documented for node classification elsewhere
+in this repo, so it keeps the original script's `n_train_models=60` / `n_unseen_models=8`
+defaults. Same `--mode sweep|ablation|entropy_mi_sweep` options as the other two scripts
+(RQ3 budget curve, RQ5 ablation, greedy entropy vs. greedy MI). Regenerate with the command
+above (`outputs/node_classification_acquisition_benchmark.json`); numbers are illustrative
+of the design until replaced with a real PyG/DGL pipeline for camera-ready figures.
+
+**Measured results** (5 seeds, 15% labeling budget, unseen-model MAE in percentage
+points; lower is better). ActiveEval-S and ActiveEval-Pair again take the top two
+places, matching the full-budget MetaEvaluator while labeling only 15% of the matrix.
+
+
+| Method                  | Family      | Unseen MAE (pp) | Cost |
+| ----------------------- | ----------- | ---------------- | ---- |
+| **ActiveEval-S**        | ours        | **2.41 ± 0.41**  | 15%  |
+| **ActiveEval-Pair**     | ours        | **2.49 ± 0.43**  | 15%  |
+| **ActiveEval-S+M**      | ours        | **2.98 ± 0.49**  | 15%  |
+| MetaEvaluator (full)    | reference   | 3.08 ± 0.58      | 100% |
+| GRAD-MATCH              | acquisition | 3.55 ± 0.60      | 15%  |
+| Greedy entropy (Alg. 1) | acquisition | 3.66 ± 0.40      | 15%  |
+| Greedy MI (Alg. 2)      | acquisition | 3.73 ± 0.39      | 15%  |
+| Submod. benchmark       | acquisition | 4.08 ± 0.54      | 15%  |
+| Bayesian opt. design    | acquisition | 4.47 ± 1.05      | 15%  |
+| Active testing          | acquisition | 4.54 ± 0.85      | 15%  |
+| DoC                     | estimator   | 4.86 ± 0.48      | —    |
+| k-center                | acquisition | 4.90 ± 0.94      | 15%  |
+| Matrix completion       | acquisition | 5.34 ± 0.66      | 15%  |
+| Random                  | acquisition | 5.39 ± 0.44      | 15%  |
+| Facility-location       | acquisition | 5.75 ± 1.30      | 15%  |
+| ATC                     | estimator   | 7.81 ± 3.84      | —    |
+
+
+Regenerate with the command above (`outputs/node_classification_acquisition_benchmark.json`).
+
 ## Baseline method library
 
 The paper compares against three families; each lives under [baselines/](baselines/)
