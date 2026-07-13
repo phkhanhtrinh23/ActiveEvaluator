@@ -1,0 +1,53 @@
+{
+  "note": "k expressed as a fraction of the target-aligned pool",
+  "k_fracs": {
+    "0.02": {
+      "Greedy entropy": 7.775068506598473,
+      "Greedy entropy_ci": 1.24160604466485,
+      "Greedy MI": 7.517336457967758,
+      "Greedy MI_ci": 1.3527614769191028
+    },
+    "0.05": {
+      "Greedy entropy": 5.9215618669986725,
+      "Greedy entropy_ci": 0.6184420654555992,
+      "Greedy MI": 5.194312781095505,
+      "Greedy MI_ci": 0.6754511820794977
+    },
+    "0.1": {
+      "Greedy entropy": 4.462984688580036,
+      "Greedy entropy_ci": 0.6928734720265154,
+      "Greedy MI": 4.106436222791672,
+      "Greedy MI_ci": 0.42256120160663024
+    },
+    "0.2": {
+      "Greedy entropy": 3.468272890895605,
+      "Greedy entropy_ci": 0.48142773274942,
+      "Greedy MI": 3.3009687066078186,
+      "Greedy MI_ci": 0.3574152428602202
+    },
+    "0.3": {
+      "Greedy entropy": 3.2287908159196377,
+      "Greedy entropy_ci": 0.3670221638682885,
+      "Greedy MI": 2.8243793919682503,
+      "Greedy MI_ci": 0.2917097344002405
+    },
+    "0.5": {
+      "Greedy entropy": 2.6575818471610546,
+      "Greedy entropy_ci": 0.2976369596713319,
+      "Greedy MI": 2.420036457479,
+      "Greedy MI_ci": 0.2643161378803882
+    },
+    "0.75": {
+      "Greedy entropy": 2.3038985393941402,
+      "Greedy entropy_ci": 0.253761117247585,
+      "Greedy MI": 2.1887878328561783,
+      "Greedy MI_ci": 0.26901795626599656
+    },
+    "1.0": {
+      "Greedy entropy": 2.127433456480503,
+      "Greedy entropy_ci": 0.25212699561793134,
+      "Greedy MI": 2.0937674678862095,
+      "Greedy MI_ci": 0.241178746557618
+    }
+  }
+}
