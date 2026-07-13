@@ -213,7 +213,7 @@ def select_bayesian_design(X, pair_model, pair_sample, target_mask, budget, *, r
         avail[pick] = False
         x = X[pick][:, None]
         Ax = A_inv @ x
-        A_inv = A_inv - (Ax @ Ax.T) / (1.0 + float(x.T @ Ax))
+        A_inv = A_inv - (Ax @ Ax.T) / (1.0 + float((x.T @ Ax).item()))
     return chosen
 
 

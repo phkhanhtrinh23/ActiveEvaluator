@@ -1,0 +1,19 @@
+# Core scientific stack — pinned to versions the repo is tested against.
+# Note: the code is compatible with NumPy 2.x (e.g. baselines/_core.py uses
+# .item() for 1x1 -> scalar conversion, which NumPy 2.x requires).
+numpy>=2.0,<3
+scipy>=1.13
+scikit-learn>=1.4
+matplotlib>=3.8
+tqdm>=4.66
+
+# Deep learning / model stack.
+# Install torch to match your platform/CUDA per https://pytorch.org/get-started/
+torch>=2.2
+transformers>=4.40
+accelerate>=0.30
+huggingface_hub>=0.23
+safetensors>=0.4
+tokenizers>=0.15
+sentencepiece>=0.2
+protobuf>=4.25
