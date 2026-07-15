@@ -33,20 +33,24 @@ reports unseen-model MAE. It uses the same selection math and predictor as the f
 Text2SQL pipeline, so the method ordering mirrors the paper's main table.
 
 **Measured results** (5 seeds, 15% labeling budget, unseen-model MAE in percentage
-points; lower is better). ActiveEval variants take the top three places and the
-full-budget MetaEvaluator is the only comparably strong method; every budgeted
-acquisition baseline and label-free estimator trails behind.
+points; lower is better). The five methods that concentrate their budget on the
+target-aligned pool — greedy MI/entropy (run uncapped over the 600-pair target
+pool; see the note under their budget sweep below) and the three ActiveEval variants —
+cluster at the top and all beat the full-budget MetaEvaluator; every
+target-agnostic budgeted baseline and label-free estimator trails behind. The top
+four are within each other's CIs here; a paired per-seed comparison over 15 seeds
+gives greedy MI a small edge (Δ ≈ 0.2 pp, t ≈ 2.3–2.6) over the rest.
 
 
 | Method                  | Family      | Unseen MAE (pp) | Cost |
 | ----------------------- | ----------- | --------------- | ---- |
-| **ActiveEval-S**        | ours        | **2.41 ± 0.41** | 15%  |
-| **ActiveEval-Pair**     | ours        | **2.49 ± 0.43** | 15%  |
-| **ActiveEval-S+M**      | ours        | **2.98 ± 0.49** | 15%  |
+| Greedy MI (Alg. 2)      | acquisition | **2.32 ± 0.46** | 15%  |
+| Greedy entropy (Alg. 1) | acquisition | 2.35 ± 0.38     | 15%  |
+| **ActiveEval-S**        | ours        | 2.41 ± 0.41     | 15%  |
+| **ActiveEval-Pair**     | ours        | 2.49 ± 0.43     | 15%  |
+| **ActiveEval-S+M**      | ours        | 2.98 ± 0.49     | 15%  |
 | MetaEvaluator (full)    | reference   | 3.08 ± 0.58     | 100% |
 | GRAD-MATCH              | acquisition | 3.55 ± 0.60     | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 3.66 ± 0.40     | 15%  |
-| Greedy MI (Alg. 2)      | acquisition | 3.73 ± 0.39     | 15%  |
 | Submod. benchmark       | acquisition | 4.08 ± 0.54     | 15%  |
 | Bayesian opt. design    | acquisition | 4.47 ± 1.05     | 15%  |
 | Active testing          | acquisition | 4.54 ± 0.85     | 15%  |
@@ -58,9 +62,12 @@ acquisition baseline and label-free estimator trails behind.
 | ATC                     | estimator   | 7.81 ± 3.84     | —    |
 
 
-ActiveEval matches (and, by spending its budget on clean target-aligned pairs,
-slightly improves on) the full-budget MetaEvaluator while labeling only 15% of the
-model×sample-set matrix. Regenerate with the command above (`outputs/acquisition_benchmark.json`).
+Every target-aware budgeted method matches or improves on the full-budget
+MetaEvaluator while labeling only 15% of the model×sample-set matrix — on this
+synthetic problem the decisive factor is spending the budget inside the clean
+target-aligned pool (see the ablation and noise-sensitivity sections below), and
+methods that do so are statistically hard to separate. Regenerate with the command
+above (`outputs/acquisition_benchmark.json`).
 
 ### Budget efficiency (RQ3)
 
@@ -106,6 +113,104 @@ uncertainty head are ablated in the full Text2SQL pipeline.)
 
 
 
+### Mechanism analysis — why the target-aware methods win
+
+The synthetic problem has four distinct populations; keeping their roles straight
+explains every number above:
+
+```
+                 10 target sets      |   30 off-target sets
+               --------------------- | ---------------------
+60 reference   600 pairs, LOW noise  |  1800 pairs, HIGH noise
+   models      (train pool, clean)   |  (train pool, harmful)
+               --------------------- | ---------------------
+ 8 unseen      TEST SET: 80 pairs,   |  (never evaluated)
+   models      clean labels          |
+```
+
+`target_sets` (10 of 40 sample-sets, a coherent latent cluster) plays the role of
+the deployment workload. The 2400 reference-model pairs are the *labelable pool*;
+`target_mask` marks the 600 whose sample-set matches the workload. The test set is
+always the fixed 80 pairs (8 unseen models × 10 target sets) — changing the budget
+never changes what is tested, only what is trained on. Measured label noise:
+|a_noisy − a_true| ≈ 0.028 on-target vs 0.126 off-target (4.5×).
+
+A controlled decomposition (5 seeds) isolates where the advantage comes from:
+
+| Training set                          | Labels | Unseen MAE (pp) |
+| ------------------------------------- | ------ | --------------- |
+| Full matrix (= MetaEvaluator full)    | 2400   | 3.08 ± 0.58     |
+| All 600 target-aligned pairs          | 600    | **2.05 ± 0.41** |
+| 600 off-target pairs (control)        | 600    | 9.87 ± 0.94     |
+| ActiveEval-Pair @ 15%                 | 360    | 2.49 ± 0.42     |
+| Random *within* the target pool @ 15% | 360    | 2.48 ± 0.55     |
+
+Three takeaways:
+
+1. **The less-is-more effect is a data-composition effect, not a selection
+   effect.** Off-target pairs are both noisier and off-distribution — trained
+   alone they are nearly useless (9.87 pp) — so the full matrix (600 clean + 1800
+   harmful labels) loses to just the 600 clean ones. On the clean axis more is
+   monotonically better (see the entropy/MI budget sweep); MAE only reverses when
+   extra labels come from the noisy off-target region.
+2. **At this budget, target-aware narrowing is essentially the whole story.**
+   Random sampling *inside* the target pool already matches ActiveEval-Pair
+   (2.48 vs 2.49 pp); the coverage/influence/diversity machinery contributes
+   ≲0.1 pp here, consistent with the ablation above. What separates the main
+   table's methods is simply how much of their budget lands on-target
+   (5 seeds, 360-pair budget):
+
+   | Method                        | On-target picks |
+   | ----------------------------- | --------------- |
+   | Random (whole pool)           | 96 / 360 (27%)  |
+   | Greedy entropy/MI, `cap=200`  | 229 / 360 (64%) |
+   | Greedy entropy/MI, `cap=None` | 360 / 360       |
+   | ActiveEval-S / -Pair          | ~360 / 360      |
+
+   Among the methods that reach ~100% on-target, a 15-seed paired test gives
+   greedy MI a small residual edge (Δ ≈ 0.2 pp, t ≈ 2.3–2.6) from *which* target
+   pairs it picks — MI selects representative interior points rather than
+   boundary ones.
+3. **These conclusions are by-construction and need real-pipeline validation.**
+   The generator deliberately makes off-target labels noisy and over-represented
+   (`make_problem`, `experiments/run_acquisition_benchmark.py`) and evaluates
+   only on the target workload. The noise-sensitivity sweep below quantifies the
+   assumption: with homoscedastic noise the full matrix wins, and the budgeted
+   subset only takes over once off-target labels are ≳3× noisier. Whether real
+   Text2SQL execution-accuracy labels exhibit such a gap is an empirical claim
+   the full pipeline must support; components that show no effect here
+   (influence weights, submodular MI over models, knapsack budgeting, the
+   uncertainty head) must likewise earn their place there.
+
+### Noise sensitivity — when does a budgeted subset beat labelling everything?
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode noise_sweep --seeds 15
+```
+
+ActiveEval beats MetaEvaluator (full) in the main table because the generator makes
+off-target labels both noisier and off-distribution, so the full matrix dilutes the
+clean target signal. This sweep varies only the off/on-target noise ratio (on-target
+noise fixed; the default benchmark sits at 4.4×) to locate where that less-is-more
+effect switches on. At 1× (homoscedastic) the full matrix is strictly more
+information and wins, as expected; the means cross between 2× and 3×, and a paired
+per-seed test shows ActiveEval-Pair significantly ahead from ≈4.4× (wins 15/15
+seeds, paired Δ = 0.43 ± 0.14 pp, t = 6.2).
+
+| off/on noise | ActiveEval-Pair @15% | Full (100%)     | Random @15% |
+| ------------ | -------------------- | --------------- | ----------- |
+| 1.0×         | 2.41 ± 0.27          | **2.18 ± 0.29** | 2.98 ± 0.37 |
+| 1.5×         | 2.38 ± 0.28          | **2.25 ± 0.28** | 3.23 ± 0.38 |
+| 2.0×         | 2.47 ± 0.29          | **2.32 ± 0.29** | 3.55 ± 0.42 |
+| 3.0×         | 2.49 ± 0.28          | 2.57 ± 0.33     | 4.24 ± 0.41 |
+| 4.4×         | **2.55 ± 0.28**      | 2.98 ± 0.34     | 5.22 ± 0.48 |
+| 6.0×         | **2.49 ± 0.29**      | 3.60 ± 0.37     | 6.33 ± 0.54 |
+
+ActiveEval-Pair is flat across the whole sweep (its picks stay inside the low-noise
+target pool, whose noise never changes), while the full matrix and whole-pool Random
+degrade linearly with the off-target noise — Random fastest, since 75% of its picks
+land off-target.
+
 ### Greedy entropy vs. greedy mutual information (exploratory)
 
 ```bash
@@ -117,21 +222,35 @@ Ports Algorithm 1 (greedy entropy) and Algorithm 2 (greedy mutual information) f
 matrix in `eval_entropy_vs_mi.py` — into this pair-acquisition setting, by building
 the same PSD kernel (`Sigma`, an RBF kernel over pair shift-descriptors) restricted
 to the target-aligned candidate pool, then running the identical pivoted-Cholesky
-selection loops. `k` is swept as a fraction of that pool with `cap=None` (no
-sub-sampling — unlike the `cap=200` default the two methods use as regular
-`ACQUISITION_REGISTRY` entries in the tables above).
+selection loops with `cap=None` (no sub-sampling). The axis below is the labeling
+budget in % of the full 2400-pair matrix — the same units as every other table.
+Both methods select only within the 600-pair target pool, so their reachable
+budget tops out at 25% (they refuse to buy off-target labels; spending more only
+means adding noisy pairs, which the noise-sensitivity section shows is
+counterproductive).
 
 
-| k (% of pool) | Entropy (pp) | MI (pp)     | Leader |
-| ------------- | ------------ | ----------- | ------ |
-| 2%            | 7.78 ± 1.24  | 7.52 ± 1.35 | tie    |
-| 5%            | 5.92 ± 0.62  | 5.19 ± 0.68 | tie    |
-| 10%           | 4.46 ± 0.69  | 4.11 ± 0.42 | tie    |
-| 20%           | 3.47 ± 0.48  | 3.30 ± 0.36 | tie    |
-| 30%           | 3.23 ± 0.37  | 2.82 ± 0.29 | tie    |
-| 50%           | 2.66 ± 0.30  | 2.42 ± 0.26 | tie    |
-| 75%           | 2.30 ± 0.25  | 2.19 ± 0.27 | tie    |
-| 100%          | 2.13 ± 0.25  | 2.09 ± 0.24 | tie    |
+| Budget | Labels | Entropy (pp) | MI (pp)     | Leader |
+| ------ | ------ | ------------ | ----------- | ------ |
+| 0.5%   | 12     | 7.78 ± 1.24  | 7.52 ± 1.35 | tie    |
+| 1.25%  | 30     | 5.92 ± 0.62  | 5.19 ± 0.68 | tie    |
+| 2.5%   | 60     | 4.46 ± 0.69  | 4.11 ± 0.42 | tie    |
+| 5%     | 120    | 3.47 ± 0.48  | 3.30 ± 0.36 | tie    |
+| 7.5%   | 180    | 3.23 ± 0.37  | 2.82 ± 0.29 | tie    |
+| 12.5%  | 300    | 2.66 ± 0.30  | 2.42 ± 0.26 | tie    |
+| 18.75% | 450    | 2.30 ± 0.25  | 2.19 ± 0.27 | tie    |
+| 25%    | 600    | 2.13 ± 0.25  | 2.09 ± 0.24 | tie    |
+
+The 25% row labels the entire target pool — the clean-data upper bound (compare
+MetaEvaluator (full): 100% budget, 3.08 pp). MAE improves monotonically here
+without contradicting the less-is-more result: every extra label on this axis is
+clean and on-distribution, whereas the full matrix adds the 75% noisy off-target
+pairs that hurt. The main table's 15% budget corresponds to 360 labels here.
+The registry's `cap=200` default (kept for benchmarks with much larger target
+pools, where greedy MI's cubic per-step cost bites) is a severe handicap at this
+scale — capped, the two methods top up ~160 of 360 picks at random from the noisy
+whole pool and land at 3.80/3.72 pp instead of ~2.3 pp — so the main-table entries
+run with `cap=None`.
 
 
 
@@ -181,6 +300,9 @@ places, ahead of both greedy submodular baselines and the full-budget MetaEvalua
 
 
 Regenerate with the command above (`outputs/image_classification_acquisition_benchmark.json`).
+Note: unlike the Text2SQL table above, the Greedy entropy/MI rows here still run with
+the registry's `cap=200` default (see the mechanism-analysis section) — expect both
+rows to improve if rerun with `cap=None`.
 
 ## Quick start — reproduce the node-classification acquisition benchmark (CPU, no downloads)
 
@@ -228,6 +350,9 @@ places, matching the full-budget MetaEvaluator while labeling only 15% of the ma
 
 
 Regenerate with the command above (`outputs/node_classification_acquisition_benchmark.json`).
+Note: unlike the Text2SQL table above, the Greedy entropy/MI rows here still run with
+the registry's `cap=200` default (see the mechanism-analysis section) — expect both
+rows to improve if rerun with `cap=None`.
 
 ## Baseline method library
 
