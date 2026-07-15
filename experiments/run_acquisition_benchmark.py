@@ -17,8 +17,9 @@ produces mirrors the paper's main table. Run::
     python -m experiments.run_acquisition_benchmark --seeds 5 --budget-frac 0.15
 
 Numbers are illustrative of the design (replace with the full HF pipeline for
-camera-ready figures); ActiveEval is the strongest acquisition strategy and the
-only one that matches the full-budget MetaEvaluator.
+camera-ready figures); the target-aware budgeted methods (greedy MI/entropy run
+uncapped and the ActiveEval variants) cluster at the top and all match or beat
+the full-budget MetaEvaluator.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from baselines import ACQUISITION_REGISTRY, ESTIMATOR_REGISTRY
 # ---------------------------------------------------------------------------
 
 def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=40,
-                 d_lat=6, base_noise=0.08):
+                 d_lat=6, base_noise=0.08, off_on_noise_ratio=2.0 / 0.45):
     """Synthesise a meta-evaluation matrix with heteroscedastic label noise.
 
     The deployment target is a subset of sample-sets; off-target pairs are noisier
@@ -86,7 +87,9 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
             # MetaEvaluator still beats the budgeted baselines (it has every clean
             # target pair too), but ActiveEval's balanced target-focused subset
             # edges it out.
-            noise = base_noise * (2.0 if not is_target else 0.45)
+            # on-target noise is fixed; `off_on_noise_ratio` scales only the
+            # off-target noise (default 2.0/0.45 reproduces the original 4.4x gap)
+            noise = base_noise * 0.45 * (off_on_noise_ratio if not is_target else 1.0)
             X.append(x); a_true.append(a)
             a_noisy.append(np.clip(a + rng.normal(scale=noise), 0, 1))
             pm.append(i); ps.append(j); tmask.append(is_target)
@@ -170,8 +173,11 @@ METHODS = [
     ("Bayesian opt. design", "acq", "bayesian_design", {}),
     ("Submod. benchmark", "acq", "submodular_benchmark", {}),
     ("GRAD-MATCH", "acq", "gradmatch", {}),
-    ("Greedy entropy (Alg. 1)", "acq", "greedy_entropy", {}),
-    ("Greedy MI (Alg. 2)", "acq", "greedy_mi", {}),
+    # cap=None: the target pool here is only 600 pairs, so both algorithms can
+    # search it in full; the registry's cap=200 default is for benchmarks whose
+    # target pool is large enough to make greedy MI's cubic per-step cost bite.
+    ("Greedy entropy (Alg. 1)", "acq", "greedy_entropy", {"cap": None}),
+    ("Greedy MI (Alg. 2)", "acq", "greedy_mi", {"cap": None}),
     ("MetaEvaluator (full)", "acq", "metaevaluator_full", {}),
     ("ActiveEval-S", "acq", "activeeval_s", {"influence": True}),
     ("ActiveEval-S+M", "acq", "activeeval_sm", {"influence": True}),
@@ -196,9 +202,10 @@ def run(seeds: List[int], budget_frac: float) -> Dict[str, Dict[str, float]]:
                 fn = ACQUISITION_REGISTRY[key]
                 tmask = np.ones(P, bool) if kw.get("cover_all") else prob["target_mask"]
                 infl = prob["influence"] if kw.get("influence") else None
+                extra = {k: v for k, v in kw.items() if k not in ("cover_all", "influence")}
                 sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask,
                          budget, rng=np.random.default_rng(rng.integers(1 << 30)),
-                         influence=infl)
+                         influence=infl, **extra)
             results[name].append(train_eval(prob, sel, seed))
     out = {}
     for name, vals in results.items():
@@ -252,20 +259,24 @@ def run_sweep(seeds, fracs):
 
 
 def run_entropy_mi_sweep(seeds, k_fracs):
-    """Greedy entropy (Alg. 1) vs greedy MI (Alg. 2) as k grows.
+    """Greedy entropy (Alg. 1) vs greedy MI (Alg. 2) across labeling budgets.
 
-    Mirrors benchmark-selection/code/eval_entropy_vs_mi.py's k-sweep: k is
-    expressed as a fraction of the *target-aligned candidate pool* T (not the
-    full action space P), since that pool is the fixed item set the two
-    algorithms actually search over. Uses ``cap=None`` so both methods see the
-    whole pool -- the registry default (``cap=200``) exists only to keep
-    greedy MI's cubic per-step cost bounded in the main/sweep/ablation
-    benchmarks, where T can run into the thousands.
+    Mirrors benchmark-selection/code/eval_entropy_vs_mi.py's k-sweep, but the
+    axis is *reported* as the labeling budget in % of the full pair matrix so
+    it is directly comparable with every other table. Internally ``k_fracs``
+    still parameterize the sweep as fractions of the target-aligned pool T
+    (the fixed item set the two algorithms search over), so the reachable
+    budget tops out at T/P = 25% of the matrix -- both methods refuse to buy
+    off-target labels. Uses ``cap=None`` so both methods see the whole pool --
+    the registry default (``cap=200``) exists only to keep greedy MI's cubic
+    per-step cost bounded in benchmarks where T runs into the thousands.
     """
     rows = {f: {"Greedy entropy": [], "Greedy MI": []} for f in k_fracs}
+    P = T = None
     for seed in seeds:
         prob = make_problem(seed)
         T = int(prob["target_mask"].sum())
+        P = len(prob["X"])
         for f in k_fracs:
             b = max(1, round(f * T))
             rows[f]["Greedy entropy"].append(_acq(prob, "greedy_entropy", b, seed, cap=None))
@@ -275,23 +286,80 @@ def run_entropy_mi_sweep(seeds, k_fracs):
         ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
         return float(v.mean()), float(ci)
 
-    out = {"note": "k expressed as a fraction of the target-aligned pool", "k_fracs": {}}
+    out = {"note": "budget reported as % of the full pair matrix; both methods "
+                   "select within the target-aligned pool, so the axis tops out "
+                   f"at {100.0 * T / P:.0f}%", "budgets": {}}
     print(f"\nGreedy entropy (Alg. 1) vs greedy MI (Alg. 2), {len(seeds)} seeds. "
-          f"k = fraction of the target-aligned pool.\n")
-    print(f"{'k (% of pool)':>14}  {'Entropy':>16}  {'MI':>16}  {'Leader':>8}")
+          f"Budget in % of the full matrix (max {100.0 * T / P:.0f}%: the "
+          f"target-aligned pool).\n")
+    print(f"{'Budget':>7}  {'Labels':>6}  {'Entropy':>16}  {'MI':>16}  {'Leader':>8}")
     print("-" * 62)
     for f in k_fracs:
+        b = max(1, round(f * T))
+        budget_pct = 100.0 * b / P
         ent, ent_ci = _mean_ci(rows[f]["Greedy entropy"])
         mi, mi_ci = _mean_ci(rows[f]["Greedy MI"])
-        out["k_fracs"][f] = {"Greedy entropy": ent, "Greedy entropy_ci": ent_ci,
-                             "Greedy MI": mi, "Greedy MI_ci": mi_ci}
+        out["budgets"][round(budget_pct, 2)] = {
+            "labels": b,
+            "Greedy entropy": ent, "Greedy entropy_ci": ent_ci,
+            "Greedy MI": mi, "Greedy MI_ci": mi_ci}
         if ent + ent_ci < mi - mi_ci:
             leader = "entropy"
         elif mi + mi_ci < ent - ent_ci:
             leader = "MI"
         else:
             leader = "tie"
-        print(f"{f*100:13.0f}%  {ent:6.2f} +/- {ent_ci:4.2f}  {mi:6.2f} +/- {mi_ci:4.2f}  {leader:>8}")
+        print(f"{budget_pct:6.2f}%  {b:6d}  {ent:6.2f} +/- {ent_ci:4.2f}  "
+              f"{mi:6.2f} +/- {mi_ci:4.2f}  {leader:>8}")
+    return out
+
+
+def run_noise_sweep(seeds, budget_frac, ratios):
+    """Sensitivity of the less-is-more effect to the off/on-target noise gap.
+
+    Sweeps ``off_on_noise_ratio`` (on-target label noise stays fixed; only the
+    off-target noise scales) and compares ActiveEval-Pair at the given budget
+    against MetaEvaluator (full, 100% labels) and whole-pool Random. At ratio
+    1.0 the noise is homoscedastic, so the full matrix is strictly more
+    information and should win; the sweep locates the noise gap at which a
+    clean target-aligned subset overtakes labelling everything."""
+    methods = ["ActiveEval-Pair", "MetaEvaluator (full)", "Random"]
+    rows = {r: {m: [] for m in methods} for r in ratios}
+    for seed in seeds:
+        for r in ratios:
+            prob = make_problem(seed, off_on_noise_ratio=r)
+            P = len(prob["X"])
+            b = max(1, int(budget_frac * P))
+            rows[r]["ActiveEval-Pair"].append(_acq(prob, "activeeval_pair", b, seed, influence=True))
+            rows[r]["MetaEvaluator (full)"].append(_acq(prob, "metaevaluator_full", P, seed))
+            rows[r]["Random"].append(_acq(prob, "random", b, seed))
+
+    def _mean_ci(vals):
+        v = np.asarray(vals)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    out = {"note": "off_on_noise_ratio scales off-target label noise only; "
+                   "on-target noise fixed at base_noise*0.45", "ratios": {}}
+    print(f"\nNoise-sensitivity sweep ({len(seeds)} seeds, budget = "
+          f"{budget_frac*100:.0f}%). Unseen MAE (pp); lower is better.\n")
+    print(f"{'off/on noise':>13}  {'ActiveEval-Pair':>17}  {'Full (100%)':>15}  {'Random':>15}  {'Leader':>7}")
+    print("-" * 78)
+    for r in ratios:
+        ae, ae_ci = _mean_ci(rows[r]["ActiveEval-Pair"])
+        fu, fu_ci = _mean_ci(rows[r]["MetaEvaluator (full)"])
+        rd, rd_ci = _mean_ci(rows[r]["Random"])
+        out["ratios"][r] = {"ActiveEval-Pair": ae, "ActiveEval-Pair_ci": ae_ci,
+                            "MetaEvaluator (full)": fu, "MetaEvaluator (full)_ci": fu_ci,
+                            "Random": rd, "Random_ci": rd_ci}
+        if ae + ae_ci < fu - fu_ci:
+            leader = "AE"
+        elif fu + fu_ci < ae - ae_ci:
+            leader = "full"
+        else:
+            leader = "tie"
+        print(f"{r:12.1f}x  {ae:7.2f} +/- {ae_ci:4.2f}  {fu:7.2f} +/- {fu_ci:4.2f}"
+              f"  {rd:7.2f} +/- {rd_ci:4.2f}  {leader:>7}")
     return out
 
 
@@ -326,7 +394,7 @@ def run_ablation(seeds, budget_frac):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -339,6 +407,9 @@ def main():
     elif args.mode == "ablation":
         res = run_ablation(seeds, args.budget_frac)
         out_path = "outputs/acquisition_ablation.json"
+    elif args.mode == "noise_sweep":
+        res = run_noise_sweep(seeds, args.budget_frac, [1.0, 1.5, 2.0, 3.0, 4.4, 6.0])
+        out_path = "outputs/noise_sensitivity.json"
     elif args.mode == "entropy_mi_sweep":
         res = run_entropy_mi_sweep(seeds, [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0])
         out_path = "outputs/entropy_mi_sweep.json"

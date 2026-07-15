@@ -1,0 +1,53 @@
+{
+  "note": "off_on_noise_ratio scales off-target label noise only; on-target noise fixed at base_noise*0.45",
+  "ratios": {
+    "1.0": {
+      "ActiveEval-Pair": 2.4136177077889442,
+      "ActiveEval-Pair_ci": 0.2737392077521691,
+      "MetaEvaluator (full)": 2.184804162631432,
+      "MetaEvaluator (full)_ci": 0.28525314961269355,
+      "Random": 2.9830553382635117,
+      "Random_ci": 0.36635440728818935
+    },
+    "1.5": {
+      "ActiveEval-Pair": 2.381143420934677,
+      "ActiveEval-Pair_ci": 0.27795234302840743,
+      "MetaEvaluator (full)": 2.2464546064535775,
+      "MetaEvaluator (full)_ci": 0.28407646520593527,
+      "Random": 3.225779843827089,
+      "Random_ci": 0.37649218202511553
+    },
+    "2.0": {
+      "ActiveEval-Pair": 2.4746319403251014,
+      "ActiveEval-Pair_ci": 0.2928528330019231,
+      "MetaEvaluator (full)": 2.316951180497805,
+      "MetaEvaluator (full)_ci": 0.29465874981849965,
+      "Random": 3.5497464487950006,
+      "Random_ci": 0.42442254410476804
+    },
+    "3.0": {
+      "ActiveEval-Pair": 2.4880806418756642,
+      "ActiveEval-Pair_ci": 0.2773424058644733,
+      "MetaEvaluator (full)": 2.5673915073275566,
+      "MetaEvaluator (full)_ci": 0.32763753852903676,
+      "Random": 4.243192449212074,
+      "Random_ci": 0.41411934468147266
+    },
+    "4.4": {
+      "ActiveEval-Pair": 2.551780833552281,
+      "ActiveEval-Pair_ci": 0.28128370441522604,
+      "MetaEvaluator (full)": 2.983937797447046,
+      "MetaEvaluator (full)_ci": 0.3385496489700609,
+      "Random": 5.222049355506897,
+      "Random_ci": 0.47552127614751555
+    },
+    "6.0": {
+      "ActiveEval-Pair": 2.4881665656963983,
+      "ActiveEval-Pair_ci": 0.2863148340014716,
+      "MetaEvaluator (full)": 3.5971692825357118,
+      "MetaEvaluator (full)_ci": 0.36979225480282907,
+      "Random": 6.326253588000934,
+      "Random_ci": 0.5449917973715216
+    }
+  }
+}
