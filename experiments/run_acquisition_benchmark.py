@@ -34,6 +34,7 @@ import torch
 
 from active_evaluator.model import ActiveEvaluator
 from baselines import ACQUISITION_REGISTRY, ESTIMATOR_REGISTRY
+from experiments.cost_models import make_cost_model, greedy_fill
 
 
 # ---------------------------------------------------------------------------
@@ -389,6 +390,134 @@ def run_noise_sweep(seeds, budget_frac, ratios):
     return out
 
 
+# cost-budget currencies in display order (count = the original cardinality budget)
+COST_CURRENCIES = [
+    ("count", "actions"),
+    ("input_tok", "in-tok"),
+    ("output_tok", "out-tok"),
+    ("latency", "sec"),
+    ("memory", "GB-mem"),
+    ("storage", "GB-store"),
+]
+# how many actions of a method's greedy order to precompute (currency-independent,
+# since selection is cost-agnostic). A budget that stretches past this length just
+# under-spends -- the realized cost fraction is reported so that stays visible.
+_N_ORDER = 450
+# greedy MI/entropy are cubic in their search universe per step; the main table can
+# afford cap=None because its budget is small, but a cost budget may request many
+# more actions, so bound the universe here to keep the pivoted-Cholesky loop cheap.
+_GREEDY_CAP = {"greedy_mi": 250, "greedy_entropy": 250}
+
+
+def _method_order(prob, name, kind, key, kw, budget, rng_master):
+    """Selection order a method produces for a cardinality ``budget`` (the same
+    call the main table uses). Estimators return None (they do not acquire)."""
+    if kind == "est":
+        return None
+    if key == "metaevaluator_full":
+        return list(range(len(prob["X"])))
+    fn = ACQUISITION_REGISTRY[key]
+    P = len(prob["X"])
+    cover_all = kw.get("cover_all")
+    tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
+    infl = prob["influence"] if kw.get("influence") else None
+    tref = None if cover_all else prob.get("X_target_ref")
+    extra = {k: v for k, v in kw.items() if k not in ("cover_all", "influence")}
+    if key in _GREEDY_CAP:                      # bound the cubic pivoted-Cholesky loop
+        extra["cap"] = _GREEDY_CAP[key]
+    return fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask, budget,
+              rng=np.random.default_rng(rng_master.integers(1 << 30)),
+              influence=infl, target_ref=tref, **extra)
+
+
+def run_cost_budget(seeds, budget_frac):
+    """Real-currency budgets: spend ``budget_frac`` of each currency's whole-pool
+    cost instead of a fixed *count* of actions.
+
+    Each acquisition method's (cost-agnostic) greedy order is computed once per
+    seed; every currency then walks that order taking actions while its marginal
+    cost fits the budget (``experiments/cost_models.greedy_fill``). Cheap-per-action
+    picks buy more labels under a token/latency budget; the amortized ``storage``
+    currency rewards methods that concentrate on few reference models. Reports
+    unseen MAE (pp) per currency, plus the median #actions bought and the realized
+    cost fraction."""
+    acq = [(name, kind, key, kw) for name, kind, key, kw in METHODS
+           if kind == "acq" and key != "metaevaluator_full"]
+    cur_names = [c for c, _ in COST_CURRENCIES]
+    mae = {name: {c: [] for c in cur_names} for name, *_ in acq}
+    items = {name: {c: [] for c in cur_names} for name, *_ in acq}
+    frac = {name: {c: [] for c in cur_names} for name, *_ in acq}
+    full, ests = [], {n: [] for n, k, *_ in METHODS if k == "est"}
+
+    for seed in seeds:
+        prob = make_problem(seed)
+        cm = make_cost_model(prob, seed)
+        pm = np.asarray(prob["pair_model"])
+        P = len(prob["X"])
+        full.append(train_eval(prob, list(range(P)), seed))
+        for n, kind, key, _ in METHODS:
+            if kind == "est":
+                ests[n].append(estimator_mae(prob, key))
+        rng = np.random.default_rng(1000 + seed)
+        pool_tot = {c: cm[c].pool_total(pm) for c in cur_names}
+        for name, kind, key, kw in acq:
+            order = _method_order(prob, name, kind, key, kw, min(P, _N_ORDER), rng)
+            for c in cur_names:
+                budget = budget_frac * pool_tot[c]
+                kept, paid = greedy_fill(order, cm[c], budget, pm)
+                mae[name][c].append(train_eval(prob, kept, seed))
+                items[name][c].append(len(kept))
+                frac[name][c].append(paid / pool_tot[c] if pool_tot[c] > 0 else 0.0)
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    full_mae = _mci(full)
+    out = {"budget_frac": budget_frac, "seeds": len(seeds),
+           "full_mae": {"mae": full_mae[0], "ci": full_mae[1]},
+           "estimators": {n: _mci(v)[0] for n, v in ests.items()},
+           "currencies": {}}
+    # per-currency method records
+    for ci_, (c, _unit) in enumerate(COST_CURRENCIES):
+        out["currencies"][c] = {"unit": cm[c].unit, "methods": {}}
+        for name, *_ in acq:
+            m, mc = _mci(mae[name][c])
+            out["currencies"][c]["methods"][name] = {
+                "mae": m, "ci": mc,
+                "median_actions": float(np.median(items[name][c])),
+                "realized_frac": float(np.mean(frac[name][c]))}
+
+    # ---- printed tables ----
+    labels = [lbl for _, lbl in COST_CURRENCIES]
+    print(f"\nReal-currency budget benchmark ({len(seeds)} seeds, budget = "
+          f"{budget_frac*100:.0f}% of each currency's whole-pool cost).")
+    print(f"MetaEvaluator (full, 100% of every currency) = {full_mae[0]:.2f} +/- {full_mae[1]:.2f} pp. "
+          f"Estimators (budget-free): " +
+          ", ".join(f"{n} {v:.2f}" for n, v in out['estimators'].items()) + "\n")
+    width = max(len(n) for n, *_ in acq)
+    print("Unseen MAE (pp); lower is better")
+    print(f"{'Method'.ljust(width)}  " + "  ".join(f"{l:>8}" for l in labels))
+    print("-" * (width + 2 + 10 * len(labels)))
+    # rank rows by the count-currency MAE for a stable ordering
+    order_rows = sorted(acq, key=lambda t: out["currencies"]["count"]["methods"][t[0]]["mae"])
+    for name, *_ in order_rows:
+        cells = []
+        for c, _ in COST_CURRENCIES:
+            r = out["currencies"][c]["methods"][name]
+            cells.append(f"{r['mae']:8.2f}")
+        print(f"{name.ljust(width)}  " + "  ".join(cells))
+    print(f"\nMedian #actions bought under each budget (P = {P})")
+    print(f"{'Method'.ljust(width)}  " + "  ".join(f"{l:>8}" for l in labels))
+    print("-" * (width + 2 + 10 * len(labels)))
+    for name, *_ in order_rows:
+        cells = [f"{out['currencies'][c]['methods'][name]['median_actions']:8.0f}"
+                 for c, _ in COST_CURRENCIES]
+        print(f"{name.ljust(width)}  " + "  ".join(cells))
+    return out
+
+
 def run_ablation(seeds, budget_frac):
     """RQ5 ablation. This offline benchmark robustly isolates the component the paper
     finds most important---target-aware narrowing---against a no-structure random
@@ -420,7 +549,7 @@ def run_ablation(seeds, budget_frac):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -439,6 +568,9 @@ def main():
     elif args.mode == "entropy_mi_sweep":
         res = run_entropy_mi_sweep(seeds, [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0])
         out_path = "outputs/entropy_mi_sweep.json"
+    elif args.mode == "cost_budget":
+        res = run_cost_budget(seeds, args.budget_frac)
+        out_path = "outputs/cost_budget_benchmark.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])

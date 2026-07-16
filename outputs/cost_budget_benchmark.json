@@ -1,0 +1,512 @@
+{
+  "budget_frac": 0.15,
+  "seeds": 5,
+  "full_mae": {
+    "mae": 3.5966935753822327,
+    "ci": 0.4738128579609957
+  },
+  "estimators": {
+    "ATC": 6.84346452326263,
+    "DoC": 4.393042996417008
+  },
+  "currencies": {
+    "count": {
+      "unit": "actions",
+      "methods": {
+        "Random": {
+          "mae": 5.469114184379578,
+          "ci": 0.9009432630140121,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "k-center": {
+          "mae": 4.961399883031845,
+          "ci": 0.5148537139972229,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Facility-location": {
+          "mae": 5.543283298611641,
+          "ci": 0.5692965074897042,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Matrix completion": {
+          "mae": 5.138843059539795,
+          "ci": 0.7842382999247557,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Active testing": {
+          "mae": 6.100549399852753,
+          "ci": 0.9806801203441357,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Bayesian opt. design": {
+          "mae": 4.609309732913971,
+          "ci": 0.6660796766445323,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Submod. benchmark": {
+          "mae": 4.63847279548645,
+          "ci": 0.21736884785583613,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "GRAD-MATCH": {
+          "mae": 5.959796607494354,
+          "ci": 1.5152053968719552,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Greedy entropy (Alg. 1)": {
+          "mae": 5.214961394667625,
+          "ci": 0.9770309867838494,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "Greedy MI (Alg. 2)": {
+          "mae": 5.714408308267593,
+          "ci": 0.5395954134235097,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "ActiveEval-S": {
+          "mae": 4.0818774700164795,
+          "ci": 0.6774045593747969,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "ActiveEval-S+M": {
+          "mae": 5.655521377921104,
+          "ci": 1.1124646074052045,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        },
+        "ActiveEval-Pair": {
+          "mae": 4.114170074462891,
+          "ci": 0.8238213320704514,
+          "median_actions": 270.0,
+          "realized_frac": 0.15
+        }
+      }
+    },
+    "input_tok": {
+      "unit": "tokens",
+      "methods": {
+        "Random": {
+          "mae": 5.203880295157433,
+          "ci": 0.7889811645713349,
+          "median_actions": 280.0,
+          "realized_frac": 0.14997238880267003
+        },
+        "k-center": {
+          "mae": 4.852660298347473,
+          "ci": 0.21029460168402433,
+          "median_actions": 266.0,
+          "realized_frac": 0.14997503851699362
+        },
+        "Facility-location": {
+          "mae": 5.062995478510857,
+          "ci": 0.6428370233685616,
+          "median_actions": 267.0,
+          "realized_frac": 0.1499831322384572
+        },
+        "Matrix completion": {
+          "mae": 4.96684804558754,
+          "ci": 0.7579806802476152,
+          "median_actions": 268.0,
+          "realized_frac": 0.14998278106821594
+        },
+        "Active testing": {
+          "mae": 6.111084893345833,
+          "ci": 0.8950072486200719,
+          "median_actions": 270.0,
+          "realized_frac": 0.14998550148390577
+        },
+        "Bayesian opt. design": {
+          "mae": 4.772337451577187,
+          "ci": 0.7220176503315806,
+          "median_actions": 254.0,
+          "realized_frac": 0.14998764857325228
+        },
+        "Submod. benchmark": {
+          "mae": 4.768795669078827,
+          "ci": 0.702642003183199,
+          "median_actions": 241.0,
+          "realized_frac": 0.1499795396150859
+        },
+        "GRAD-MATCH": {
+          "mae": 6.255924701690674,
+          "ci": 1.3467273852690256,
+          "median_actions": 287.0,
+          "realized_frac": 0.14998494854487748
+        },
+        "Greedy entropy (Alg. 1)": {
+          "mae": 5.050174295902252,
+          "ci": 0.7076580887583761,
+          "median_actions": 276.0,
+          "realized_frac": 0.14996833040910126
+        },
+        "Greedy MI (Alg. 2)": {
+          "mae": 5.776133015751839,
+          "ci": 0.685209225551439,
+          "median_actions": 280.0,
+          "realized_frac": 0.14997229569564424
+        },
+        "ActiveEval-S": {
+          "mae": 4.556468650698662,
+          "ci": 0.3780479807646033,
+          "median_actions": 252.0,
+          "realized_frac": 0.1499775397857322
+        },
+        "ActiveEval-S+M": {
+          "mae": 5.3437624126672745,
+          "ci": 0.9746424307263488,
+          "median_actions": 248.0,
+          "realized_frac": 0.14998562192669979
+        },
+        "ActiveEval-Pair": {
+          "mae": 4.533954709768295,
+          "ci": 0.4645630247602154,
+          "median_actions": 252.0,
+          "realized_frac": 0.14997431697873304
+        }
+      }
+    },
+    "output_tok": {
+      "unit": "tokens",
+      "methods": {
+        "Random": {
+          "mae": 5.524838790297508,
+          "ci": 0.7835112023350134,
+          "median_actions": 277.0,
+          "realized_frac": 0.14998381497340416
+        },
+        "k-center": {
+          "mae": 4.813496991991997,
+          "ci": 0.6721600547135282,
+          "median_actions": 283.0,
+          "realized_frac": 0.14998601355202223
+        },
+        "Facility-location": {
+          "mae": 5.142707750201225,
+          "ci": 0.5350690078672565,
+          "median_actions": 252.0,
+          "realized_frac": 0.14998913180570084
+        },
+        "Matrix completion": {
+          "mae": 5.179744735360146,
+          "ci": 0.8699921353277035,
+          "median_actions": 268.0,
+          "realized_frac": 0.1499809338467037
+        },
+        "Active testing": {
+          "mae": 5.686146914958954,
+          "ci": 0.8620954906310542,
+          "median_actions": 267.0,
+          "realized_frac": 0.14997200106909417
+        },
+        "Bayesian opt. design": {
+          "mae": 4.76316399872303,
+          "ci": 0.9472265030213873,
+          "median_actions": 293.0,
+          "realized_frac": 0.14997648889498033
+        },
+        "Submod. benchmark": {
+          "mae": 4.438921213150024,
+          "ci": 0.25523521524706716,
+          "median_actions": 286.0,
+          "realized_frac": 0.14997644615264644
+        },
+        "GRAD-MATCH": {
+          "mae": 5.894275456666946,
+          "ci": 1.657035325614807,
+          "median_actions": 307.0,
+          "realized_frac": 0.1499670570576417
+        },
+        "Greedy entropy (Alg. 1)": {
+          "mae": 4.865753203630447,
+          "ci": 0.7507854444604252,
+          "median_actions": 278.0,
+          "realized_frac": 0.1499921456830993
+        },
+        "Greedy MI (Alg. 2)": {
+          "mae": 5.5498844385147095,
+          "ci": 0.5557906921754291,
+          "median_actions": 272.0,
+          "realized_frac": 0.149990155727999
+        },
+        "ActiveEval-S": {
+          "mae": 4.7803665697574615,
+          "ci": 0.5799354249587679,
+          "median_actions": 248.0,
+          "realized_frac": 0.149984956869443
+        },
+        "ActiveEval-S+M": {
+          "mae": 5.294961780309677,
+          "ci": 0.9932063762763164,
+          "median_actions": 259.0,
+          "realized_frac": 0.14997771143416325
+        },
+        "ActiveEval-Pair": {
+          "mae": 4.702802002429962,
+          "ci": 0.5152609788595928,
+          "median_actions": 248.0,
+          "realized_frac": 0.1499836895410992
+        }
+      }
+    },
+    "latency": {
+      "unit": "sec",
+      "methods": {
+        "Random": {
+          "mae": 5.278511792421341,
+          "ci": 0.6776545613888835,
+          "median_actions": 279.0,
+          "realized_frac": 0.1499980420110854
+        },
+        "k-center": {
+          "mae": 4.376346841454506,
+          "ci": 0.6466660209413118,
+          "median_actions": 282.0,
+          "realized_frac": 0.14999876679613697
+        },
+        "Facility-location": {
+          "mae": 4.8087505251169205,
+          "ci": 0.2937194931172276,
+          "median_actions": 305.0,
+          "realized_frac": 0.14999722505001242
+        },
+        "Matrix completion": {
+          "mae": 5.209970921278,
+          "ci": 0.9363238186200488,
+          "median_actions": 265.0,
+          "realized_frac": 0.1499983687400066
+        },
+        "Active testing": {
+          "mae": 5.785356983542442,
+          "ci": 0.798986284541861,
+          "median_actions": 278.0,
+          "realized_frac": 0.14999904045808302
+        },
+        "Bayesian opt. design": {
+          "mae": 4.467044025659561,
+          "ci": 0.9288779720480731,
+          "median_actions": 271.0,
+          "realized_frac": 0.14999782641377263
+        },
+        "Submod. benchmark": {
+          "mae": 4.527619406580925,
+          "ci": 0.35030016325729935,
+          "median_actions": 277.0,
+          "realized_frac": 0.1499983557557745
+        },
+        "GRAD-MATCH": {
+          "mae": 6.15145206451416,
+          "ci": 1.2238485867180944,
+          "median_actions": 314.0,
+          "realized_frac": 0.14999683834209052
+        },
+        "Greedy entropy (Alg. 1)": {
+          "mae": 4.962748661637306,
+          "ci": 0.7089385928656747,
+          "median_actions": 294.0,
+          "realized_frac": 0.14999748928305287
+        },
+        "Greedy MI (Alg. 2)": {
+          "mae": 5.570422485470772,
+          "ci": 0.9927162877774593,
+          "median_actions": 286.0,
+          "realized_frac": 0.14999891293362935
+        },
+        "ActiveEval-S": {
+          "mae": 4.587738662958145,
+          "ci": 0.5376643228331571,
+          "median_actions": 255.0,
+          "realized_frac": 0.1499986327967448
+        },
+        "ActiveEval-S+M": {
+          "mae": 5.471388027071953,
+          "ci": 1.1198886018720526,
+          "median_actions": 235.0,
+          "realized_frac": 0.1499981925765162
+        },
+        "ActiveEval-Pair": {
+          "mae": 4.550542831420898,
+          "ci": 0.6544995546234158,
+          "median_actions": 255.0,
+          "realized_frac": 0.14999821625843693
+        }
+      }
+    },
+    "memory": {
+      "unit": "GB",
+      "methods": {
+        "Random": {
+          "mae": 5.017252117395401,
+          "ci": 0.49610410582341624,
+          "median_actions": 259.0,
+          "realized_frac": 0.14998743009618082
+        },
+        "k-center": {
+          "mae": 4.56500381231308,
+          "ci": 0.6587065024056143,
+          "median_actions": 295.0,
+          "realized_frac": 0.14999532843943794
+        },
+        "Facility-location": {
+          "mae": 5.433187633752823,
+          "ci": 0.4013331553833359,
+          "median_actions": 287.0,
+          "realized_frac": 0.14999296322660066
+        },
+        "Matrix completion": {
+          "mae": 5.4589953273534775,
+          "ci": 1.2020817173150102,
+          "median_actions": 250.0,
+          "realized_frac": 0.1499962863534513
+        },
+        "Active testing": {
+          "mae": 5.789027065038681,
+          "ci": 1.142906695784004,
+          "median_actions": 232.0,
+          "realized_frac": 0.1499880919128926
+        },
+        "Bayesian opt. design": {
+          "mae": 4.534383080899715,
+          "ci": 1.2290333936830065,
+          "median_actions": 318.0,
+          "realized_frac": 0.14999327898408948
+        },
+        "Submod. benchmark": {
+          "mae": 4.476005584001541,
+          "ci": 0.4198395144809431,
+          "median_actions": 312.0,
+          "realized_frac": 0.1499918051602441
+        },
+        "GRAD-MATCH": {
+          "mae": 6.204240843653679,
+          "ci": 1.5497428954044694,
+          "median_actions": 275.0,
+          "realized_frac": 0.1499910233102179
+        },
+        "Greedy entropy (Alg. 1)": {
+          "mae": 5.089487135410309,
+          "ci": 1.0026952401578624,
+          "median_actions": 302.0,
+          "realized_frac": 0.1499874312948192
+        },
+        "Greedy MI (Alg. 2)": {
+          "mae": 5.625177398324013,
+          "ci": 0.8784888636098794,
+          "median_actions": 288.0,
+          "realized_frac": 0.14998958774965732
+        },
+        "ActiveEval-S": {
+          "mae": 4.124628528952599,
+          "ci": 0.5775033924789992,
+          "median_actions": 264.0,
+          "realized_frac": 0.14999226395951404
+        },
+        "ActiveEval-S+M": {
+          "mae": 5.287437289953232,
+          "ci": 1.0892939330220865,
+          "median_actions": 264.0,
+          "realized_frac": 0.14998652233418938
+        },
+        "ActiveEval-Pair": {
+          "mae": 4.330701306462288,
+          "ci": 0.49098969217121613,
+          "median_actions": 264.0,
+          "realized_frac": 0.14998974956470762
+        }
+      }
+    },
+    "storage": {
+      "unit": "GB",
+      "methods": {
+        "Random": {
+          "mae": 5.750128924846649,
+          "ci": 1.4306467313859377,
+          "median_actions": 109.0,
+          "realized_frac": 0.1496902284408045
+        },
+        "k-center": {
+          "mae": 6.4556654542684555,
+          "ci": 2.220775881027235,
+          "median_actions": 177.0,
+          "realized_frac": 0.14973142042463233
+        },
+        "Facility-location": {
+          "mae": 6.718050688505173,
+          "ci": 1.2831076505984873,
+          "median_actions": 133.0,
+          "realized_frac": 0.14981511003205802
+        },
+        "Matrix completion": {
+          "mae": 6.303247511386871,
+          "ci": 1.736270367303734,
+          "median_actions": 106.0,
+          "realized_frac": 0.14977980525478105
+        },
+        "Active testing": {
+          "mae": 6.3435206562280655,
+          "ci": 0.8582305766524083,
+          "median_actions": 128.0,
+          "realized_frac": 0.14985135633600385
+        },
+        "Bayesian opt. design": {
+          "mae": 5.2172111719846725,
+          "ci": 0.6831331909919859,
+          "median_actions": 232.0,
+          "realized_frac": 0.14966895087066956
+        },
+        "Submod. benchmark": {
+          "mae": 4.990253672003746,
+          "ci": 0.7914701694997687,
+          "median_actions": 251.0,
+          "realized_frac": 0.14990881451107813
+        },
+        "GRAD-MATCH": {
+          "mae": 6.3401952385902405,
+          "ci": 0.4077123574286175,
+          "median_actions": 104.0,
+          "realized_frac": 0.14966110014093087
+        },
+        "Greedy entropy (Alg. 1)": {
+          "mae": 6.2016139924526215,
+          "ci": 1.2110803590159627,
+          "median_actions": 106.0,
+          "realized_frac": 0.1496050037592151
+        },
+        "Greedy MI (Alg. 2)": {
+          "mae": 6.535829976201057,
+          "ci": 1.1222380170088277,
+          "median_actions": 113.0,
+          "realized_frac": 0.14972862798093786
+        },
+        "ActiveEval-S": {
+          "mae": 5.600277408957481,
+          "ci": 0.8392418602867928,
+          "median_actions": 98.0,
+          "realized_frac": 0.14975567323906647
+        },
+        "ActiveEval-S+M": {
+          "mae": 6.1722733825445175,
+          "ci": 1.278113213411476,
+          "median_actions": 122.0,
+          "realized_frac": 0.1494159497226836
+        },
+        "ActiveEval-Pair": {
+          "mae": 6.806420460343361,
+          "ci": 0.7489987074296865,
+          "median_actions": 91.0,
+          "realized_frac": 0.14975536188417063
+        }
+      }
+    }
+  }
+}
