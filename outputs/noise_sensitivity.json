@@ -1,53 +1,53 @@
 {
-  "note": "off_on_noise_ratio scales off-target label noise only; on-target noise fixed at base_noise*0.45",
+  "note": "off_on_noise_ratio scales far-source label noise only; near-target source noise fixed at base_noise*0.45",
   "ratios": {
     "1.0": {
-      "ActiveEval-Pair": 2.4136177077889442,
-      "ActiveEval-Pair_ci": 0.2737392077521691,
-      "MetaEvaluator (full)": 2.184804162631432,
-      "MetaEvaluator (full)_ci": 0.28525314961269355,
-      "Random": 2.9830553382635117,
-      "Random_ci": 0.36635440728818935
+      "ActiveEval-Pair": 3.672252371907234,
+      "ActiveEval-Pair_ci": 0.20849267449965544,
+      "MetaEvaluator (full)": 2.9037676006555557,
+      "MetaEvaluator (full)_ci": 0.3925153902143033,
+      "Random": 3.877274841070175,
+      "Random_ci": 0.3370004314699079
     },
     "1.5": {
-      "ActiveEval-Pair": 2.381143420934677,
-      "ActiveEval-Pair_ci": 0.27795234302840743,
-      "MetaEvaluator (full)": 2.2464546064535775,
-      "MetaEvaluator (full)_ci": 0.28407646520593527,
-      "Random": 3.225779843827089,
-      "Random_ci": 0.37649218202511553
+      "ActiveEval-Pair": 3.7259911745786667,
+      "ActiveEval-Pair_ci": 0.20151679931103605,
+      "MetaEvaluator (full)": 2.992738224565983,
+      "MetaEvaluator (full)_ci": 0.36004355632783464,
+      "Random": 4.050143212080002,
+      "Random_ci": 0.36273146909822973
     },
     "2.0": {
-      "ActiveEval-Pair": 2.4746319403251014,
-      "ActiveEval-Pair_ci": 0.2928528330019231,
-      "MetaEvaluator (full)": 2.316951180497805,
-      "MetaEvaluator (full)_ci": 0.29465874981849965,
-      "Random": 3.5497464487950006,
-      "Random_ci": 0.42442254410476804
+      "ActiveEval-Pair": 3.788575828075409,
+      "ActiveEval-Pair_ci": 0.3464960367351705,
+      "MetaEvaluator (full)": 3.051525391638279,
+      "MetaEvaluator (full)_ci": 0.37665561654602703,
+      "Random": 4.135130792856216,
+      "Random_ci": 0.40983899522929523
     },
     "3.0": {
-      "ActiveEval-Pair": 2.4880806418756642,
-      "ActiveEval-Pair_ci": 0.2773424058644733,
-      "MetaEvaluator (full)": 2.5673915073275566,
-      "MetaEvaluator (full)_ci": 0.32763753852903676,
-      "Random": 4.243192449212074,
-      "Random_ci": 0.41411934468147266
+      "ActiveEval-Pair": 3.93590085208416,
+      "ActiveEval-Pair_ci": 0.49648617331032224,
+      "MetaEvaluator (full)": 3.2553330808877945,
+      "MetaEvaluator (full)_ci": 0.42617026646773853,
+      "Random": 4.5242562890052795,
+      "Random_ci": 0.443713957999642
     },
     "4.4": {
-      "ActiveEval-Pair": 2.551780833552281,
-      "ActiveEval-Pair_ci": 0.28128370441522604,
-      "MetaEvaluator (full)": 2.983937797447046,
-      "MetaEvaluator (full)_ci": 0.3385496489700609,
-      "Random": 5.222049355506897,
-      "Random_ci": 0.47552127614751555
+      "ActiveEval-Pair": 4.1995669901371,
+      "ActiveEval-Pair_ci": 0.39067705950881393,
+      "MetaEvaluator (full)": 3.636504039168358,
+      "MetaEvaluator (full)_ci": 0.4767325219325144,
+      "Random": 4.9600765854120255,
+      "Random_ci": 0.4940816283833941
     },
     "6.0": {
-      "ActiveEval-Pair": 2.4881665656963983,
-      "ActiveEval-Pair_ci": 0.2863148340014716,
-      "MetaEvaluator (full)": 3.5971692825357118,
-      "MetaEvaluator (full)_ci": 0.36979225480282907,
-      "Random": 6.326253588000934,
-      "Random_ci": 0.5449917973715216
+      "ActiveEval-Pair": 4.350564181804657,
+      "ActiveEval-Pair_ci": 0.48520808505214763,
+      "MetaEvaluator (full)": 4.130488112568855,
+      "MetaEvaluator (full)_ci": 0.5086248445997573,
+      "Random": 5.496182292699814,
+      "Random_ci": 0.8421472204015888
     }
   }
 }

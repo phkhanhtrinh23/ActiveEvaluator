@@ -83,26 +83,43 @@ def select_kcenter(X, pair_model, pair_sample, target_mask, budget, *, rng, **kw
 
 
 def select_facility(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                    influence: np.ndarray | None = None, **kw) -> List[int]:
+                    influence: np.ndarray | None = None,
+                    target_ref: np.ndarray | None = None, **kw) -> List[int]:
     """Target-aware (optionally influence-weighted) facility location.
 
-    Maximises ``sum_{q in target} w(q) * max_{s in S} k(q, s)`` by greedy. With
-    ``influence=None`` this is plain facility location; passing the gradient-norm
-    influence weights recovers ActiveEval's sample-coverage term.
+    Maximises ``sum_{q in target} w(q) * max_{s in S} k(q, s)`` by greedy, i.e.
+    it picks *source* candidates ``S`` that best cover the target region ``Q``.
+
+    The target region ``Q`` is supplied one of two ways:
+
+    * ``target_ref`` -- an explicit ``(T, d)`` array of *unlabeled* target-region
+      descriptors. Candidates ``X`` are the (disjoint) labelable source pool, so
+      the target slices are never selected/labeled themselves. ``influence`` then
+      weights the *candidates* (high-leverage source pairs are preferred).
+    * ``target_mask`` -- legacy path: the target rows live inside ``X`` and both
+      anchor the coverage objective and are themselves selectable. ``influence``
+      weights the target anchors. Used when ``target_ref is None``.
     """
     n = len(X)
     budget = min(budget, n)
     tau = _median_bandwidth(X, rng)
-    q_idx = np.where(target_mask)[0]
-    if q_idx.size == 0:
-        q_idx = np.arange(n)
-    K = _rbf(X[q_idx], X, tau)            # (|Q|, P): sim of each target point to each candidate
-    w = np.ones(q_idx.size) if influence is None else influence[q_idx]
-    coverage = np.zeros(q_idx.size)
+    if target_ref is not None and len(target_ref) > 0:
+        Q = np.asarray(target_ref, X.dtype)          # unlabeled target-region anchors
+        w = np.ones(len(Q))
+        cand_w = np.ones(n) if influence is None else influence   # leverage on candidates
+    else:
+        q_idx = np.where(target_mask)[0]
+        if q_idx.size == 0:
+            q_idx = np.arange(n)
+        Q = X[q_idx]
+        w = np.ones(q_idx.size) if influence is None else influence[q_idx]
+        cand_w = np.ones(n)
+    K = _rbf(Q, X, tau)                   # (|Q|, P): sim of each target anchor to each candidate
+    coverage = np.zeros(len(Q))
     chosen: List[int] = []
     avail = np.ones(n, bool)
     for _ in range(budget):
-        gain = (w[:, None] * np.clip(K - coverage[:, None], 0, None)).sum(0)
+        gain = (w[:, None] * np.clip(K - coverage[:, None], 0, None)).sum(0) * cand_w
         gain[~avail] = -np.inf
         pick = int(np.argmax(gain))
         if not np.isfinite(gain[pick]) or gain[pick] <= 0:
@@ -224,8 +241,12 @@ def select_gradmatch(X, pair_model, pair_sample, target_mask, budget, *, rng, la
     :func:`active_evaluator.active_selection.gradient_match_omp`."""
     n = len(X)
     budget = min(budget, n)
-    q = np.where(target_mask)[0]
-    target = X[q].mean(0) if q.size else X.mean(0)
+    target_ref = kw.get("target_ref")
+    if target_ref is not None and len(target_ref) > 0:
+        target = np.asarray(target_ref, X.dtype).mean(0)   # unlabeled target-region mean
+    else:
+        q = np.where(target_mask)[0]
+        target = X[q].mean(0) if q.size else X.mean(0)
     residual = target.copy()
     chosen: List[int] = []
     avail = np.ones(n, bool)
@@ -385,15 +406,17 @@ def select_greedy_mi(X, pair_model, pair_sample, target_mask, budget, *, rng,
 # ---------------------------------------------------------------------------
 
 def select_activeeval_sample(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                             influence: np.ndarray | None = None, **kw) -> List[int]:
+                             influence: np.ndarray | None = None,
+                             target_ref: np.ndarray | None = None, **kw) -> List[int]:
     """ActiveEval-S: target-aware, influence-weighted facility location over
     sample-sets only (the model axis is left uniform)."""
     return select_facility(X, pair_model, pair_sample, target_mask, budget,
-                           rng=rng, influence=influence)
+                           rng=rng, influence=influence, target_ref=target_ref)
 
 
 def select_activeeval_sm(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                         influence: np.ndarray | None = None, **kw) -> List[int]:
+                         influence: np.ndarray | None = None,
+                         target_ref: np.ndarray | None = None, **kw) -> List[int]:
     """ActiveEval-S+M: two-stage. First pick behaviorally-diverse reference
     models (k-center in model-mean-descriptor space), then target-aware sample
     sets within those models."""
@@ -408,26 +431,40 @@ def select_activeeval_sm(X, pair_model, pair_sample, target_mask, budget, *, rng
     sub = np.where(mask)[0]
     infl = None if influence is None else influence[sub]
     local = select_facility(X[sub], pair_model[sub], pair_sample[sub], target_mask[sub],
-                            budget, rng=rng, influence=infl)
+                            budget, rng=rng, influence=infl, target_ref=target_ref)
     return list(sub[local])
 
 
 def select_activeeval_pair(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                           influence: np.ndarray | None = None, alpha=0.8, **kw) -> List[int]:
+                           influence: np.ndarray | None = None,
+                           target_ref: np.ndarray | None = None, alpha=0.8, **kw) -> List[int]:
     """ActiveEval-Pair: direct pair selection blending target-coverage facility
-    location with a log-determinant diversity term over the *target-aligned* pairs
-    (the strongest variant). The diversity term spreads picks within the target
-    region rather than wandering into noisy off-target pairs."""
+    location with a log-determinant diversity term (the strongest variant). The
+    coverage term pulls picks toward the (unlabeled) target region; the diversity
+    term then spreads the remaining budget across the source pool near those picks
+    rather than clumping."""
     n = len(X)
     budget = min(budget, n)
     b_cov = int(round(alpha * budget))
     cov = select_facility(X, pair_model, pair_sample, target_mask, b_cov,
-                          rng=rng, influence=influence)
+                          rng=rng, influence=influence, target_ref=target_ref)
     remaining = budget - len(cov)
     if remaining > 0:
         chosen_set = set(cov)
-        # diversify only within the target region (stay on clean, relevant pairs)
-        cand = np.array([i for i in np.where(target_mask)[0] if i not in chosen_set])
+        # Diversify, but stay on clean, target-relevant pairs. If target pairs are
+        # themselves selectable (legacy), diversify within them. Otherwise the
+        # target region is unlabeled/held out, so restrict the diversity pool to
+        # the near-target *source* pairs (top affinity to the target reference)
+        # rather than the whole source pool -- else the log-det term wanders into
+        # far, noisy pairs and undoes the coverage term's target focus.
+        if target_ref is not None and len(target_ref) > 0 and not target_mask.any():
+            tau = _median_bandwidth(X, rng)
+            affinity = _rbf(np.asarray(target_ref, X.dtype), X, tau).max(0)  # per-candidate target affinity
+            k = max(remaining, budget, int(0.35 * n))
+            near = np.argsort(-affinity)[:k]
+            cand = np.array([i for i in near if i not in chosen_set])
+        else:
+            cand = np.array([i for i in np.where(target_mask)[0] if i not in chosen_set])
         if cand.size == 0:
             cand = np.array([i for i in range(n) if i not in chosen_set])
         div_local = select_logdet(X[cand], pair_model[cand], pair_sample[cand],

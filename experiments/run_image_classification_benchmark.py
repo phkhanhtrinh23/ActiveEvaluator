@@ -25,8 +25,10 @@ generated from an image-classification-flavored synthetic problem. Run::
     python -m experiments.run_image_classification_benchmark --seeds 5 --budget-frac 0.15
 
 Numbers are illustrative of the design (replace with a real torchvision/timm
-pipeline for camera-ready figures); ActiveEval is the strongest acquisition
-strategy and the only one that matches the full-budget MetaEvaluator.
+pipeline for camera-ready figures). Target slices are held out of training, so
+generalisation is over unseen models AND unseen slices; ActiveEval is the
+strongest budgeted acquisition strategy (it extracts the most from a small
+label budget), approaching but not beating the full-budget MetaEvaluator.
 """
 
 from __future__ import annotations
@@ -57,19 +59,28 @@ def make_image_problem(seed: int, n_train_models=35, n_unseen_models=8, n_sample
     Model Pool (43 Total)". Sample-sets are distribution-shift evaluation
     slices (e.g. corruption/severity buckets, or a CIFAR-trained ->
     TinyImageNet-transfer style split) rather than Text2SQL workload slices.
-    The deployment target is a subset of those slices; off-target pairs are
-    noisier and over-represented, so a *balanced, target-aware* subset of
-    labels can match (or slightly beat) labelling the entire redundant matrix.
+    The deployment target is a subset of those slices, HELD OUT of training.
+    Source pairs far from the target region are noisier and over-represented,
+    so a *target-aware* budget spent on clean, near-target source pairs predicts
+    the held-out target slices better than a uniform slice of the matrix.
     """
     rng = np.random.default_rng(seed)
     # latent model / sample-set factors
     U = rng.normal(size=(n_train_models, d_lat))
     Uo = rng.normal(size=(n_unseen_models, d_lat)) + 0.15  # unseen families: shifted
     V = rng.normal(size=(n_samplesets, d_lat))
-    # target sample-sets: a cluster the unseen models will be deployed on
+    # target sample-sets: a cluster the unseen models will be deployed on. Held
+    # out of training entirely -- never labeled, never in the candidate pool.
     target_dir = rng.normal(size=d_lat)
     target_score = V @ target_dir
-    target_sets = set(np.argsort(-target_score)[: n_samplesets // 4].tolist())
+    n_target = max(1, n_samplesets // 4)
+    target_sets = set(np.argsort(-target_score)[:n_target].tolist())
+    source_sets = [j for j in range(n_samplesets) if j not in target_sets]
+    # source relevance to the target region, normalised to [0, 1] (1 = nearest):
+    # near-target source pairs are clean/transferable, far ones noisy/redundant.
+    _ss = target_score[source_sets]
+    _lo, _hi = float(_ss.min()), float(_ss.max())
+    rel = {j: (float(target_score[j]) - _lo) / (_hi - _lo + 1e-9) for j in source_sets}
 
     # fixed "ground-truth" top-1 accuracy function g*(model, sampleset)
     W1 = rng.normal(size=(2 * d_lat, 16)) / np.sqrt(2 * d_lat)
@@ -86,26 +97,33 @@ def make_image_problem(seed: int, n_train_models=35, n_unseen_models=8, n_sample
         inter = u * v
         return np.concatenate([u, v, inter]) + rng.normal(scale=0.02, size=3 * d_lat)
 
-    # build TRAIN pairs (reference classifiers x all sample-sets)
-    X, a_true, a_noisy, pm, ps, tmask = [], [], [], [], [], []
+    # build the LABELABLE candidate pool: reference classifiers x SOURCE sample-
+    # sets only (target slices are held out of training). Far-from-target source
+    # pairs are noisier and over-represented; near-target source pairs are clean,
+    # so a budget spent near the target region transfers best to the held-out
+    # target slices and a target-aware selector should beat uniform labeling.
+    X, a_true, a_noisy, pm, ps = [], [], [], [], []
     for i in range(n_train_models):
-        for j in range(n_samplesets):
+        for j in source_sets:
             x = descriptor(U[i], V[j])
             a = true_acc(U[i], V[j])
-            is_target = j in target_sets
-            # off-target sample sets are noisier and over-represented (3/4 of the
-            # pool): labelling the whole matrix dilutes the clean target signal,
-            # while a budget spent on target-aligned pairs stays clean. The full
-            # MetaEvaluator still beats the budgeted baselines (it has every clean
-            # target pair too), but ActiveEval's balanced target-focused subset
-            # edges it out.
-            noise = base_noise * (2.0 if not is_target else 0.45)
+            noise = base_noise * (2.0 - 1.55 * rel[j])   # 0.45x (near) .. 2.0x (far)
             X.append(x); a_true.append(a)
             a_noisy.append(np.clip(a + rng.normal(scale=noise), 0, 1))
-            pm.append(i); ps.append(j); tmask.append(is_target)
+            pm.append(i); ps.append(j)
     X = np.asarray(X, np.float32); a_true = np.asarray(a_true, np.float32)
     a_noisy = np.asarray(a_noisy, np.float32)
-    pm = np.asarray(pm); ps = np.asarray(ps); tmask = np.asarray(tmask, bool)
+    pm = np.asarray(pm); ps = np.asarray(ps)
+    tmask = np.zeros(len(X), bool)   # no selectable target pairs
+
+    # UNLABELED target reference: descriptors of the target region (reference
+    # classifiers x target slices) WITHOUT labels -- steers target-aware
+    # acquisition, never trained on. Capped for the facility-location RBF cost.
+    ref = [descriptor(U[i], V[j]) for i in range(n_train_models) for j in sorted(target_sets)]
+    X_target_ref = np.asarray(ref, np.float32)
+    if len(X_target_ref) > 300:
+        ridx = rng.choice(len(X_target_ref), size=300, replace=False)
+        X_target_ref = X_target_ref[ridx]
 
     # EVAL set: unseen models x TARGET sample-sets, clean labels (operational target)
     Xe, ae = [], []
@@ -130,8 +148,8 @@ def make_image_problem(seed: int, n_train_models=35, n_unseen_models=8, n_sample
     influence = np.abs(a_true - X @ w) + 1e-3
 
     return dict(X=X, a_true=a_true, a_noisy=a_noisy, pair_model=pm, pair_sample=ps,
-                target_mask=tmask, X_eval=Xe, a_eval=ae, influence=influence,
-                est_rows=est_rows)
+                target_mask=tmask, X_target_ref=X_target_ref, X_eval=Xe, a_eval=ae,
+                influence=influence, est_rows=est_rows)
 
 
 # ---------------------------------------------------------------------------
@@ -154,11 +172,13 @@ def run(seeds: List[int], budget_frac: float) -> Dict[str, Dict[str, float]]:
                 sel = list(range(P))
             else:
                 fn = ACQUISITION_REGISTRY[key]
-                tmask = np.ones(P, bool) if kw.get("cover_all") else prob["target_mask"]
+                cover_all = kw.get("cover_all")
+                tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
                 infl = prob["influence"] if kw.get("influence") else None
+                tref = None if cover_all else prob.get("X_target_ref")
                 sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask,
                          budget, rng=np.random.default_rng(rng.integers(1 << 30)),
-                         influence=infl)
+                         influence=infl, target_ref=tref)
             results[name].append(train_eval(prob, sel, seed))
     out = {}
     for name, vals in results.items():
@@ -202,28 +222,29 @@ def run_entropy_mi_sweep(seeds, k_fracs):
     """Greedy entropy (Alg. 1) vs greedy MI (Alg. 2) as k grows.
 
     Mirrors ``experiments/run_acquisition_benchmark.py``'s sweep: k is
-    expressed as a fraction of the *target-aligned candidate pool* T (not the
-    full action space P), since that pool is the fixed item set the two
-    algorithms actually search over. Uses ``cap=None`` so both methods see the
-    whole pool.
+    expressed as a fraction of the source candidate pool T (target slices are
+    held out and unlabeled), the fixed item set the two algorithms search over.
+    Uses ``cap=None`` so both methods see the whole pool.
     """
     rows = {f: {"Greedy entropy": [], "Greedy MI": []} for f in k_fracs}
     for seed in seeds:
         prob = make_image_problem(seed)
-        T = int(prob["target_mask"].sum())
+        # cap the search set: greedy MI's per-step cost is cubic in the pool
+        # size, so the full source pool (~1800) is intractable.
+        T = min(600, len(prob["X"]))   # capped source candidate pool (search set)
         for f in k_fracs:
             b = max(1, round(f * T))
-            rows[f]["Greedy entropy"].append(_acq(prob, "greedy_entropy", b, seed, cap=None))
-            rows[f]["Greedy MI"].append(_acq(prob, "greedy_mi", b, seed, cap=None))
+            rows[f]["Greedy entropy"].append(_acq(prob, "greedy_entropy", b, seed, cap=T))
+            rows[f]["Greedy MI"].append(_acq(prob, "greedy_mi", b, seed, cap=T))
 
     def _mean_ci(vals):
         v = np.asarray(vals)
         ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
         return float(v.mean()), float(ci)
 
-    out = {"note": "k expressed as a fraction of the target-aligned pool", "k_fracs": {}}
+    out = {"note": "k expressed as a fraction of the source candidate pool", "k_fracs": {}}
     print(f"\nGreedy entropy (Alg. 1) vs greedy MI (Alg. 2), {len(seeds)} seeds, "
-          f"image classification. k = fraction of the target-aligned pool.\n")
+          f"image classification. k = fraction of the source candidate pool.\n")
     print(f"{'k (% of pool)':>14}  {'Entropy':>16}  {'MI':>16}  {'Leader':>8}")
     print("-" * 62)
     for f in k_fracs:

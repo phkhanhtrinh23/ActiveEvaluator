@@ -44,19 +44,31 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
                  d_lat=6, base_noise=0.08, off_on_noise_ratio=2.0 / 0.45):
     """Synthesise a meta-evaluation matrix with heteroscedastic label noise.
 
-    The deployment target is a subset of sample-sets; off-target pairs are noisier
-    and over-represented, so a *balanced, target-aware* subset of labels can match
-    (or slightly beat) labelling the entire redundant matrix.
+    The deployment target is a subset of sample-sets, HELD OUT of training. Source
+    pairs far from the target region are noisier and over-represented, so a
+    *target-aware* budget spent on clean, near-target source pairs predicts the
+    held-out target workload better than a uniform slice of the matrix.
     """
     rng = np.random.default_rng(seed)
     # latent model / sample-set factors
     U = rng.normal(size=(n_train_models, d_lat))
     Uo = rng.normal(size=(n_unseen_models, d_lat)) + 0.15  # unseen families: shifted
     V = rng.normal(size=(n_samplesets, d_lat))
-    # target sample-sets: a cluster the unseen models will be deployed on
+    # target sample-sets: a cluster the unseen models will be deployed on. These
+    # are HELD OUT of training entirely -- never labeled, never in the candidate
+    # pool. Generalisation is over unseen models AND these unseen workloads.
     target_dir = rng.normal(size=d_lat)
     target_score = V @ target_dir
-    target_sets = set(np.argsort(-target_score)[: n_samplesets // 4].tolist())
+    n_target = max(1, n_samplesets // 4)
+    target_sets = set(np.argsort(-target_score)[:n_target].tolist())
+    source_sets = [j for j in range(n_samplesets) if j not in target_sets]
+    # source relevance: proximity of each source sample-set to the target region,
+    # normalised to [0, 1] (1 = nearest). Near-target source pairs carry clean,
+    # transferable signal; far ones are noisy and redundant, so a target-aware
+    # selector should prefer near-target source pairs.
+    _ss = target_score[source_sets]
+    _lo, _hi = float(_ss.min()), float(_ss.max())
+    rel = {j: (float(target_score[j]) - _lo) / (_hi - _lo + 1e-9) for j in source_sets}
 
     # fixed "ground-truth" accuracy function g*(model, sampleset)
     W1 = rng.normal(size=(2 * d_lat, 16)) / np.sqrt(2 * d_lat)
@@ -73,29 +85,38 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
         inter = u * v
         return np.concatenate([u, v, inter]) + rng.normal(scale=0.02, size=3 * d_lat)
 
-    # build TRAIN pairs (reference models x all sample-sets)
-    X, a_true, a_noisy, pm, ps, tmask = [], [], [], [], [], []
-    # density: count of pairs sharing a sample-set cluster -> redundancy
+    # build the LABELABLE candidate pool: reference models x SOURCE sample-sets
+    # only (target sample-sets are held out of training entirely). Far-from-target
+    # source pairs are noisier and over-represented; near-target source pairs are
+    # clean. A budget spent near the target region transfers best to the held-out
+    # target workload, so a target-aware selector should beat uniform labeling.
+    # `off_on_noise_ratio` scales the far-source noise (default 2.0/0.45 keeps the
+    # original ~4.4x clean/noisy gap between nearest and farthest source pairs).
+    X, a_true, a_noisy, pm, ps = [], [], [], [], []
     for i in range(n_train_models):
-        for j in range(n_samplesets):
+        for j in source_sets:
             x = descriptor(U[i], V[j])
             a = true_acc(U[i], V[j])
-            is_target = j in target_sets
-            # off-target sample sets are noisier and over-represented (3/4 of the
-            # pool): labelling the whole matrix dilutes the clean target signal,
-            # while a budget spent on target-aligned pairs stays clean. The full
-            # MetaEvaluator still beats the budgeted baselines (it has every clean
-            # target pair too), but ActiveEval's balanced target-focused subset
-            # edges it out.
-            # on-target noise is fixed; `off_on_noise_ratio` scales only the
-            # off-target noise (default 2.0/0.45 reproduces the original 4.4x gap)
-            noise = base_noise * 0.45 * (off_on_noise_ratio if not is_target else 1.0)
+            noise = base_noise * 0.45 * (1.0 + (off_on_noise_ratio - 1.0) * (1.0 - rel[j]))
             X.append(x); a_true.append(a)
             a_noisy.append(np.clip(a + rng.normal(scale=noise), 0, 1))
-            pm.append(i); ps.append(j); tmask.append(is_target)
+            pm.append(i); ps.append(j)
     X = np.asarray(X, np.float32); a_true = np.asarray(a_true, np.float32)
     a_noisy = np.asarray(a_noisy, np.float32)
-    pm = np.asarray(pm); ps = np.asarray(ps); tmask = np.asarray(tmask, bool)
+    pm = np.asarray(pm); ps = np.asarray(ps)
+    # target sample-sets are not selectable; the target signal reaches acquisition
+    # only through the unlabeled X_target_ref below.
+    tmask = np.zeros(len(X), bool)
+
+    # UNLABELED target reference: descriptors of the target region (reference
+    # models x target sample-sets) WITHOUT labels -- steers target-aware
+    # acquisition toward the target region but is never trained on. Capped for
+    # the facility-location RBF cost.
+    ref = [descriptor(U[i], V[j]) for i in range(n_train_models) for j in sorted(target_sets)]
+    X_target_ref = np.asarray(ref, np.float32)
+    if len(X_target_ref) > 300:
+        ridx = rng.choice(len(X_target_ref), size=300, replace=False)
+        X_target_ref = X_target_ref[ridx]
 
     # EVAL set: unseen models x TARGET sample-sets, clean labels (operational target)
     Xe, ae = [], []
@@ -120,8 +141,8 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
     influence = np.abs(a_true - X @ w) + 1e-3
 
     return dict(X=X, a_true=a_true, a_noisy=a_noisy, pair_model=pm, pair_sample=ps,
-                target_mask=tmask, X_eval=Xe, a_eval=ae, influence=influence,
-                est_rows=est_rows)
+                target_mask=tmask, X_target_ref=X_target_ref, X_eval=Xe, a_eval=ae,
+                influence=influence, est_rows=est_rows)
 
 
 # ---------------------------------------------------------------------------
@@ -200,12 +221,14 @@ def run(seeds: List[int], budget_frac: float) -> Dict[str, Dict[str, float]]:
                 sel = list(range(P))
             else:
                 fn = ACQUISITION_REGISTRY[key]
-                tmask = np.ones(P, bool) if kw.get("cover_all") else prob["target_mask"]
+                cover_all = kw.get("cover_all")
+                tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
                 infl = prob["influence"] if kw.get("influence") else None
+                tref = None if cover_all else prob.get("X_target_ref")
                 extra = {k: v for k, v in kw.items() if k not in ("cover_all", "influence")}
                 sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask,
                          budget, rng=np.random.default_rng(rng.integers(1 << 30)),
-                         influence=infl, **extra)
+                         influence=infl, target_ref=tref, **extra)
             results[name].append(train_eval(prob, sel, seed))
     out = {}
     for name, vals in results.items():
@@ -224,8 +247,9 @@ def _acq(prob, key, budget, seed, *, cover_all=False, influence=False, **kw):
         fn = ACQUISITION_REGISTRY[key]
         tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
         infl = prob["influence"] if influence else None
+        tref = None if cover_all else prob.get("X_target_ref")
         sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask, budget,
-                 rng=np.random.default_rng(seed), influence=infl, **kw)
+                 rng=np.random.default_rng(seed), influence=infl, target_ref=tref, **kw)
     return train_eval(prob, sel, seed)
 
 
@@ -262,36 +286,38 @@ def run_entropy_mi_sweep(seeds, k_fracs):
     """Greedy entropy (Alg. 1) vs greedy MI (Alg. 2) across labeling budgets.
 
     Mirrors benchmark-selection/code/eval_entropy_vs_mi.py's k-sweep, but the
-    axis is *reported* as the labeling budget in % of the full pair matrix so
-    it is directly comparable with every other table. Internally ``k_fracs``
-    still parameterize the sweep as fractions of the target-aligned pool T
-    (the fixed item set the two algorithms search over), so the reachable
-    budget tops out at T/P = 25% of the matrix -- both methods refuse to buy
-    off-target labels. Uses ``cap=None`` so both methods see the whole pool --
-    the registry default (``cap=200``) exists only to keep greedy MI's cubic
-    per-step cost bounded in benchmarks where T runs into the thousands.
+    axis is *reported* as the labeling budget in % of the source candidate pool
+    so it is directly comparable with every other table. ``k_fracs`` parameterize
+    the sweep as fractions of the source pool T (the fixed item set the two
+    algorithms search over; target sample-sets are held out and unlabeled). Uses
+    ``cap=None`` so both methods see the whole pool -- the registry default
+    (``cap=200``) exists only to keep greedy MI's cubic per-step cost bounded in
+    benchmarks where T runs into the thousands.
     """
     rows = {f: {"Greedy entropy": [], "Greedy MI": []} for f in k_fracs}
+    # bound the entropy/MI search set to POOL items: greedy MI's per-step
+    # complement-precision refactorization is cubic in the pool size, so the full
+    # source pool (~1800) is intractable. POOL matches the old target-pool scale.
+    POOL = 600
     P = T = None
     for seed in seeds:
         prob = make_problem(seed)
-        T = int(prob["target_mask"].sum())
+        T = min(POOL, len(prob["X"]))   # capped source candidate pool (search set)
         P = len(prob["X"])
         for f in k_fracs:
             b = max(1, round(f * T))
-            rows[f]["Greedy entropy"].append(_acq(prob, "greedy_entropy", b, seed, cap=None))
-            rows[f]["Greedy MI"].append(_acq(prob, "greedy_mi", b, seed, cap=None))
+            rows[f]["Greedy entropy"].append(_acq(prob, "greedy_entropy", b, seed, cap=T))
+            rows[f]["Greedy MI"].append(_acq(prob, "greedy_mi", b, seed, cap=T))
     def _mean_ci(vals):
         v = np.asarray(vals)
         ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
         return float(v.mean()), float(ci)
 
-    out = {"note": "budget reported as % of the full pair matrix; both methods "
-                   "select within the target-aligned pool, so the axis tops out "
-                   f"at {100.0 * T / P:.0f}%", "budgets": {}}
+    out = {"note": "budget reported as % of the source candidate pool; both "
+                   "methods search the whole source pool (target sample-sets are "
+                   "held out and unlabeled)", "budgets": {}}
     print(f"\nGreedy entropy (Alg. 1) vs greedy MI (Alg. 2), {len(seeds)} seeds. "
-          f"Budget in % of the full matrix (max {100.0 * T / P:.0f}%: the "
-          f"target-aligned pool).\n")
+          f"Budget in % of the source candidate pool.\n")
     print(f"{'Budget':>7}  {'Labels':>6}  {'Entropy':>16}  {'MI':>16}  {'Leader':>8}")
     print("-" * 62)
     for f in k_fracs:
@@ -317,12 +343,12 @@ def run_entropy_mi_sweep(seeds, k_fracs):
 def run_noise_sweep(seeds, budget_frac, ratios):
     """Sensitivity of the less-is-more effect to the off/on-target noise gap.
 
-    Sweeps ``off_on_noise_ratio`` (on-target label noise stays fixed; only the
-    off-target noise scales) and compares ActiveEval-Pair at the given budget
+    Sweeps ``off_on_noise_ratio`` (near-target source noise stays fixed; only the
+    far-source noise scales) and compares ActiveEval-Pair at the given budget
     against MetaEvaluator (full, 100% labels) and whole-pool Random. At ratio
     1.0 the noise is homoscedastic, so the full matrix is strictly more
     information and should win; the sweep locates the noise gap at which a
-    clean target-aligned subset overtakes labelling everything."""
+    clean near-target source subset overtakes labelling everything."""
     methods = ["ActiveEval-Pair", "MetaEvaluator (full)", "Random"]
     rows = {r: {m: [] for m in methods} for r in ratios}
     for seed in seeds:
@@ -339,8 +365,8 @@ def run_noise_sweep(seeds, budget_frac, ratios):
         ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
         return float(v.mean()), float(ci)
 
-    out = {"note": "off_on_noise_ratio scales off-target label noise only; "
-                   "on-target noise fixed at base_noise*0.45", "ratios": {}}
+    out = {"note": "off_on_noise_ratio scales far-source label noise only; "
+                   "near-target source noise fixed at base_noise*0.45", "ratios": {}}
     print(f"\nNoise-sensitivity sweep ({len(seeds)} seeds, budget = "
           f"{budget_frac*100:.0f}%). Unseen MAE (pp); lower is better.\n")
     print(f"{'off/on noise':>13}  {'ActiveEval-Pair':>17}  {'Full (100%)':>15}  {'Random':>15}  {'Leader':>7}")

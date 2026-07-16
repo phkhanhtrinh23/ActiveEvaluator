@@ -1,35 +1,35 @@
 {
-  "full_mae": 3.036438263952732,
+  "full_mae": 3.5966935753822327,
   "budgets": {
     "0.05": {
-      "ActiveEval-Pair": 3.0732060968875885,
-      "Facility-location": 7.124025672674179,
-      "Random": 6.9944582134485245
+      "ActiveEval-Pair": 5.518277809023857,
+      "Facility-location": 6.5939996391534805,
+      "Random": 6.825633496046066
     },
     "0.1": {
-      "ActiveEval-Pair": 2.6524316892027855,
-      "Facility-location": 6.482691764831543,
-      "Random": 5.7594601064920425
+      "ActiveEval-Pair": 4.866486564278603,
+      "Facility-location": 5.848794206976891,
+      "Random": 5.432194843888283
     },
     "0.15": {
-      "ActiveEval-Pair": 2.4960334599018097,
-      "Facility-location": 5.558475106954575,
-      "Random": 5.5360232293605804
+      "ActiveEval-Pair": 4.194899499416351,
+      "Facility-location": 5.08309118449688,
+      "Random": 4.989109858870506
     },
     "0.2": {
-      "ActiveEval-Pair": 2.20421202480793,
-      "Facility-location": 4.757855087518692,
-      "Random": 5.423324629664421
+      "ActiveEval-Pair": 4.824356213212013,
+      "Facility-location": 4.9387915432453156,
+      "Random": 5.327437520027161
     },
     "0.3": {
-      "ActiveEval-Pair": 2.0905280858278275,
-      "Facility-location": 4.3687604367733,
-      "Random": 4.655234664678574
+      "ActiveEval-Pair": 4.4907547533512115,
+      "Facility-location": 4.957261011004448,
+      "Random": 4.7387053817510605
     },
     "0.5": {
-      "ActiveEval-Pair": 3.0690429732203484,
-      "Facility-location": 3.661477714776993,
-      "Random": 3.78306582570076
+      "ActiveEval-Pair": 4.210668355226517,
+      "Facility-location": 4.239525571465492,
+      "Random": 4.03904415667057
     }
   }
 }
