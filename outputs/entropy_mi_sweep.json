@@ -3,59 +3,59 @@
   "budgets": {
     "0.67": {
       "labels": 12,
-      "Greedy entropy": 9.279038459062576,
-      "Greedy entropy_ci": 2.1554060605238914,
-      "Greedy MI": 8.309513628482819,
-      "Greedy MI_ci": 1.1024241767017704
+      "Greedy entropy": 9.293969571590424,
+      "Greedy entropy_ci": 2.1545773820384433,
+      "Greedy MI": 8.84812280535698,
+      "Greedy MI_ci": 0.4960359240080765
     },
     "1.67": {
       "labels": 30,
-      "Greedy entropy": 7.029409259557724,
-      "Greedy entropy_ci": 1.6364565144279575,
-      "Greedy MI": 6.56836211681366,
-      "Greedy MI_ci": 1.1963151666112328
+      "Greedy entropy": 7.222627401351929,
+      "Greedy entropy_ci": 1.3919966652979825,
+      "Greedy MI": 7.3567332327365875,
+      "Greedy MI_ci": 1.183832284347251
     },
     "3.33": {
       "labels": 60,
-      "Greedy entropy": 6.067541316151619,
-      "Greedy entropy_ci": 0.8296961667723296,
-      "Greedy MI": 7.811407968401909,
-      "Greedy MI_ci": 2.219726612672905
+      "Greedy entropy": 6.509744077920914,
+      "Greedy entropy_ci": 0.7758046985727441,
+      "Greedy MI": 5.980396047234535,
+      "Greedy MI_ci": 0.7288539011401503
     },
     "6.67": {
       "labels": 120,
-      "Greedy entropy": 5.223085805773735,
-      "Greedy entropy_ci": 1.3669040080896626,
-      "Greedy MI": 5.690453872084618,
-      "Greedy MI_ci": 1.0006630468028999
+      "Greedy entropy": 5.609408840537071,
+      "Greedy entropy_ci": 1.0588062518152117,
+      "Greedy MI": 5.6255944818258286,
+      "Greedy MI_ci": 0.6959272301901607
     },
     "10.0": {
       "labels": 180,
-      "Greedy entropy": 4.822813645005226,
-      "Greedy entropy_ci": 0.8820134262897598,
-      "Greedy MI": 5.391149148344994,
-      "Greedy MI_ci": 0.7238591389592074
+      "Greedy entropy": 5.339788943529129,
+      "Greedy entropy_ci": 1.2111423614448469,
+      "Greedy MI": 5.075493231415749,
+      "Greedy MI_ci": 0.6977070404762384
     },
     "16.67": {
       "labels": 300,
-      "Greedy entropy": 5.4698291420936584,
-      "Greedy entropy_ci": 1.0241338218376197,
-      "Greedy MI": 5.151965394616127,
-      "Greedy MI_ci": 0.7855841037710521
+      "Greedy entropy": 5.218736156821251,
+      "Greedy entropy_ci": 0.7988399699883876,
+      "Greedy MI": 5.6834980845451355,
+      "Greedy MI_ci": 0.7747385465858676
     },
     "25.0": {
       "labels": 450,
-      "Greedy entropy": 4.837640970945358,
-      "Greedy entropy_ci": 0.29478583413023557,
-      "Greedy MI": 5.053120627999306,
-      "Greedy MI_ci": 0.4123298198322613
+      "Greedy entropy": 4.821142107248306,
+      "Greedy entropy_ci": 0.493245579953687,
+      "Greedy MI": 4.667143523693085,
+      "Greedy MI_ci": 0.41644095278282167
     },
     "33.33": {
       "labels": 600,
-      "Greedy entropy": 4.697883278131485,
-      "Greedy entropy_ci": 0.37943413010655225,
-      "Greedy MI": 4.742551743984222,
-      "Greedy MI_ci": 0.45330990385110614
+      "Greedy entropy": 4.63685505092144,
+      "Greedy entropy_ci": 0.45008879397508644,
+      "Greedy MI": 4.475571811199188,
+      "Greedy MI_ci": 0.5743314769731116
     }
   }
 }

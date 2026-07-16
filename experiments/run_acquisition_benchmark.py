@@ -403,10 +403,14 @@ COST_CURRENCIES = [
 # since selection is cost-agnostic). A budget that stretches past this length just
 # under-spends -- the realized cost fraction is reported so that stays visible.
 _N_ORDER = 450
-# greedy MI/entropy are cubic in their search universe per step; the main table can
-# afford cap=None because its budget is small, but a cost budget may request many
-# more actions, so bound the universe here to keep the pivoted-Cholesky loop cheap.
-_GREEDY_CAP = {"greedy_mi": 250, "greedy_entropy": 250}
+# greedy MI's per-step complement-precision refactorization is cubic in its search
+# universe, so a cost budget's larger action count (_N_ORDER) makes the full pool
+# intractable -- bound it here. greedy_entropy's pivoted-Cholesky step is only O(N)
+# (no complement-precision solve), so it is left uncapped like select_logdet; capping
+# it too previously reintroduced a random-250-subsample confound that made it look
+# far worse than logdet under the `storage` currency despite being the same algorithm
+# (see docs/rq4-cost-currency-mechanism.md).
+_GREEDY_CAP = {"greedy_mi": 250}
 
 
 def _method_order(prob, name, kind, key, kw, budget, rng_master):

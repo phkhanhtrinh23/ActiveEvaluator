@@ -422,6 +422,9 @@ through the greedy loops (`active_evaluator/active_selection.py`) — that trade
 coverage off against the amortized checkpoint cost instead of ignoring it.
 (`outputs/cost_budget_benchmark.json`; greedy MI/entropy capped at 250 via `_GREEDY_CAP`,
 orders precomputed to `_N_ORDER = 450`, realized cost fraction recorded per cell.)
+For the code-level mechanism behind each table (why the additive currencies barely
+reorder while `storage` inverts the ranking), see
+[docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md).
 
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 

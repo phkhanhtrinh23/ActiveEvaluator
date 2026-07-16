@@ -361,14 +361,24 @@ def _pivoted_cholesky_mi(Sigma: np.ndarray, k: int) -> List[int]:
 
 
 def select_greedy_entropy(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                          cap: int | None = 200, **kw) -> List[int]:
+                          cap: int | None = 200, sigma: float | None = 1.0, **kw) -> List[int]:
     """Greedy entropy (Alg. 1): pivoted-Cholesky greedy maximization of
-    log det(Sigma_S) over an RBF kernel restricted to the target-aligned pool."""
+    log det(Sigma_S) over an RBF kernel restricted to the target-aligned pool.
+
+    ``sigma`` defaults to 1.0, matching ``select_logdet``'s ridge-regularized
+    ``log det(I + K/sigma^2)`` objective -- the two are the same pivoted-Cholesky
+    greedy algorithm and should use the same regularization so they are directly
+    comparable. Pass ``sigma=None`` for the original near-zero jitter (``+1e-6``,
+    i.e. unregularized greedy entropy)."""
     n = len(X)
     budget = min(budget, n)
     q_idx = _target_universe(n, target_mask, rng, cap=cap)
     tau = _median_bandwidth(X[q_idx], rng)
-    Sigma = _rbf(X[q_idx], X[q_idx], tau) + 1e-6 * np.eye(len(q_idx))
+    K = _rbf(X[q_idx], X[q_idx], tau)
+    if sigma is None:
+        Sigma = K + 1e-6 * np.eye(len(q_idx))
+    else:
+        Sigma = K / (sigma ** 2) + np.eye(len(q_idx))
     local = _pivoted_cholesky_entropy(Sigma, budget)
     chosen = list(q_idx[local])
     if len(chosen) < budget:
@@ -381,15 +391,24 @@ def select_greedy_entropy(X, pair_model, pair_sample, target_mask, budget, *, rn
 
 
 def select_greedy_mi(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                     cap: int | None = 200, **kw) -> List[int]:
+                     cap: int | None = 200, sigma: float | None = 1.0, **kw) -> List[int]:
     """Greedy mutual information (Alg. 2): pivoted-Cholesky greedy
     maximization of I(X_S; X_{V\\S}) over an RBF kernel restricted to the
-    target-aligned pool."""
+    target-aligned pool.
+
+    ``sigma`` defaults to 1.0, matching ``select_logdet``'s ridge-regularized
+    ``log det(I + K/sigma^2)`` objective, so entropy/MI/logdet are compared under
+    the same regularization. Pass ``sigma=None`` for the original near-zero jitter
+    (``+1e-6``, i.e. unregularized greedy MI)."""
     n = len(X)
     budget = min(budget, n)
     q_idx = _target_universe(n, target_mask, rng, cap=cap)
     tau = _median_bandwidth(X[q_idx], rng)
-    Sigma = _rbf(X[q_idx], X[q_idx], tau) + 1e-6 * np.eye(len(q_idx))
+    K = _rbf(X[q_idx], X[q_idx], tau)
+    if sigma is None:
+        Sigma = K + 1e-6 * np.eye(len(q_idx))
+    else:
+        Sigma = K / (sigma ** 2) + np.eye(len(q_idx))
     local = _pivoted_cholesky_mi(Sigma, budget)
     chosen = list(q_idx[local])
     if len(chosen) < budget:
