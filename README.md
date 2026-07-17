@@ -75,12 +75,17 @@ models) budgeted methods are harder to separate — see the per-benchmark JSONs.
 [^1]: `Submod. benchmark` (`select_logdet`) is the same pivoted-Cholesky greedy
     log-det/max-entropy algorithm as `Greedy entropy (Alg. 1)` once both use the same
     regularization (`sigma=1.0`, the shared default — [baselines/_core.py](baselines/_core.py)).
-    `Greedy entropy (Alg. 1)` is therefore omitted from this and the other
-    method-comparison tables to avoid listing the same method twice; it remains
+    The previous `greedy_entropy`/`greedy_mi` default (`sigma=None`, i.e. a near-zero
+    `+1e-6` jitter on the kernel diagonal) is the value that degraded their results:
+    it left the greedy pivot over-sensitive to noise in the RBF-bandwidth estimate,
+    costing Greedy entropy 5.12 ± 0.14 vs. 4.68 ± 0.29 pp with `sigma=1.0` (exactly
+    `select_logdet`'s number) and Greedy MI 5.82 ± 0.50 vs. 5.10 ± 0.64 pp (main
+    table, 5 seeds). `Greedy entropy (Alg. 1)` is therefore omitted from this and the
+    other method-comparison tables to avoid listing the same method twice; it remains
     available in `ACQUISITION_REGISTRY` and is compared directly against
     `Greedy MI (Alg. 2)` in the [dedicated sweep below](#greedy-entropy-vs-greedy-mutual-information-exploratory).
     See [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md) for
-    the ablation.
+    the full ablation isolating this from the pool-cap confound.
 
 ### Budget efficiency (RQ3)
 
