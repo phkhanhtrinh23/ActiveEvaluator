@@ -61,33 +61,27 @@
           "median_actions": 270.0,
           "realized_frac": 0.15
         },
-        "Greedy entropy (Alg. 1)": {
-          "mae": 4.737517163157463,
-          "ci": 0.20826241131912368,
-          "median_actions": 270.0,
-          "realized_frac": 0.15
-        },
         "Greedy MI (Alg. 2)": {
-          "mae": 5.770271569490433,
-          "ci": 0.5229283063754698,
+          "mae": 5.241382345557213,
+          "ci": 0.8762886162780447,
           "median_actions": 270.0,
           "realized_frac": 0.15
         },
         "ActiveEval-S": {
-          "mae": 4.0818774700164795,
-          "ci": 0.6774045593747969,
+          "mae": 4.076090976595879,
+          "ci": 0.7866584715911524,
           "median_actions": 270.0,
           "realized_frac": 0.15
         },
         "ActiveEval-S+M": {
-          "mae": 5.655521377921104,
-          "ci": 1.1124646074052045,
+          "mae": 5.610141903162003,
+          "ci": 0.5370962391439854,
           "median_actions": 270.0,
           "realized_frac": 0.15
         },
         "ActiveEval-Pair": {
-          "mae": 4.114170074462891,
-          "ci": 0.8238213320704514,
+          "mae": 4.084204584360123,
+          "ci": 0.7021911876848359,
           "median_actions": 270.0,
           "realized_frac": 0.15
         }
@@ -144,35 +138,29 @@
           "median_actions": 287.0,
           "realized_frac": 0.14998494854487748
         },
-        "Greedy entropy (Alg. 1)": {
-          "mae": 4.87247422337532,
-          "ci": 0.4970136362624167,
-          "median_actions": 241.0,
-          "realized_frac": 0.1499795155249603
-        },
         "Greedy MI (Alg. 2)": {
-          "mae": 5.673980340361595,
-          "ci": 0.6817761050916037,
-          "median_actions": 280.0,
-          "realized_frac": 0.1499722956956442
+          "mae": 5.082068964838982,
+          "ci": 0.8133857448211543,
+          "median_actions": 276.0,
+          "realized_frac": 0.14997418667746146
         },
         "ActiveEval-S": {
-          "mae": 4.556468650698662,
-          "ci": 0.3780479807646033,
+          "mae": 4.456160441040993,
+          "ci": 0.41251429258911027,
           "median_actions": 252.0,
-          "realized_frac": 0.1499775397857322
+          "realized_frac": 0.1499835701045576
         },
         "ActiveEval-S+M": {
-          "mae": 5.3437624126672745,
-          "ci": 0.9746424307263488,
-          "median_actions": 248.0,
-          "realized_frac": 0.14998562192669979
+          "mae": 5.414954647421837,
+          "ci": 0.6574441487358742,
+          "median_actions": 250.0,
+          "realized_frac": 0.14998220733113515
         },
         "ActiveEval-Pair": {
-          "mae": 4.533954709768295,
-          "ci": 0.4645630247602154,
+          "mae": 4.518100321292877,
+          "ci": 0.36761418298109205,
           "median_actions": 252.0,
-          "realized_frac": 0.14997431697873304
+          "realized_frac": 0.14997163828406163
         }
       }
     },
@@ -227,35 +215,29 @@
           "median_actions": 307.0,
           "realized_frac": 0.1499670570576417
         },
-        "Greedy entropy (Alg. 1)": {
-          "mae": 4.497365355491638,
-          "ci": 0.2380223103778509,
-          "median_actions": 286.0,
-          "realized_frac": 0.14998344191714036
-        },
         "Greedy MI (Alg. 2)": {
-          "mae": 5.665020868182182,
-          "ci": 0.6202327132825025,
-          "median_actions": 272.0,
-          "realized_frac": 0.14999015572799898
+          "mae": 5.025666952133179,
+          "ci": 1.0659902274266675,
+          "median_actions": 278.0,
+          "realized_frac": 0.14998846555978002
         },
         "ActiveEval-S": {
-          "mae": 4.7803665697574615,
-          "ci": 0.5799354249587679,
+          "mae": 4.797172546386719,
+          "ci": 0.5492860736223408,
           "median_actions": 248.0,
-          "realized_frac": 0.149984956869443
+          "realized_frac": 0.14998732341459534
         },
         "ActiveEval-S+M": {
-          "mae": 5.294961780309677,
-          "ci": 0.9932063762763164,
-          "median_actions": 259.0,
-          "realized_frac": 0.14997771143416325
+          "mae": 5.193151608109474,
+          "ci": 0.8068426508768644,
+          "median_actions": 253.0,
+          "realized_frac": 0.14998347087061314
         },
         "ActiveEval-Pair": {
-          "mae": 4.702802002429962,
-          "ci": 0.5152609788595928,
-          "median_actions": 248.0,
-          "realized_frac": 0.1499836895410992
+          "mae": 4.62353490293026,
+          "ci": 0.37778516513823507,
+          "median_actions": 249.0,
+          "realized_frac": 0.14998542047254274
         }
       }
     },
@@ -310,35 +292,29 @@
           "median_actions": 314.0,
           "realized_frac": 0.14999683834209052
         },
-        "Greedy entropy (Alg. 1)": {
-          "mae": 4.8244936764240265,
-          "ci": 0.22850101710324458,
-          "median_actions": 274.0,
-          "realized_frac": 0.14999889767832264
-        },
         "Greedy MI (Alg. 2)": {
-          "mae": 5.448210388422012,
-          "ci": 0.9773594887451202,
-          "median_actions": 286.0,
-          "realized_frac": 0.14999909784037552
+          "mae": 5.043678656220436,
+          "ci": 0.8730915076131631,
+          "median_actions": 294.0,
+          "realized_frac": 0.1499974892830529
         },
         "ActiveEval-S": {
-          "mae": 4.587738662958145,
-          "ci": 0.5376643228331571,
-          "median_actions": 255.0,
-          "realized_frac": 0.1499986327967448
+          "mae": 4.478087052702904,
+          "ci": 0.6353863670322699,
+          "median_actions": 256.0,
+          "realized_frac": 0.14999837834791885
         },
         "ActiveEval-S+M": {
-          "mae": 5.471388027071953,
-          "ci": 1.1198886018720526,
-          "median_actions": 235.0,
-          "realized_frac": 0.1499981925765162
+          "mae": 5.014326870441437,
+          "ci": 0.6389366502403913,
+          "median_actions": 253.0,
+          "realized_frac": 0.14999864543108044
         },
         "ActiveEval-Pair": {
-          "mae": 4.550542831420898,
-          "ci": 0.6544995546234158,
+          "mae": 4.3052077293396,
+          "ci": 0.700814111720134,
           "median_actions": 255.0,
-          "realized_frac": 0.14999821625843693
+          "realized_frac": 0.14999905451757956
         }
       }
     },
@@ -393,35 +369,29 @@
           "median_actions": 275.0,
           "realized_frac": 0.1499910233102179
         },
-        "Greedy entropy (Alg. 1)": {
-          "mae": 4.51884001493454,
-          "ci": 0.31978556476344705,
-          "median_actions": 312.0,
-          "realized_frac": 0.14999449988761995
-        },
         "Greedy MI (Alg. 2)": {
-          "mae": 5.55392786860466,
-          "ci": 0.9842313202234144,
-          "median_actions": 288.0,
-          "realized_frac": 0.14999068513939418
+          "mae": 5.2453069388866425,
+          "ci": 1.0560336640740626,
+          "median_actions": 302.0,
+          "realized_frac": 0.1499874312948192
         },
         "ActiveEval-S": {
-          "mae": 4.124628528952599,
-          "ci": 0.5775033924789992,
+          "mae": 4.464999735355377,
+          "ci": 0.44318633608188196,
           "median_actions": 264.0,
-          "realized_frac": 0.14999226395951404
+          "realized_frac": 0.1499894865181362
         },
         "ActiveEval-S+M": {
-          "mae": 5.287437289953232,
-          "ci": 1.0892939330220865,
-          "median_actions": 264.0,
-          "realized_frac": 0.14998652233418938
+          "mae": 5.443734526634216,
+          "ci": 0.621764764864283,
+          "median_actions": 280.0,
+          "realized_frac": 0.14999316415342875
         },
         "ActiveEval-Pair": {
-          "mae": 4.330701306462288,
-          "ci": 0.49098969217121613,
+          "mae": 4.293336644768715,
+          "ci": 0.5125774975964273,
           "median_actions": 264.0,
-          "realized_frac": 0.14998974956470762
+          "realized_frac": 0.14999102368024442
         }
       }
     },
@@ -476,35 +446,29 @@
           "median_actions": 104.0,
           "realized_frac": 0.14966110014093087
         },
-        "Greedy entropy (Alg. 1)": {
-          "mae": 5.065992623567581,
-          "ci": 0.988356797441516,
-          "median_actions": 249.0,
-          "realized_frac": 0.14990884336817864
-        },
         "Greedy MI (Alg. 2)": {
-          "mae": 6.024019792675972,
-          "ci": 0.9723653408949842,
-          "median_actions": 157.0,
-          "realized_frac": 0.1496491371763093
+          "mae": 6.270568817853928,
+          "ci": 1.0573219703417505,
+          "median_actions": 143.0,
+          "realized_frac": 0.14961507476913635
         },
         "ActiveEval-S": {
-          "mae": 5.600277408957481,
-          "ci": 0.8392418602867928,
-          "median_actions": 98.0,
-          "realized_frac": 0.14975567323906647
+          "mae": 6.214753687381744,
+          "ci": 1.001269375195806,
+          "median_actions": 96.0,
+          "realized_frac": 0.1497567185080028
         },
         "ActiveEval-S+M": {
-          "mae": 6.1722733825445175,
-          "ci": 1.278113213411476,
-          "median_actions": 122.0,
-          "realized_frac": 0.1494159497226836
+          "mae": 5.613068044185638,
+          "ci": 0.5801080549266651,
+          "median_actions": 211.0,
+          "realized_frac": 0.14932223121704008
         },
         "ActiveEval-Pair": {
-          "mae": 6.806420460343361,
-          "ci": 0.7489987074296865,
-          "median_actions": 91.0,
-          "realized_frac": 0.14975536188417063
+          "mae": 5.956655368208885,
+          "ci": 0.8062235115130619,
+          "median_actions": 90.0,
+          "realized_frac": 0.14975541042120225
         }
       }
     }

@@ -14,14 +14,28 @@ explains *why*, grounded in the selection code and one reproducible measurement.
 
 ## The shared mechanism: selection is cost-agnostic
 
-Every method ranks the candidate pool exactly once, from shift descriptors alone
-(`_method_order`, [experiments/run_acquisition_benchmark.py:412-431](../experiments/run_acquisition_benchmark.py#L412-L431)).
-The ranking never sees tokens, seconds, or GB. A currency only decides how far its
-budget reaches into that fixed order, via `greedy_fill`
-([experiments/cost_models.py:78-104](../experiments/cost_models.py#L78-L104)): walk the
-order, keep an action if its *marginal* cost still fits, skip it otherwise. So every
-difference between the six per-currency tables comes down to which slice of the pool
-each method's fixed ranking happens to prefer, and how that slice is priced.
+A recurring point of confusion is that the experiment "prices actions by
+`input_tok`, `output_tok`, …" while this note calls the methods "cost-agnostic."
+Both are true, because cost enters the pipeline in only one of its **two separate
+stages**:
+
+1. **Ranking (cost-agnostic).** Every method ranks the candidate pool exactly once,
+   from shift descriptors alone (`_method_order`,
+   [experiments/run_acquisition_benchmark.py:412-431](../experiments/run_acquisition_benchmark.py#L412-L431)).
+   The ranking never sees tokens, seconds, or GB — for a given method it is
+   *identical* across all six currency tables.
+2. **Spending (currency-aware).** `greedy_fill`
+   ([experiments/cost_models.py:78-104](../experiments/cost_models.py#L78-L104)) walks
+   that fixed order and keeps an action if its *marginal* cost still fits the
+   remaining budget. The currency only decides **where the budget cuts the list
+   off**, never how the list is ordered.
+
+So every difference between the six per-currency tables comes down to which slice of
+the pool each method's fixed ranking happens to prefer, and how that slice is priced.
+"Additive" below describes the *price structure* of a currency (cost accumulates per
+action, no reuse discount — see `Currency.total`,
+[experiments/cost_models.py:65-71](../experiments/cost_models.py#L65-L71)), not a
+property of any method.
 
 ## Group 1 — `input_tok` / `output_tok` / `latency` / `memory`: mostly noise
 
@@ -36,6 +50,38 @@ of the top cluster overlap almost completely (e.g. `latency`: k-center 4.38 ± 0
 ActiveEval-Pair 4.55 ± 0.65). Treat these as seed-to-seed noise among a group of
 methods that are genuinely close, not evidence that one method is "built for" that
 currency.
+
+### Read gaps, not ranks
+
+The reshuffles look dramatic only if you read **rank positions**. Under `latency`,
+ActiveEval-S falls from 1st (`count`) to 5th — but the entire top-5 spans
+4.38–4.59 pp, i.e. **0.21 pp**, less than a third of any single method's ±0.5–0.65
+CI half-width. When the field is that tight, rank is a lottery over seeds; a
+different seed set would reshuffle it again. Contrast with what a *real* mechanism
+difference looks like under `storage`: ActiveEval-Pair moves 4.11 → 6.81 pp
+(**2.7 pp**, CI-separated) *and* comes with a measurable cause — its purchasable
+actions collapse from 270 to 91. Under `latency` there is no such signature:
+ActiveEval-S still buys 255 of ~270 actions.
+
+### The small structural effect that does exist
+
+Additivity doesn't make the currencies perfectly neutral. In the README tables,
+ActiveEval-S/-Pair consistently buy slightly **fewer** actions than the other
+methods under the token/latency currencies (252 vs. ~280 under `input_tok`, 255 vs.
+~282 under `latency`): their target-similar picks land on slightly
+pricier-than-average actions (e.g. `latency` ∝ tokens × params). This is a real,
+repeatable effect — but losing ~25 of 270 labels moves MAE by tenths of a pp, well
+inside seed noise. The qualitative line between Group 1 and Group 2 is the *size*
+of the purchasing-power loss: ~10% here vs. ~65% under `storage`.
+
+### How to verify rigorously
+
+All methods run on the same seed set, so the clean test is a **paired per-seed
+comparison**: for each seed, compute MAE(method A) − MAE(method B) under the
+currency in question and check whether the sign is consistent across seeds. If the
+sign flips seed-to-seed, "noise" is confirmed directly rather than inferred from
+overlapping CIs. (Not yet run for the Group-1 reshuffles; the CI-overlap argument
+above is the current basis.)
 
 ## Group 2 — `storage`: a real inversion, with a concrete cause
 

@@ -54,9 +54,8 @@ setup where target pairs were labelable).
 | DoC                     | estimator   | 4.39 ± 0.50     | —    |
 | Random                  | acquisition | 4.47 ± 0.90     | 15%  |
 | Bayesian opt. design    | acquisition | 4.61 ± 0.67     | 15%  |
-| Submod. benchmark       | acquisition | 4.64 ± 0.22     | 15%  |
+| Submod. benchmark [^1]  | acquisition | 4.64 ± 0.22     | 15%  |
 | k-center                | acquisition | 4.96 ± 0.51     | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 5.01 ± 0.34     | 15%  |
 | Facility-location       | acquisition | 5.30 ± 0.48     | 15%  |
 | Matrix completion       | acquisition | 5.38 ± 0.90     | 15%  |
 | **ActiveEval-S+M**      | ours        | 5.66 ± 1.11     | 15%  |
@@ -72,6 +71,16 @@ target — but full labeling retains an information edge. Regenerate with the co
 above (`outputs/acquisition_benchmark.json`). Note: `ActiveEval-S+M`'s model-axis
 narrowing hurts in this regime, and on the noisier image variant (fewer reference
 models) budgeted methods are harder to separate — see the per-benchmark JSONs.
+
+[^1]: `Submod. benchmark` (`select_logdet`) is the same pivoted-Cholesky greedy
+    log-det/max-entropy algorithm as `Greedy entropy (Alg. 1)` once both use the same
+    regularization (`sigma=1.0`, the shared default — [baselines/_core.py](baselines/_core.py)).
+    `Greedy entropy (Alg. 1)` is therefore omitted from this and the other
+    method-comparison tables to avoid listing the same method twice; it remains
+    available in `ACQUISITION_REGISTRY` and is compared directly against
+    `Greedy MI (Alg. 2)` in the [dedicated sweep below](#greedy-entropy-vs-greedy-mutual-information-exploratory).
+    See [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md) for
+    the ablation.
 
 ### Budget efficiency (RQ3)
 
@@ -303,14 +312,13 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 | **ActiveEval-S** | **4.08 ± 0.68** | 270 |
 | ActiveEval-Pair | 4.11 ± 0.82 | 270 |
 | Bayesian opt. design | 4.61 ± 0.67 | 270 |
-| Submod. benchmark | 4.64 ± 0.22 | 270 |
+| Submod. benchmark [^1] | 4.64 ± 0.22 | 270 |
 | k-center | 4.96 ± 0.51 | 270 |
 | Matrix completion | 5.14 ± 0.78 | 270 |
-| Greedy entropy (Alg. 1) | 5.21 ± 0.98 | 270 |
 | Random | 5.47 ± 0.90 | 270 |
 | Facility-location | 5.54 ± 0.57 | 270 |
 | ActiveEval-S+M | 5.66 ± 1.11 | 270 |
-| Greedy MI (Alg. 2) | 5.71 ± 0.54 | 270 |
+| Greedy MI (Alg. 2) | 5.77 ± 0.52 | 270 |
 | GRAD-MATCH | 5.96 ± 1.52 | 270 |
 | Active testing | 6.10 ± 0.98 | 270 |
 
@@ -320,15 +328,14 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 | ------ | --------------- | -------- |
 | **ActiveEval-Pair** | **4.53 ± 0.46** | 252 |
 | ActiveEval-S | 4.56 ± 0.38 | 252 |
-| Submod. benchmark | 4.77 ± 0.70 | 241 |
+| Submod. benchmark [^1] | 4.77 ± 0.70 | 241 |
 | Bayesian opt. design | 4.77 ± 0.72 | 254 |
 | k-center | 4.85 ± 0.21 | 266 |
 | Matrix completion | 4.97 ± 0.76 | 268 |
-| Greedy entropy (Alg. 1) | 5.05 ± 0.71 | 276 |
 | Facility-location | 5.06 ± 0.64 | 267 |
 | Random | 5.20 ± 0.79 | 280 |
 | ActiveEval-S+M | 5.34 ± 0.97 | 248 |
-| Greedy MI (Alg. 2) | 5.78 ± 0.69 | 280 |
+| Greedy MI (Alg. 2) | 5.67 ± 0.68 | 280 |
 | Active testing | 6.11 ± 0.90 | 270 |
 | GRAD-MATCH | 6.26 ± 1.35 | 287 |
 
@@ -336,17 +343,16 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 
 | Method | Unseen MAE (pp) | #actions |
 | ------ | --------------- | -------- |
-| **Submod. benchmark** | **4.44 ± 0.26** | 286 |
+| **Submod. benchmark** [^1] | **4.44 ± 0.26** | 286 |
 | ActiveEval-Pair | 4.70 ± 0.52 | 248 |
 | Bayesian opt. design | 4.76 ± 0.95 | 293 |
 | ActiveEval-S | 4.78 ± 0.58 | 248 |
 | k-center | 4.81 ± 0.67 | 283 |
-| Greedy entropy (Alg. 1) | 4.87 ± 0.75 | 278 |
 | Facility-location | 5.14 ± 0.54 | 252 |
 | Matrix completion | 5.18 ± 0.87 | 268 |
 | ActiveEval-S+M | 5.29 ± 0.99 | 259 |
 | Random | 5.52 ± 0.78 | 277 |
-| Greedy MI (Alg. 2) | 5.55 ± 0.56 | 272 |
+| Greedy MI (Alg. 2) | 5.67 ± 0.62 | 272 |
 | Active testing | 5.69 ± 0.86 | 267 |
 | GRAD-MATCH | 5.89 ± 1.66 | 307 |
 
@@ -356,15 +362,14 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 | ------ | --------------- | -------- |
 | **k-center** | **4.38 ± 0.65** | 282 |
 | Bayesian opt. design | 4.47 ± 0.93 | 271 |
-| Submod. benchmark | 4.53 ± 0.35 | 277 |
+| Submod. benchmark [^1] | 4.53 ± 0.35 | 277 |
 | ActiveEval-Pair | 4.55 ± 0.65 | 255 |
 | ActiveEval-S | 4.59 ± 0.54 | 255 |
 | Facility-location | 4.81 ± 0.29 | 305 |
-| Greedy entropy (Alg. 1) | 4.96 ± 0.71 | 294 |
 | Matrix completion | 5.21 ± 0.94 | 265 |
 | Random | 5.28 ± 0.68 | 279 |
+| Greedy MI (Alg. 2) | 5.45 ± 0.98 | 286 |
 | ActiveEval-S+M | 5.47 ± 1.12 | 235 |
-| Greedy MI (Alg. 2) | 5.57 ± 0.99 | 286 |
 | Active testing | 5.79 ± 0.80 | 278 |
 | GRAD-MATCH | 6.15 ± 1.22 | 314 |
 
@@ -374,15 +379,14 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 | ------ | --------------- | -------- |
 | **ActiveEval-S** | **4.12 ± 0.58** | 264 |
 | ActiveEval-Pair | 4.33 ± 0.49 | 264 |
-| Submod. benchmark | 4.48 ± 0.42 | 312 |
+| Submod. benchmark [^1] | 4.48 ± 0.42 | 312 |
 | Bayesian opt. design | 4.53 ± 1.23 | 318 |
 | k-center | 4.57 ± 0.66 | 295 |
 | Random | 5.02 ± 0.50 | 259 |
-| Greedy entropy (Alg. 1) | 5.09 ± 1.00 | 302 |
 | ActiveEval-S+M | 5.29 ± 1.09 | 264 |
 | Facility-location | 5.43 ± 0.40 | 287 |
 | Matrix completion | 5.46 ± 1.20 | 250 |
-| Greedy MI (Alg. 2) | 5.63 ± 0.88 | 288 |
+| Greedy MI (Alg. 2) | 5.55 ± 0.98 | 288 |
 | Active testing | 5.79 ± 1.14 | 232 |
 | GRAD-MATCH | 6.20 ± 1.55 | 275 |
 
@@ -390,19 +394,33 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 
 | Method | Unseen MAE (pp) | #actions |
 | ------ | --------------- | -------- |
-| **Submod. benchmark** | **4.99 ± 0.79** | 251 |
+| **Submod. benchmark** [^1] | **4.99 ± 0.79** | 251 |
 | Bayesian opt. design | 5.22 ± 0.68 | 232 |
 | ActiveEval-S | 5.60 ± 0.84 | 98 |
 | Random | 5.75 ± 1.43 | 109 |
+| Greedy MI (Alg. 2) | 6.02 ± 0.97 | 157 |
 | ActiveEval-S+M | 6.17 ± 1.28 | 122 |
-| Greedy entropy (Alg. 1) | 6.20 ± 1.21 | 106 |
 | Matrix completion | 6.30 ± 1.74 | 106 |
 | GRAD-MATCH | 6.34 ± 0.41 | 104 |
 | Active testing | 6.34 ± 0.86 | 128 |
 | k-center | 6.46 ± 2.22 | 177 |
-| Greedy MI (Alg. 2) | 6.54 ± 1.12 | 113 |
 | Facility-location | 6.72 ± 1.28 | 133 |
 | ActiveEval-Pair | 6.81 ± 0.75 | 91 |
+
+> `Greedy entropy (Alg. 1)` isn't in this table ([^1]), but it's worth naming what
+> would happen if it were: 5.07 ± 0.99 pp on 249 actions — right next to `Submod.
+> benchmark` (4.99, 251 actions), not a coincidence, since they're the same algorithm.
+> That near-exact match is itself the confirmation: `select_logdet` has always used a
+> ridge-regularized objective `log det(I + K/sigma^2)` with `sigma=1.0`
+> ([baselines/_core.py:138](baselines/_core.py#L138)), while `greedy_entropy`/`greedy_mi`
+> previously defaulted to a near-zero jitter (`+1e-6`) — a much weaker prior that left
+> them more sensitive to noise in the RBF-bandwidth estimate — and, in this experiment
+> specifically, `greedy_entropy` was also run through an unnecessary `cap=250`
+> candidate-pool restriction that only the genuinely cubic-cost `greedy_mi` needed.
+> `sigma` now defaults to `1.0` for both ([baselines/_core.py:364](baselines/_core.py#L364),
+> [:394](baselines/_core.py#L394)), and `greedy_entropy` runs uncapped like
+> `select_logdet` ([experiments/run_acquisition_benchmark.py:413](experiments/run_acquisition_benchmark.py#L413)).
+> Full ablation isolating each fix: [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md).
 
 
 **What the currencies say.** Under the additive budgets (`input_tok`, `output_tok`,
@@ -420,8 +438,11 @@ budget, and it points at the deferred next step: a **cost-benefit** (gain/cost
 knapsack) variant of ActiveEval — the production pipeline already threads a `cost_fn`
 through the greedy loops (`active_evaluator/active_selection.py`) — that trades
 coverage off against the amortized checkpoint cost instead of ignoring it.
-(`outputs/cost_budget_benchmark.json`; greedy MI/entropy capped at 250 via `_GREEDY_CAP`,
-orders precomputed to `_N_ORDER = 450`, realized cost fraction recorded per cell.)
+(`outputs/cost_budget_benchmark.json`; only `greedy_mi` is capped at 250 via
+`_GREEDY_CAP` — its per-step complement-precision solve is genuinely cubic in the
+candidate-pool size, unlike `greedy_entropy`'s `O(N)` pivoted-Cholesky step, which runs
+uncapped like `select_logdet`; orders precomputed to `_N_ORDER = 450`, realized cost
+fraction recorded per cell.)
 For the code-level mechanism behind each table (why the additive currencies barely
 reorder while `storage` inverts the ranking), see
 [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md).
@@ -460,14 +481,13 @@ replaced by a real torchvision/timm pipeline.
 | k-center                | acquisition | 5.65 ± 1.27     | 15%  |
 | **ActiveEval-S+M**      | ours        | 5.84 ± 1.72     | 15%  |
 | **ActiveEval-S**        | ours        | 6.00 ± 1.84     | 15%  |
-| Submod. benchmark       | acquisition | 6.20 ± 1.24     | 15%  |
+| Submod. benchmark [^1]  | acquisition | 6.20 ± 1.24     | 15%  |
 | **ActiveEval-Pair**     | ours        | 6.20 ± 1.46     | 15%  |
 | Random                  | acquisition | 6.39 ± 1.67     | 15%  |
 | Greedy MI (Alg. 2)      | acquisition | 6.52 ± 1.18     | 15%  |
 | Matrix completion       | acquisition | 6.58 ± 0.85     | 15%  |
 | Bayesian opt. design    | acquisition | 6.66 ± 0.99     | 15%  |
 | Active testing          | acquisition | 6.93 ± 1.34     | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 7.03 ± 1.61     | 15%  |
 | Facility-location       | acquisition | 7.42 ± 2.03     | 15%  |
 | GRAD-MATCH              | acquisition | 7.91 ± 0.64     | 15%  |
 | ATC                     | estimator   | 8.28 ± 2.14     | —    |
@@ -509,8 +529,7 @@ the strongest budgeted methods, ahead of whole-pool Random and every other basel
 | DoC                     | estimator   | 4.39 ± 0.50     | —    |
 | Random                  | acquisition | 4.47 ± 0.90     | 15%  |
 | Bayesian opt. design    | acquisition | 4.61 ± 0.67     | 15%  |
-| Submod. benchmark       | acquisition | 4.64 ± 0.22     | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 4.89 ± 0.58     | 15%  |
+| Submod. benchmark [^1]  | acquisition | 4.64 ± 0.22     | 15%  |
 | k-center                | acquisition | 4.96 ± 0.51     | 15%  |
 | Facility-location       | acquisition | 5.30 ± 0.48     | 15%  |
 | Matrix completion       | acquisition | 5.38 ± 0.90     | 15%  |
@@ -532,7 +551,7 @@ with a `select`/`estimate` entry point. Implemented methods are in **bold**.
 | Family                | Methods                                                                                                                                                                                                                          |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Label-free estimators | **ATC**, **DoC**, AutoEval, AETTA, SSME                                                                                                                                                                                          |
-| Budgeted acquisition  | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH**, **Greedy entropy (Alg. 1)**, **Greedy MI (Alg. 2)** |
+| Budgeted acquisition  | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH**, **Greedy entropy (Alg. 1)** [^1], **Greedy MI (Alg. 2)** |
 | Reference / ours      | **MetaEvaluator (full budget)**, **ActiveEval-S**, **ActiveEval-S+M**, **ActiveEval-Pair**                                                                                                                                       |
 
 

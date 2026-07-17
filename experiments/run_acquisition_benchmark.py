@@ -195,10 +195,14 @@ METHODS = [
     ("Bayesian opt. design", "acq", "bayesian_design", {}),
     ("Submod. benchmark", "acq", "submodular_benchmark", {}),
     ("GRAD-MATCH", "acq", "gradmatch", {}),
-    # cap=None: the target pool here is only 600 pairs, so both algorithms can
-    # search it in full; the registry's cap=200 default is for benchmarks whose
-    # target pool is large enough to make greedy MI's cubic per-step cost bite.
-    ("Greedy entropy (Alg. 1)", "acq", "greedy_entropy", {"cap": None}),
+    # "Greedy entropy (Alg. 1)" is deliberately NOT listed here: with sigma=1.0 (the
+    # shared default -- see baselines/_core.py) it is the same pivoted-Cholesky
+    # greedy log-det algorithm as "Submod. benchmark" (select_logdet), so it would
+    # just duplicate that row in every table below. It stays in ACQUISITION_REGISTRY
+    # and is compared against Greedy MI directly in the entropy_mi_sweep mode (its
+    # original purpose, mirroring benchmark-selection/code/eval_entropy_vs_mi.py).
+    # See docs/rq4-cost-currency-mechanism.md for the ablation confirming the two
+    # are statistically indistinguishable once regularization/pool-cap are matched.
     ("Greedy MI (Alg. 2)", "acq", "greedy_mi", {"cap": None}),
     ("MetaEvaluator (full)", "acq", "metaevaluator_full", {}),
     ("ActiveEval-S", "acq", "activeeval_s", {"influence": True}),
