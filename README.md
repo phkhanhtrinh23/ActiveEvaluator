@@ -16,8 +16,6 @@
 > given), benchmark compression (we generalize to *future* models), and active
 > testing (the target stays unlabeled).
 
-
-
 ## Quick start — reproduce the acquisition benchmark (CPU, no downloads)
 
 ```bash
@@ -56,9 +54,8 @@ setup where target pairs were labelable).
 | DoC                     | estimator   | 4.39 ± 0.50     | —    |
 | Random                  | acquisition | 4.47 ± 0.90     | 15%  |
 | Bayesian opt. design    | acquisition | 4.61 ± 0.67     | 15%  |
-| Submod. benchmark       | acquisition | 4.64 ± 0.22     | 15%  |
+| Submod. benchmark [^1]  | acquisition | 4.64 ± 0.22     | 15%  |
 | k-center                | acquisition | 4.96 ± 0.51     | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 5.01 ± 0.34     | 15%  |
 | Facility-location       | acquisition | 5.30 ± 0.48     | 15%  |
 | Matrix completion       | acquisition | 5.38 ± 0.90     | 15%  |
 | **ActiveEval-S+M**      | ours        | 5.66 ± 1.11     | 15%  |
@@ -75,6 +72,21 @@ above (`outputs/acquisition_benchmark.json`). Note: `ActiveEval-S+M`'s model-axi
 narrowing hurts in this regime, and on the noisier image variant (fewer reference
 models) budgeted methods are harder to separate — see the per-benchmark JSONs.
 
+[^1]: `Submod. benchmark` (`select_logdet`) is the same pivoted-Cholesky greedy
+    log-det/max-entropy algorithm as `Greedy entropy (Alg. 1)` once both use the same
+    regularization (`sigma=1.0`, the shared default — [baselines/_core.py](baselines/_core.py)).
+    The previous `greedy_entropy`/`greedy_mi` default (`sigma=None`, i.e. a near-zero
+    `+1e-6` jitter on the kernel diagonal) is the value that degraded their results:
+    it left the greedy pivot over-sensitive to noise in the RBF-bandwidth estimate,
+    costing Greedy entropy 5.12 ± 0.14 vs. 4.68 ± 0.29 pp with `sigma=1.0` (exactly
+    `select_logdet`'s number) and Greedy MI 5.82 ± 0.50 vs. 5.10 ± 0.64 pp (main
+    table, 5 seeds). `Greedy entropy (Alg. 1)` is therefore omitted from this and the
+    other method-comparison tables to avoid listing the same method twice; it remains
+    available in `ACQUISITION_REGISTRY` and is compared directly against
+    `Greedy MI (Alg. 2)` in the [dedicated sweep below](#greedy-entropy-vs-greedy-mutual-information-exploratory).
+    See [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md) for
+    the full ablation isolating this from the pool-cap confound.
+
 ### Budget efficiency (RQ3)
 
 ```bash
@@ -87,16 +99,14 @@ gap is largest at small budgets, where target-aware coverage matters most — an
 budgeted methods converge toward, but stay above, the full-labeling line.
 
 
-| Budget | ActiveEval-Pair | Facility-loc | Random |
-| ------ | --------------- | ------------ | ------ |
-| 5%     | **5.52**        | 6.59         | 6.83   |
-| 10%    | **4.87**        | 5.85         | 5.43   |
-| 15%    | **4.19**        | 5.08         | 4.99   |
-| 20%    | **4.82**        | 4.94         | 5.33   |
-| 30%    | **4.49**        | 4.96         | 4.74   |
+| Budget | ActiveEval-Pair | Facility-loc | Random   |
+| ------ | --------------- | ------------ | -------- |
+| 5%     | **5.52**        | 6.59         | 6.83     |
+| 10%    | **4.87**        | 5.85         | 5.43     |
+| 15%    | **4.19**        | 5.08         | 4.99     |
+| 20%    | **4.82**        | 4.94         | 5.33     |
+| 30%    | **4.49**        | 4.96         | 4.74     |
 | 50%    | 4.21            | 4.24         | **4.04** |
-
-
 
 
 ### Ablation (RQ5)
@@ -120,8 +130,6 @@ Text2SQL pipeline.)
 | ActiveEval-Pair (full)   | **4.19 ± 0.39** |
 | − target-aware narrowing | 4.26 ± 0.18     |
 | − all structure (Random) | 4.99 ± 0.56     |
-
-
 
 
 ### Mechanism analysis — why the budgeted methods differ
@@ -151,19 +159,19 @@ source pairs whose feature region transfers best to the held-out target.
 What the numbers say in this corrected (no-leak) regime:
 
 1. **Full labeling wins; there is no less-is-more reversal.** With target pairs
-   unlabelable, the earlier crossover (a budgeted subset *beating* the full matrix)
+  unlabelable, the earlier crossover (a budgeted subset *beating* the full matrix)
    disappears — it depended on labeling clean target pairs directly. The full
    MetaEvaluator (3.60 pp) is the overall best; budgeted methods approach it from
    above.
 2. **Among budgeted methods, target-aware source coverage is what helps — modestly.**
-   ActiveEval-S/-Pair (≈4.1 pp) beat whole-pool Random (4.47) and every other
+  ActiveEval-S/-Pair (≈4.1 pp) beat whole-pool Random (4.47) and every other
    baseline by concentrating labels on near-target source pairs. But the ablation
    shows the *target-narrowing component itself* now contributes only ~0.06 pp; most
    of the budgeted advantage comes from the general coverage/diversity structure.
    (Diagnostic: facility/ActiveEval-S selections sit at mean distance ≈3.6 from the
    target-reference centroid vs ≈4.3 for Random, with ~35% lower label noise.)
 3. **These conclusions are by-construction and need real-pipeline validation.**
-   The generator makes far-source labels noisy and over-represented
+  The generator makes far-source labels noisy and over-represented
    (`make_problem`, `experiments/run_acquisition_benchmark.py`) and evaluates only on
    the held-out target workload. Whether real Text2SQL execution-accuracy labels
    exhibit such target-proximity structure is an empirical claim the full pipeline
@@ -186,6 +194,7 @@ whole-pool Random throughout, and the ActiveEval–full gap shrinks as far-sourc
 grows (0.77 pp at 1× → 0.22 pp at 6×) because heavier far-source noise erodes the full
 matrix's information advantage (5 seeds).
 
+
 | far/near noise | ActiveEval-Pair @15% | Full (100%)     | Random @15% |
 | -------------- | -------------------- | --------------- | ----------- |
 | 1.0×           | 3.67 ± 0.21          | **2.90 ± 0.39** | 3.88 ± 0.34 |
@@ -194,6 +203,7 @@ matrix's information advantage (5 seeds).
 | 3.0×           | 3.94 ± 0.50          | **3.26 ± 0.43** | 4.52 ± 0.44 |
 | 4.4×           | 4.20 ± 0.39          | **3.64 ± 0.48** | 4.96 ± 0.49 |
 | 6.0×           | 4.35 ± 0.49          | **4.13 ± 0.51** | 5.50 ± 0.84 |
+
 
 ActiveEval-Pair and the full matrix both degrade as far-source noise grows, but
 whole-pool Random degrades fastest (most of its picks land in the noisy far-source
@@ -226,13 +236,324 @@ size; the axis is the labeling budget in % of that capped pool (5 seeds).
 | 25%    | 450    | 4.84 ± 0.29  | 5.05 ± 0.41 |
 | 33.33% | 600    | 4.70 ± 0.38  | 4.74 ± 0.45 |
 
+
 MAE improves with budget (more clean source labels help), but neither pivoted-Cholesky
 rule stands out from the simpler baselines in this held-out regime — over the source
 pool they act as diversity/coverage selectors without the target-region signal the
 leaky setup handed them, and both land well above the full MetaEvaluator (3.60 pp).
 
+### Real-currency budgets (RQ4) — tokens, latency, memory, storage
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode cost_budget --seeds 5
+```
+
+The other tables set the budget as a **count** of evaluation actions (every
+model–workload pair costs 1). In practice, running a model on a workload slice
+consumes different *currencies*, and the same 15% budget buys a different number of
+labels depending on which one you meter. This mode re-spends the budget as 15% of
+each currency's **whole-pool cost** instead of 15% of the action *count*:
 
 
+| Currency     | Per-action cost model (`experiments/cost_models.py`)                           | Kind          |
+| ------------ | ------------------------------------------------------------------------------ | ------------- |
+| `count`      | 1 (the original cardinality budget — reproduces the main table exactly)        | additive      |
+| `input_tok`  | `set_size × prompt_len` (≈ model-independent; big slices cost more to feed)    | additive      |
+| `output_tok` | `set_size × model_verbosity`                                                   | additive      |
+| `latency`    | `set_size × (prompt+gen tokens) × model_params` (wall-clock to run the action) | additive      |
+| `memory`     | `model_params` (peak resident GB; set-independent, paid per action)            | additive      |
+| `storage`    | checkpoint GB counted **once per unique model** + small per-action cache       | **amortized** |
+
+
+Costs are drawn from per-model (params, verbosity) and per-sample-set (examples,
+prompt length) size factors with an rng decoupled from the label noise, so they are
+reproducible; absolute scales are illustrative — only *ratios across actions* matter.
+
+**Flow.** Selection is **cost-agnostic**: each method ranks the pool *once per seed*
+(the ranking never sees the currency), and each currency only decides how far 15% of
+its budget reaches into that fixed ranking:
+
+```
+  method.select(budget = 450)  ─────────►  order = [i₀, i₁, …, i₄₄₉]   (priority list of pair-indices)
+                                                     │  same order reused for every currency
+        ┌────────────────────────────────┬──────────┴──────────┬────────────────────────────────┐
+        ▼ input_tok                       ▼ memory              ▼ storage (amortized)             │
+ budget = 0.15·Σ tokens           budget = 0.15·Σ GB      budget = 0.15·(cache + checkpoints)     │
+        │                                 │                     │  checkpoint paid once per model │
+        ▼   greedy_fill: walk order front-to-back, KEEP i if its marginal cost fits the budget,   │
+        │                    SKIP (don't stop) if not — so kept = a prefix-with-skips of order    │
+     kept ≈ 252 actions               kept ≈ 264            kept ≈ 91 (checkpoints eat the budget) │
+        └────────────────────────────────┴─────────────────────┴────────────────────────────────┘
+                                          ▼
+                       train ActiveEvaluator on kept → unseen MAE
+```
+
+`count` uses `budget = 0.15·P`; every other currency uses `0.15·pool_total`, the cost
+of running the *whole* pool in that unit. Because the order is fixed, the table below
+reflects only how far each budget stretches — not six different selection problems.
+(Caveat: composite methods fix their internal split against the full 450-long order —
+ActiveEval-Pair's 80/20 coverage/diversity, ActiveEval-S+M's keep-half-the-models — so
+when a currency affords far fewer actions, e.g. storage's ~91, only the coverage phase
+is ever reached; re-deriving the split per currency would be more faithful but 6× the
+compute.)
+
+**Measured results** (5 seeds, 15% of each currency's whole-pool cost; unseen-model
+MAE in pp, lower is better; MetaEvaluator full = **3.60**). One table per currency,
+each sorted by its own MAE — the top row is that currency's winner (**bold**).
+`#actions` is the median number of labeled pairs the 15% budget actually bought.
+
+> **On `count`.** `count` is *not* a computational cost — it is the plain
+> **label-count** budget every other table in this README uses: each action costs
+> exactly 1, so "15% of the whole-pool cost" is simply 15% of the ~1800 pairs = ~270
+> labels. It is the degenerate currency where cost = cardinality, kept here as the
+> reference; the other five re-price those same actions by a real resource (tokens /
+> seconds / GB), and `#actions` then varies because a fixed budget of tokens/GB buys
+> a different *number* of labels than a flat count does.
+
+#### count — label-count budget (baseline = main table)
+
+| Method | Unseen MAE (pp) | #actions |
+| ------ | --------------- | -------- |
+| **ActiveEval-S** | **4.08 ± 0.68** | 270 |
+| ActiveEval-Pair | 4.11 ± 0.82 | 270 |
+| Bayesian opt. design | 4.61 ± 0.67 | 270 |
+| Submod. benchmark [^1] | 4.64 ± 0.22 | 270 |
+| k-center | 4.96 ± 0.51 | 270 |
+| Matrix completion | 5.14 ± 0.78 | 270 |
+| Random | 5.47 ± 0.90 | 270 |
+| Facility-location | 5.54 ± 0.57 | 270 |
+| ActiveEval-S+M | 5.66 ± 1.11 | 270 |
+| Greedy MI (Alg. 2) | 5.77 ± 0.52 | 270 |
+| GRAD-MATCH | 5.96 ± 1.52 | 270 |
+| Active testing | 6.10 ± 0.98 | 270 |
+
+#### input_tok — input tokens (`set_size × prompt_len`)
+
+| Method | Unseen MAE (pp) | #actions |
+| ------ | --------------- | -------- |
+| **ActiveEval-Pair** | **4.53 ± 0.46** | 252 |
+| ActiveEval-S | 4.56 ± 0.38 | 252 |
+| Submod. benchmark [^1] | 4.77 ± 0.70 | 241 |
+| Bayesian opt. design | 4.77 ± 0.72 | 254 |
+| k-center | 4.85 ± 0.21 | 266 |
+| Matrix completion | 4.97 ± 0.76 | 268 |
+| Facility-location | 5.06 ± 0.64 | 267 |
+| Random | 5.20 ± 0.79 | 280 |
+| ActiveEval-S+M | 5.34 ± 0.97 | 248 |
+| Greedy MI (Alg. 2) | 5.67 ± 0.68 | 280 |
+| Active testing | 6.11 ± 0.90 | 270 |
+| GRAD-MATCH | 6.26 ± 1.35 | 287 |
+
+#### output_tok — generated tokens (`set_size × verbosity`)
+
+| Method | Unseen MAE (pp) | #actions |
+| ------ | --------------- | -------- |
+| **Submod. benchmark** [^1] | **4.44 ± 0.26** | 286 |
+| ActiveEval-Pair | 4.70 ± 0.52 | 248 |
+| Bayesian opt. design | 4.76 ± 0.95 | 293 |
+| ActiveEval-S | 4.78 ± 0.58 | 248 |
+| k-center | 4.81 ± 0.67 | 283 |
+| Facility-location | 5.14 ± 0.54 | 252 |
+| Matrix completion | 5.18 ± 0.87 | 268 |
+| ActiveEval-S+M | 5.29 ± 0.99 | 259 |
+| Random | 5.52 ± 0.78 | 277 |
+| Greedy MI (Alg. 2) | 5.67 ± 0.62 | 272 |
+| Active testing | 5.69 ± 0.86 | 267 |
+| GRAD-MATCH | 5.89 ± 1.66 | 307 |
+
+#### latency — wall-clock seconds (`tokens × params`)
+
+| Method | Unseen MAE (pp) | #actions |
+| ------ | --------------- | -------- |
+| **k-center** | **4.38 ± 0.65** | 282 |
+| Bayesian opt. design | 4.47 ± 0.93 | 271 |
+| Submod. benchmark [^1] | 4.53 ± 0.35 | 277 |
+| ActiveEval-Pair | 4.55 ± 0.65 | 255 |
+| ActiveEval-S | 4.59 ± 0.54 | 255 |
+| Facility-location | 4.81 ± 0.29 | 305 |
+| Matrix completion | 5.21 ± 0.94 | 265 |
+| Random | 5.28 ± 0.68 | 279 |
+| Greedy MI (Alg. 2) | 5.45 ± 0.98 | 286 |
+| ActiveEval-S+M | 5.47 ± 1.12 | 235 |
+| Active testing | 5.79 ± 0.80 | 278 |
+| GRAD-MATCH | 6.15 ± 1.22 | 314 |
+
+#### memory — peak resident GB (`params`, per action)
+
+| Method | Unseen MAE (pp) | #actions |
+| ------ | --------------- | -------- |
+| **ActiveEval-S** | **4.12 ± 0.58** | 264 |
+| ActiveEval-Pair | 4.33 ± 0.49 | 264 |
+| Submod. benchmark [^1] | 4.48 ± 0.42 | 312 |
+| Bayesian opt. design | 4.53 ± 1.23 | 318 |
+| k-center | 4.57 ± 0.66 | 295 |
+| Random | 5.02 ± 0.50 | 259 |
+| ActiveEval-S+M | 5.29 ± 1.09 | 264 |
+| Facility-location | 5.43 ± 0.40 | 287 |
+| Matrix completion | 5.46 ± 1.20 | 250 |
+| Greedy MI (Alg. 2) | 5.55 ± 0.98 | 288 |
+| Active testing | 5.79 ± 1.14 | 232 |
+| GRAD-MATCH | 6.20 ± 1.55 | 275 |
+
+#### storage — checkpoint + cache GB (**amortized per unique model**)
+
+| Method | Unseen MAE (pp) | #actions |
+| ------ | --------------- | -------- |
+| **Submod. benchmark** [^1] | **4.99 ± 0.79** | 251 |
+| Bayesian opt. design | 5.22 ± 0.68 | 232 |
+| ActiveEval-S | 5.60 ± 0.84 | 98 |
+| Random | 5.75 ± 1.43 | 109 |
+| Greedy MI (Alg. 2) | 6.02 ± 0.97 | 157 |
+| ActiveEval-S+M | 6.17 ± 1.28 | 122 |
+| Matrix completion | 6.30 ± 1.74 | 106 |
+| GRAD-MATCH | 6.34 ± 0.41 | 104 |
+| Active testing | 6.34 ± 0.86 | 128 |
+| k-center | 6.46 ± 2.22 | 177 |
+| Facility-location | 6.72 ± 1.28 | 133 |
+| ActiveEval-Pair | 6.81 ± 0.75 | 91 |
+
+> `Greedy entropy (Alg. 1)` isn't in this table ([^1]), but it's worth naming what
+> would happen if it were: 5.07 ± 0.99 pp on 249 actions — right next to `Submod.
+> benchmark` (4.99, 251 actions), not a coincidence, since they're the same algorithm.
+> That near-exact match is itself the confirmation: `select_logdet` has always used a
+> ridge-regularized objective `log det(I + K/sigma^2)` with `sigma=1.0`
+> ([baselines/_core.py:138](baselines/_core.py#L138)), while `greedy_entropy`/`greedy_mi`
+> previously defaulted to a near-zero jitter (`+1e-6`) — a much weaker prior that left
+> them more sensitive to noise in the RBF-bandwidth estimate — and, in this experiment
+> specifically, `greedy_entropy` was also run through an unnecessary `cap=250`
+> candidate-pool restriction that only the genuinely cubic-cost `greedy_mi` needed.
+> `sigma` now defaults to `1.0` for both ([baselines/_core.py:364](baselines/_core.py#L364),
+> [:394](baselines/_core.py#L394)), and `greedy_entropy` runs uncapped like
+> `select_logdet` ([experiments/run_acquisition_benchmark.py:413](experiments/run_acquisition_benchmark.py#L413)).
+> Full ablation isolating each fix: [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md).
+
+
+**What the currencies say.** Under the additive budgets (`input_tok`, `output_tok`,
+`latency`, `memory`) the ordering barely moves from `count` — ActiveEval-S/-Pair stay
+on top — because a cost-agnostic order draws a representative cost mix, so 15% of the
+cost buys ≈15% of the actions (~270) whatever the unit. The `storage` **budget
+inverts it**, and the reason is a checkpoint accounting detail, not a difference in
+selection quality: `storage_cost = (#unique models touched) × checkpoint_gb + (#actions) ×
+small_cache_gb`, so a fixed GB budget buys actions almost in proportion to how few
+*new* models the selection order forces you to pay for
+([docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md) for the
+full derivation). `Submod. benchmark`'s pair-diversity objective happens to satisfy
+itself by revisiting the *same* model across several sample-sets (16 models bought 250
+actions, ≈15.6/model) — it was never trying to minimize model count, but pair
+diversity doesn't require model diversity here, so it stays cheap. `ActiveEval-Pair`'s
+coverage objective is explicitly indifferent to model identity (it optimizes purely
+for target-similarity), but the few pairs closest to the target happen to be spread
+across many different models, so chasing them forces a new checkpoint every ~7-8
+actions (12 models bought only 90 actions) — collapsing it to near-worst (6.81 pp)
+despite leading almost every other table.
+
+This is an honest limitation of *count*-optimal target-aware selection under a storage
+budget, and it points at the deferred next step: a **cost-benefit** (gain/cost
+knapsack) variant of ActiveEval — the production pipeline already threads a `cost_fn`
+through the greedy loops (`active_evaluator/active_selection.py`) — that trades
+coverage off against the amortized checkpoint cost instead of ignoring it.
+(`outputs/cost_budget_benchmark.json`; only `greedy_mi` is capped at 250 via
+`_GREEDY_CAP` — its per-step complement-precision solve is genuinely cubic in the
+candidate-pool size, unlike `greedy_entropy`'s `O(N)` pivoted-Cholesky step, which runs
+uncapped like `select_logdet`; orders precomputed to `_N_ORDER = 450`, realized cost
+fraction recorded per cell.)
+For the code-level mechanism behind each table (why the additive currencies barely
+reorder while `storage` inverts the ranking), see
+[docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md).
+
+### Fixed-model-pool fairness check (RQ4 companion)
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode fixed_model_pool --seeds 5 --budget-frac 0.15
+```
+
+The `storage` currency above rewards methods that concentrate picks on few
+reference models (checkpoint cost is paid once per unique model), which is why
+`Submod. benchmark`/`Bayesian opt. design` win it and `ActiveEval-*` collapses to
+near-worst. This leaves it unclear whether ActiveEval is *penalized for
+spreading across more models*, or simply worse at picking pairs. This check
+controls for that directly: freeze the reference-model set `Submod. benchmark`
+buys under the storage budget, then let every other method reselect its own
+pairs restricted to **only that model set**, at the same action count. Each
+method is also measured **Free** (unrestricted pool, same action count, paired
+RNG) as the fairness baseline. `Delta = Fixed − Free`; positive means being
+confined to `Submod. benchmark`'s models hurts that method.
+
+**Results** (5 seeds, 15% of storage pool cost). `Submod. benchmark` bought a
+median of **251 actions across 16 models** (source MAE 5.08 ± 0.95 pp). Unseen
+MAE (pp), lower is better; sorted by delta.
+
+| Method | Free (unrestricted) | Fixed (Submod.'s models) | Delta |
+| --- | ---: | ---: | ---: |
+| **GRAD-MATCH** | 5.72 ± 1.63 | **5.02 ± 0.65** | **−0.70** |
+| Random | 5.62 ± 0.66 | 5.33 ± 0.82 | −0.29 |
+| Submod. benchmark (source) | 5.08 ± 0.95 | 5.08 ± 0.95 | 0 (defines the model set) |
+| k-center | 5.04 ± 0.53 | 5.11 ± 0.55 | +0.06 |
+| Bayesian opt. design | 4.82 ± 0.85 | 5.17 ± 0.88 | +0.35 |
+| Facility-location | 5.00 ± 0.44 | 5.36 ± 0.79 | +0.36 |
+| **ActiveEval-Pair** | **4.45 ± 0.36** | 5.02 ± 0.93 | +0.58 |
+| ActiveEval-S+M | 5.03 ± 0.58 | 5.62 ± 1.20 | +0.59 |
+| ActiveEval-S | 4.47 ± 0.47 | 5.06 ± 0.76 | +0.59 |
+| Active testing | 4.62 ± 0.72 | 5.26 ± 1.06 | +0.64 |
+| Greedy MI (Alg. 2) | 4.83 ± 0.46 | 5.54 ± 0.80 | +0.71 |
+| Matrix completion | 5.20 ± 0.45 | 5.95 ± 1.13 | +0.75 |
+
+**Best result:** lowest MAE overall is **ActiveEval-Pair, Free = 4.45 ± 0.36 pp**
+(best of every cell in the table). All three ActiveEval variants get worse
+(+0.58 to +0.59 pp) when confined to `Submod. benchmark`'s 16-model set —
+consistent with the RQ4 mechanism: part of ActiveEval's advantage comes from
+spreading picks across many models to stay close to the target region, which
+the model-concentrated pool takes away. GRAD-MATCH and Random go the other way
+(negative delta) — restricting the pool doesn't hurt methods that weren't
+exploiting model diversity to begin with. CIs overlap across most rows at 5
+seeds, so treat the ranking as directional. Full analysis:
+[docs/fixed-model-pool-fairness-check.md](docs/fixed-model-pool-fairness-check.md)
+(`outputs/fixed_model_pool_benchmark.json`).
+
+### Adaptive (threshold-stopped) budget — is there a free lunch under a fixed cap?
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode threshold_budget --seeds 5 --budget-frac 0.20
+```
+
+Every table above hands each method a fixed budget and forces it to spend all
+of it (saturated greedy loops were padded with random picks up to the cap).
+This experiment asks the reverse question: given a hard cap (20%), can a method
+**stop itself early** — once its own marginal gain (coverage/log-det/mutual-info,
+whichever it already computes) drops below a `gain_threshold` fraction of its
+first pick's gain — and spend less while still matching full-cap accuracy? A
+new `gain_threshold` kwarg was added to every greedy selector that tracks a
+decreasing per-step gain (`select_facility`, `select_logdet`,
+`select_greedy_entropy`/`select_greedy_mi`, and the `ActiveEval-S`/`-S+M`/`-Pair`
+selectors built from them — [baselines/_core.py](baselines/_core.py)); when set,
+the greedy loop breaks early and the pre-existing "pad back up to budget" step
+is skipped, so the method can genuinely under-spend the cap. Because each of
+these is a greedy *prefix* selector, stopping early at a threshold is
+mathematically identical to fixing the budget at the realized spend from the
+start — the sweep just locates that point automatically.
+
+**Results** (5 seeds, 20% budget cap, log-spaced thresholds `1e-4`–`0.3`):
+
+| Method | Baseline (full 20% cap) | Cheapest match found | Verdict |
+| --- | --- | --- | --- |
+| **ActiveEval-S** | 4.02 ± 0.49 pp @ 20% | **4.33 ± 0.61 pp @ 12.3%** (`gain_threshold=1e-4`) | **Genuine free lunch** — 39% less budget, MAE within the full-cap CI. |
+| Greedy MI (Alg. 2) | 5.10 ± 0.37 pp @ 20% | 4.74 ± 0.47 pp @ 13.9% | Looks free, but is a `cap=250` search-universe artifact, not real gain decay — see the doc below. |
+| Submod. benchmark | 4.67 ± 0.38 pp @ 20% | — never under-spends | Diversity gain never decays enough in this range; always spends the full cap. |
+| ActiveEval-Pair | 4.79 ± 0.87 pp @ 20% | — never under-spends | Same — its diversity phase absorbs whatever budget the coverage phase leaves it. |
+| Facility-location | 4.94 ± 0.42 pp @ 20% | — decays too fast | Collapses to ≤6.5% spend with much worse MAE at the smallest tested threshold; no usable middle ground. |
+| ActiveEval-S+M | 4.61 ± 0.32 pp @ 20% | — decays too fast | Same pattern as Facility-location. |
+
+**ActiveEval-S is the only genuine result** — its realized spend strictly
+decreases as the threshold grows (20% → 12.3% → 8.5% → 3.7% → ...), a real
+gain-decay curve, and its cheapest match uses ~39% less budget for
+statistically indistinguishable accuracy. Greedy MI's apparent under-spend is a
+measurement artifact worth flagging honestly: its realized spend is *identical*
+(13.9%) across all 8 nonzero thresholds tested, because its search universe was
+already capped at 250 candidates for tractability — the gain threshold never
+actually triggered a break in this run, the pre-existing cap did. Full
+per-threshold tables, the cap-artifact explanation, and reading notes:
+[docs/adaptive-threshold-budget.md](docs/adaptive-threshold-budget.md)
+(`outputs/threshold_budget_benchmark.json`).
 
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 
@@ -247,8 +568,7 @@ Robust Baselines). It reuses the exact selection math and meta-evaluator — `Ac
 (`active_evaluator/model.py`) and `baselines.ACQUISITION_REGISTRY` / `ESTIMATOR_REGISTRY`
 are imported unchanged from the Text2SQL script — with `n_train_models=35` +
 `n_unseen_models=8` seen/held-out classifiers (43 total) and sample-sets framed as
-distribution-shift evaluation slices instead of Text2SQL workload slices. Same `--mode
-sweep|ablation|entropy_mi_sweep` options as the Text2SQL script (RQ3 budget curve, RQ5
+distribution-shift evaluation slices instead of Text2SQL workload slices. Same `--mode sweep|ablation|entropy_mi_sweep` options as the Text2SQL script (RQ3 budget curve, RQ5
 ablation, greedy entropy vs. greedy MI). Regenerate with the command above
 (`outputs/image_classification_acquisition_benchmark.json`); numbers are illustrative of
 the design until replaced with a real torchvision/timm pipeline for camera-ready figures.
@@ -263,23 +583,22 @@ replaced by a real torchvision/timm pipeline.
 
 
 | Method                  | Family      | Unseen MAE (pp) | Cost |
-| ----------------------- | ----------- | ---------------- | ---- |
-| MetaEvaluator (full)    | reference   | **4.54 ± 1.10**  | 100% |
-| DoC                     | estimator   | 4.69 ± 0.50      | —    |
-| k-center                | acquisition | 5.65 ± 1.27      | 15%  |
-| **ActiveEval-S+M**      | ours        | 5.84 ± 1.72      | 15%  |
-| **ActiveEval-S**        | ours        | 6.00 ± 1.84      | 15%  |
-| Submod. benchmark       | acquisition | 6.20 ± 1.24      | 15%  |
-| **ActiveEval-Pair**     | ours        | 6.20 ± 1.46      | 15%  |
-| Random                  | acquisition | 6.39 ± 1.67      | 15%  |
-| Greedy MI (Alg. 2)      | acquisition | 6.52 ± 1.18      | 15%  |
-| Matrix completion       | acquisition | 6.58 ± 0.85      | 15%  |
-| Bayesian opt. design    | acquisition | 6.66 ± 0.99      | 15%  |
-| Active testing          | acquisition | 6.93 ± 1.34      | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 7.03 ± 1.61      | 15%  |
-| Facility-location       | acquisition | 7.42 ± 2.03      | 15%  |
-| GRAD-MATCH              | acquisition | 7.91 ± 0.64      | 15%  |
-| ATC                     | estimator   | 8.28 ± 2.14      | —    |
+| ----------------------- | ----------- | --------------- | ---- |
+| MetaEvaluator (full)    | reference   | **4.54 ± 1.10** | 100% |
+| DoC                     | estimator   | 4.69 ± 0.50     | —    |
+| k-center                | acquisition | 5.65 ± 1.27     | 15%  |
+| **ActiveEval-S+M**      | ours        | 5.84 ± 1.72     | 15%  |
+| **ActiveEval-S**        | ours        | 6.00 ± 1.84     | 15%  |
+| Submod. benchmark [^1]  | acquisition | 6.20 ± 1.24     | 15%  |
+| **ActiveEval-Pair**     | ours        | 6.20 ± 1.46     | 15%  |
+| Random                  | acquisition | 6.39 ± 1.67     | 15%  |
+| Greedy MI (Alg. 2)      | acquisition | 6.52 ± 1.18     | 15%  |
+| Matrix completion       | acquisition | 6.58 ± 0.85     | 15%  |
+| Bayesian opt. design    | acquisition | 6.66 ± 0.99     | 15%  |
+| Active testing          | acquisition | 6.93 ± 1.34     | 15%  |
+| Facility-location       | acquisition | 7.42 ± 2.03     | 15%  |
+| GRAD-MATCH              | acquisition | 7.91 ± 0.64     | 15%  |
+| ATC                     | estimator   | 8.28 ± 2.14     | —    |
 
 
 Regenerate with the command above (`outputs/image_classification_acquisition_benchmark.json`).
@@ -311,23 +630,22 @@ the strongest budgeted methods, ahead of whole-pool Random and every other basel
 
 
 | Method                  | Family      | Unseen MAE (pp) | Cost |
-| ----------------------- | ----------- | ---------------- | ---- |
-| MetaEvaluator (full)    | reference   | **3.60 ± 0.47**  | 100% |
-| **ActiveEval-S**        | ours        | 4.08 ± 0.68      | 15%  |
-| **ActiveEval-Pair**     | ours        | 4.11 ± 0.39      | 15%  |
-| DoC                     | estimator   | 4.39 ± 0.50      | —    |
-| Random                  | acquisition | 4.47 ± 0.90      | 15%  |
-| Bayesian opt. design    | acquisition | 4.61 ± 0.67      | 15%  |
-| Submod. benchmark       | acquisition | 4.64 ± 0.22      | 15%  |
-| Greedy entropy (Alg. 1) | acquisition | 4.89 ± 0.58      | 15%  |
-| k-center                | acquisition | 4.96 ± 0.51      | 15%  |
-| Facility-location       | acquisition | 5.30 ± 0.48      | 15%  |
-| Matrix completion       | acquisition | 5.38 ± 0.90      | 15%  |
-| Greedy MI (Alg. 2)      | acquisition | 5.45 ± 0.79      | 15%  |
-| **ActiveEval-S+M**      | ours        | 5.66 ± 1.11      | 15%  |
-| GRAD-MATCH              | acquisition | 6.00 ± 1.48      | 15%  |
-| Active testing          | acquisition | 6.10 ± 0.98      | 15%  |
-| ATC                     | estimator   | 6.84 ± 3.37      | —    |
+| ----------------------- | ----------- | --------------- | ---- |
+| MetaEvaluator (full)    | reference   | **3.60 ± 0.47** | 100% |
+| **ActiveEval-S**        | ours        | 4.08 ± 0.68     | 15%  |
+| **ActiveEval-Pair**     | ours        | 4.11 ± 0.39     | 15%  |
+| DoC                     | estimator   | 4.39 ± 0.50     | —    |
+| Random                  | acquisition | 4.47 ± 0.90     | 15%  |
+| Bayesian opt. design    | acquisition | 4.61 ± 0.67     | 15%  |
+| Submod. benchmark [^1]  | acquisition | 4.64 ± 0.22     | 15%  |
+| k-center                | acquisition | 4.96 ± 0.51     | 15%  |
+| Facility-location       | acquisition | 5.30 ± 0.48     | 15%  |
+| Matrix completion       | acquisition | 5.38 ± 0.90     | 15%  |
+| Greedy MI (Alg. 2)      | acquisition | 5.45 ± 0.79     | 15%  |
+| **ActiveEval-S+M**      | ours        | 5.66 ± 1.11     | 15%  |
+| GRAD-MATCH              | acquisition | 6.00 ± 1.48     | 15%  |
+| Active testing          | acquisition | 6.10 ± 0.98     | 15%  |
+| ATC                     | estimator   | 6.84 ± 3.37     | —    |
 
 
 Regenerate with the command above (`outputs/node_classification_acquisition_benchmark.json`).
@@ -341,7 +659,7 @@ with a `select`/`estimate` entry point. Implemented methods are in **bold**.
 | Family                | Methods                                                                                                                                                                                                                          |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Label-free estimators | **ATC**, **DoC**, AutoEval, AETTA, SSME                                                                                                                                                                                          |
-| Budgeted acquisition  | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH**, **Greedy entropy (Alg. 1)**, **Greedy MI (Alg. 2)** |
+| Budgeted acquisition  | **Random**, **k-center**, **Facility-location**, **Matrix completion**, **Active testing**, **Bayesian optimal design**, **Submodular benchmark selection**, **GRAD-MATCH**, **Greedy entropy (Alg. 1)** [^1], **Greedy MI (Alg. 2)** |
 | Reference / ours      | **MetaEvaluator (full budget)**, **ActiveEval-S**, **ActiveEval-S+M**, **ActiveEval-Pair**                                                                                                                                       |
 
 
@@ -379,8 +697,6 @@ The previously-existing modules ([active_evaluator/meta_learning.py](active_eval
 - [scripts/](scripts/) — Helpers (`inspect_active_evaluator.py`, `rename_model_outputs.py`).
 - [test/](test/) — 24 unit tests (`test_active_selection.py`, `test_budget.py`, `test_active_learning.py`).
 
-
-
 ## Requirements
 
 ```bash
@@ -390,8 +706,6 @@ pip install torch transformers accelerate bitsandbytes scipy scikit-learn matplo
 `bitsandbytes` and `accelerate` are required for the 4-bit quantized SQL generator. Some checkpoints are gated on Hugging Face — pass `alias=model_id` to `--model-ids` to point at approved variants.
 
 ## Active Selection — the new contribution
-
-
 
 ### Problem statement
 
@@ -434,8 +748,6 @@ Non-submodular and non-monotone — uses plain greedy with a positive-gain abort
 | `--selection-seed`                     | `42`                 | RNG seed (bandwidth pair sampling, ties).     |
 
 
-
-
 ### Output artifacts
 
 When `--use-active-selection` is passed, per-test-model diagnostics are written to `outputs/<output-dir>/selection_<sanitized_model_id>/`:
@@ -469,8 +781,6 @@ python -m active_evaluator.pipeline \
   --test-model-ids Qwen/Qwen2.5-0.5B-Instruct ...
 ```
 
-
-
 ### Theoretical guarantees
 
 
@@ -480,8 +790,6 @@ python -m active_evaluator.pipeline \
 | V1 cost-benefit greedy      | knapsack               | `½(1 − 1/e)` of OPT   | Khuller, Moss & Naor (1999)                  |
 | V1 with partial enumeration | knapsack               | `(1 − 1/e)` of OPT    | Sviridenko (2004)                            |
 | V2 plain greedy             | cardinality            | none (non-submodular) | Wei, Iyer & Bilmes (2015) — empirical oracle |
-
-
 
 
 ## Tests
@@ -499,8 +807,6 @@ python -m pytest test/ -v
 | V1 algorithmic    | lazy-greedy ≡ plain-greedy on synthetic 20×5 pool; submodularity (marginal gains non-increasing); disjointness `S ∩ V = ∅`; budget cap; log emission. |
 | V2 algorithmic    | budget cap; FASS pre-filter cap (verified via `eval_trace` hook); positive-gain abort rule; pipeline-wrapper smoke.                                   |
 | Shared machinery  | embedding shape; bandwidth scaling; narrowing produces `(1 − q) ·                                                                                     |
-
-
 
 
 ## Base Pipeline (unchanged behavior)
@@ -522,8 +828,6 @@ python -m active_evaluator.pipeline \
   --model-ids ... \
   [--test-model-ids ...]
 ```
-
-
 
 ## Shift Descriptor Pipeline (auxiliary)
 
@@ -556,8 +860,6 @@ For image classification backbones, standard PyTorch loaders (e.g. `torchvision.
 - Wei, Iyer & Bilmes (ICML 2015). "Submodularity in Data Subset Selection and Active Learning."
 - Park, Park & Lee (ICLR 2025). "Active Learning for Continual Learning: Keeping the Past Alive in the Present."
 
-
-
 ## Legacy benchmarks (pre-active-selection)
 
 The following tables report MAE numbers from the original MetaEvaluator paper (Text2SQL Spider→BIRD and image classification CIFAR→TinyImageNet transfer). They reflect the *base* predictor without active selection and are kept here for reference. New active-selection MAE numbers will be added once the scaled-up benchmark run completes.
@@ -572,8 +874,6 @@ The following tables report MAE numbers from the original MetaEvaluator paper (T
 | SQLCoder / SLM-SQL / CscSQL / Hrida | 24    | SQLCoder family; SLM-SQL family; CscSQL-Merge / CscSQL-Grpo; Hrida-T2SQL                                                       |
 | Other LLMs                          | 10    | DeepSeek-Coder; Snowflake Arctic-Text2SQL; DeepSeek-R1-Distill; WizardCoder; Mistral; Llama-3.1; Qwen2.5                       |
 | Modern General LLM Backbones        | 26    | DeepSeek-V3; OLMo-2; gemma-3; Mistral-Small-3.1; Llama-4; Qwen3; SmolLM3; Kimi-K2; GPT-OSS; GLM-4.5/4.6; MiniMax; RWKV; Mamba2 |
-
-
 
 
 ### Image Classification Model Pool (43 Total)

@@ -34,6 +34,7 @@ import torch
 
 from active_evaluator.model import ActiveEvaluator
 from baselines import ACQUISITION_REGISTRY, ESTIMATOR_REGISTRY
+from experiments.cost_models import make_cost_model, greedy_fill
 
 
 # ---------------------------------------------------------------------------
@@ -194,10 +195,14 @@ METHODS = [
     ("Bayesian opt. design", "acq", "bayesian_design", {}),
     ("Submod. benchmark", "acq", "submodular_benchmark", {}),
     ("GRAD-MATCH", "acq", "gradmatch", {}),
-    # cap=None: the target pool here is only 600 pairs, so both algorithms can
-    # search it in full; the registry's cap=200 default is for benchmarks whose
-    # target pool is large enough to make greedy MI's cubic per-step cost bite.
-    ("Greedy entropy (Alg. 1)", "acq", "greedy_entropy", {"cap": None}),
+    # "Greedy entropy (Alg. 1)" is deliberately NOT listed here: with sigma=1.0 (the
+    # shared default -- see baselines/_core.py) it is the same pivoted-Cholesky
+    # greedy log-det algorithm as "Submod. benchmark" (select_logdet), so it would
+    # just duplicate that row in every table below. It stays in ACQUISITION_REGISTRY
+    # and is compared against Greedy MI directly in the entropy_mi_sweep mode (its
+    # original purpose, mirroring benchmark-selection/code/eval_entropy_vs_mi.py).
+    # See docs/rq4-cost-currency-mechanism.md for the ablation confirming the two
+    # are statistically indistinguishable once regularization/pool-cap are matched.
     ("Greedy MI (Alg. 2)", "acq", "greedy_mi", {"cap": None}),
     ("MetaEvaluator (full)", "acq", "metaevaluator_full", {}),
     ("ActiveEval-S", "acq", "activeeval_s", {"influence": True}),
@@ -389,6 +394,242 @@ def run_noise_sweep(seeds, budget_frac, ratios):
     return out
 
 
+# cost-budget currencies in display order (count = the original cardinality budget)
+COST_CURRENCIES = [
+    ("count", "actions"),
+    ("input_tok", "in-tok"),
+    ("output_tok", "out-tok"),
+    ("latency", "sec"),
+    ("memory", "GB-mem"),
+    ("storage", "GB-store"),
+]
+# how many actions of a method's greedy order to precompute (currency-independent,
+# since selection is cost-agnostic). A budget that stretches past this length just
+# under-spends -- the realized cost fraction is reported so that stays visible.
+_N_ORDER = 450
+# greedy MI's per-step complement-precision refactorization is cubic in its search
+# universe, so a cost budget's larger action count (_N_ORDER) makes the full pool
+# intractable -- bound it here. greedy_entropy's pivoted-Cholesky step is only O(N)
+# (no complement-precision solve), so it is left uncapped like select_logdet; capping
+# it too previously reintroduced a random-250-subsample confound that made it look
+# far worse than logdet under the `storage` currency despite being the same algorithm
+# (see docs/rq4-cost-currency-mechanism.md).
+_GREEDY_CAP = {"greedy_mi": 250}
+
+
+def _method_order(prob, name, kind, key, kw, budget, rng_master):
+    """Selection order a method produces for a cardinality ``budget`` (the same
+    call the main table uses). Estimators return None (they do not acquire)."""
+    if kind == "est":
+        return None
+    if key == "metaevaluator_full":
+        return list(range(len(prob["X"])))
+    fn = ACQUISITION_REGISTRY[key]
+    P = len(prob["X"])
+    cover_all = kw.get("cover_all")
+    tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
+    infl = prob["influence"] if kw.get("influence") else None
+    tref = None if cover_all else prob.get("X_target_ref")
+    extra = {k: v for k, v in kw.items() if k not in ("cover_all", "influence")}
+    if key in _GREEDY_CAP:                      # bound the cubic pivoted-Cholesky loop
+        extra["cap"] = _GREEDY_CAP[key]
+    return fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask, budget,
+              rng=np.random.default_rng(rng_master.integers(1 << 30)),
+              influence=infl, target_ref=tref, **extra)
+
+
+def run_cost_budget(seeds, budget_frac):
+    """Real-currency budgets: spend ``budget_frac`` of each currency's whole-pool
+    cost instead of a fixed *count* of actions.
+
+    Each acquisition method's (cost-agnostic) greedy order is computed once per
+    seed; every currency then walks that order taking actions while its marginal
+    cost fits the budget (``experiments/cost_models.greedy_fill``). Cheap-per-action
+    picks buy more labels under a token/latency budget; the amortized ``storage``
+    currency rewards methods that concentrate on few reference models. Reports
+    unseen MAE (pp) per currency, plus the median #actions bought and the realized
+    cost fraction."""
+    acq = [(name, kind, key, kw) for name, kind, key, kw in METHODS
+           if kind == "acq" and key != "metaevaluator_full"]
+    cur_names = [c for c, _ in COST_CURRENCIES]
+    mae = {name: {c: [] for c in cur_names} for name, *_ in acq}
+    items = {name: {c: [] for c in cur_names} for name, *_ in acq}
+    frac = {name: {c: [] for c in cur_names} for name, *_ in acq}
+    full, ests = [], {n: [] for n, k, *_ in METHODS if k == "est"}
+
+    for seed in seeds:
+        prob = make_problem(seed)
+        cm = make_cost_model(prob, seed)
+        pm = np.asarray(prob["pair_model"])
+        P = len(prob["X"])
+        full.append(train_eval(prob, list(range(P)), seed))
+        for n, kind, key, _ in METHODS:
+            if kind == "est":
+                ests[n].append(estimator_mae(prob, key))
+        rng = np.random.default_rng(1000 + seed)
+        pool_tot = {c: cm[c].pool_total(pm) for c in cur_names}
+        for name, kind, key, kw in acq:
+            order = _method_order(prob, name, kind, key, kw, min(P, _N_ORDER), rng)
+            for c in cur_names:
+                budget = budget_frac * pool_tot[c]
+                kept, paid = greedy_fill(order, cm[c], budget, pm)
+                mae[name][c].append(train_eval(prob, kept, seed))
+                items[name][c].append(len(kept))
+                frac[name][c].append(paid / pool_tot[c] if pool_tot[c] > 0 else 0.0)
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    full_mae = _mci(full)
+    out = {"budget_frac": budget_frac, "seeds": len(seeds),
+           "full_mae": {"mae": full_mae[0], "ci": full_mae[1]},
+           "estimators": {n: _mci(v)[0] for n, v in ests.items()},
+           "currencies": {}}
+    # per-currency method records
+    for ci_, (c, _unit) in enumerate(COST_CURRENCIES):
+        out["currencies"][c] = {"unit": cm[c].unit, "methods": {}}
+        for name, *_ in acq:
+            m, mc = _mci(mae[name][c])
+            out["currencies"][c]["methods"][name] = {
+                "mae": m, "ci": mc,
+                "median_actions": float(np.median(items[name][c])),
+                "realized_frac": float(np.mean(frac[name][c]))}
+
+    # ---- printed tables ----
+    labels = [lbl for _, lbl in COST_CURRENCIES]
+    print(f"\nReal-currency budget benchmark ({len(seeds)} seeds, budget = "
+          f"{budget_frac*100:.0f}% of each currency's whole-pool cost).")
+    print(f"MetaEvaluator (full, 100% of every currency) = {full_mae[0]:.2f} +/- {full_mae[1]:.2f} pp. "
+          f"Estimators (budget-free): " +
+          ", ".join(f"{n} {v:.2f}" for n, v in out['estimators'].items()) + "\n")
+    width = max(len(n) for n, *_ in acq)
+    print("Unseen MAE (pp); lower is better")
+    print(f"{'Method'.ljust(width)}  " + "  ".join(f"{l:>8}" for l in labels))
+    print("-" * (width + 2 + 10 * len(labels)))
+    # rank rows by the count-currency MAE for a stable ordering
+    order_rows = sorted(acq, key=lambda t: out["currencies"]["count"]["methods"][t[0]]["mae"])
+    for name, *_ in order_rows:
+        cells = []
+        for c, _ in COST_CURRENCIES:
+            r = out["currencies"][c]["methods"][name]
+            cells.append(f"{r['mae']:8.2f}")
+        print(f"{name.ljust(width)}  " + "  ".join(cells))
+    print(f"\nMedian #actions bought under each budget (P = {P})")
+    print(f"{'Method'.ljust(width)}  " + "  ".join(f"{l:>8}" for l in labels))
+    print("-" * (width + 2 + 10 * len(labels)))
+    for name, *_ in order_rows:
+        cells = [f"{out['currencies'][c]['methods'][name]['median_actions']:8.0f}"
+                 for c, _ in COST_CURRENCIES]
+        print(f"{name.ljust(width)}  " + "  ".join(cells))
+    return out
+
+
+def run_fixed_model_pool(seeds, budget_frac):
+    """Model-set-controlled fairness check on the RQ4 storage finding.
+
+    Freezes the set of reference models that ``Submod. benchmark`` (select_logdet)
+    buys under the amortized ``storage`` budget (docs/rq4-cost-currency-mechanism.md),
+    then has every other acquisition method reselect its own pairs restricted to
+    *only that model set*, spending the same number of actions Submod. benchmark
+    bought. Each method is also run at that same action budget on the full,
+    unrestricted pool (same paired RNG draw) as the fairness baseline. The
+    fixed-vs-free delta isolates whether a method's storage-budget disadvantage
+    comes from spreading across more models, or from how it picks pairs once the
+    model set is fixed to match Submod. benchmark's.
+    """
+    acq = [(name, kind, key, kw) for name, kind, key, kw in METHODS
+           if kind == "acq" and key not in ("metaevaluator_full", "submodular_benchmark")]
+    sub_name, _sub_kind, sub_key, sub_kw = next(
+        (n, k, ky, kw) for n, k, ky, kw in METHODS if ky == "submodular_benchmark")
+
+    mae_fixed = {name: [] for name, *_ in acq}
+    mae_free = {name: [] for name, *_ in acq}
+    mae_source = []
+    full = []
+    budgets, n_models_sel = [], []
+
+    for seed in seeds:
+        prob = make_problem(seed)
+        cm = make_cost_model(prob, seed)
+        pm = np.asarray(prob["pair_model"])
+        ps = np.asarray(prob["pair_sample"])
+        P = len(prob["X"])
+        full.append(train_eval(prob, list(range(P)), seed))
+        rng = np.random.default_rng(1000 + seed)
+
+        order = _method_order(prob, sub_name, "acq", sub_key, sub_kw, min(P, _N_ORDER), rng)
+        storage = cm["storage"]
+        budget_cost = budget_frac * storage.pool_total(pm)
+        kept, _paid = greedy_fill(order, storage, budget_cost, pm)
+        model_list = np.unique(pm[kept])
+        k = len(kept)
+        budgets.append(k)
+        n_models_sel.append(len(model_list))
+        mae_source.append(train_eval(prob, kept, seed))
+
+        sub_idx = np.where(np.isin(pm, model_list))[0]
+        X_sub, pm_sub, ps_sub = prob["X"][sub_idx], pm[sub_idx], ps[sub_idx]
+        tmask_sub, infl_sub = prob["target_mask"][sub_idx], prob["influence"][sub_idx]
+        k_local = min(k, len(sub_idx))
+
+        for name, kind, key, kw in acq:
+            fn = ACQUISITION_REGISTRY[key]
+            cover_all = kw.get("cover_all")
+            extra = {kk: vv for kk, vv in kw.items() if kk not in ("cover_all", "influence")}
+            rseed = int(rng.integers(1 << 30))
+
+            tmask_f = np.ones(len(sub_idx), bool) if cover_all else tmask_sub
+            infl_f = infl_sub if kw.get("influence") else None
+            tref_f = None if cover_all else prob.get("X_target_ref")
+            sel_local = fn(X_sub, pm_sub, ps_sub, tmask_f, k_local,
+                           rng=np.random.default_rng(rseed), influence=infl_f, target_ref=tref_f, **extra)
+            sel_global = sub_idx[np.asarray(sel_local, int)]
+            mae_fixed[name].append(train_eval(prob, sel_global, seed))
+
+            tmask_full = np.ones(P, bool) if cover_all else prob["target_mask"]
+            infl_full = prob["influence"] if kw.get("influence") else None
+            tref_full = None if cover_all else prob.get("X_target_ref")
+            sel_free = fn(prob["X"], pm, ps, tmask_full, k,
+                         rng=np.random.default_rng(rseed), influence=infl_full, target_ref=tref_full, **extra)
+            mae_free[name].append(train_eval(prob, sel_free, seed))
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    full_mae = _mci(full)
+    src_mae = _mci(mae_source)
+    out = {"budget_frac": budget_frac, "seeds": len(seeds),
+           "median_budget_k": float(np.median(budgets)),
+           "median_models_selected": float(np.median(n_models_sel)),
+           "full_mae": {"mae": full_mae[0], "ci": full_mae[1]},
+           "submodular_source": {"mae": src_mae[0], "ci": src_mae[1]},
+           "methods": {}}
+    for name, *_ in acq:
+        fm, fc = _mci(mae_fixed[name])
+        rm, rc = _mci(mae_free[name])
+        out["methods"][name] = {
+            "fixed": {"mae": fm, "ci": fc}, "free": {"mae": rm, "ci": rc},
+            "delta": fm - rm}
+
+    print(f"\nFixed-model-pool fairness check ({len(seeds)} seeds, storage budget = "
+          f"{budget_frac*100:.0f}% of pool). Submod. benchmark bought a median of "
+          f"{out['median_budget_k']:.0f} actions across {out['median_models_selected']:.0f} models "
+          f"(source MAE {src_mae[0]:.2f} +/- {src_mae[1]:.2f} pp).\n")
+    width = max(len(n) for n, *_ in acq)
+    print(f"{'Method'.ljust(width)}  {'Free (unrestr.)':>16}  {'Fixed (same models)':>20}  {'Delta':>7}")
+    print("-" * (width + 2 + 18 + 22 + 9))
+    order_rows = sorted(acq, key=lambda t: out["methods"][t[0]]["delta"])
+    for name, *_ in order_rows:
+        r = out["methods"][name]
+        print(f"{name.ljust(width)}  {r['free']['mae']:7.2f} +/- {r['free']['ci']:.2f}   "
+              f"{r['fixed']['mae']:7.2f} +/- {r['fixed']['ci']:.2f}   {r['delta']:+6.2f}")
+    return out
+
+
 def run_ablation(seeds, budget_frac):
     """RQ5 ablation. This offline benchmark robustly isolates the component the paper
     finds most important---target-aware narrowing---against a no-structure random
@@ -418,9 +659,98 @@ def run_ablation(seeds, budget_frac):
     return out
 
 
+def run_threshold_budget(seeds, max_budget_frac, thresholds):
+    """Adaptive-budget check: given a hard cap (``max_budget_frac``), does
+    stopping a greedy acquisition loop early -- once its marginal gain falls
+    below ``threshold`` of the first pick's gain -- find a cheaper subset
+    (5/10/15% spend) that matches or beats spending the full cap?
+
+    Applies to every method whose greedy loop already tracks a monotonically
+    non-increasing per-step gain (facility-location coverage, log-det
+    diversity, greedy MI's pivoted-Cholesky conditional variance, and the
+    ActiveEval variants built from them). Because each is a greedy *prefix*
+    selection, stopping early at a given threshold is exactly equivalent to
+    having fixed the budget at the realized spend from the start -- this sweep
+    just locates that spend automatically per seed instead of grid-searching
+    budget fractions by hand (``threshold=0`` reproduces the full-cap,
+    no-early-stop selection, i.e. the method's normal row in the main table).
+    """
+    variants = [
+        ("Facility-location", "facility_location", dict(cover_all=True)),
+        ("Submod. benchmark", "submodular_benchmark", dict()),
+        ("Greedy MI (Alg. 2)", "greedy_mi", dict(cap=250)),
+        ("ActiveEval-S", "activeeval_s", dict(influence=True)),
+        ("ActiveEval-S+M", "activeeval_sm", dict(influence=True)),
+        ("ActiveEval-Pair", "activeeval_pair", dict(influence=True)),
+    ]
+    mae = {name: {t: [] for t in thresholds} for name, *_ in variants}
+    frac = {name: {t: [] for t in thresholds} for name, *_ in variants}
+    full = []
+    for seed in seeds:
+        prob = make_problem(seed)
+        P = len(prob["X"])
+        budget = max(1, int(max_budget_frac * P))
+        full.append(train_eval(prob, list(range(P)), seed))
+        rng = np.random.default_rng(1000 + seed)
+        for name, key, kw in variants:
+            fn = ACQUISITION_REGISTRY[key]
+            cover_all = kw.get("cover_all")
+            tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
+            infl = prob["influence"] if kw.get("influence") else None
+            tref = None if cover_all else prob.get("X_target_ref")
+            extra = {k: v for k, v in kw.items() if k not in ("cover_all", "influence")}
+            for th in thresholds:
+                gt = None if th <= 0 else th
+                sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask, budget,
+                         rng=np.random.default_rng(rng.integers(1 << 30)),
+                         influence=infl, target_ref=tref, gain_threshold=gt, **extra)
+                mae[name][th].append(train_eval(prob, sel, seed))
+                frac[name][th].append(len(sel) / P)
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    full_mae = _mci(full)
+    out = {"max_budget_frac": max_budget_frac, "seeds": len(seeds),
+           "full_mae": {"mae": full_mae[0], "ci": full_mae[1]}, "methods": {}}
+
+    print(f"\nAdaptive (threshold-stopped) budget under a {max_budget_frac*100:.0f}% cap "
+          f"({len(seeds)} seeds). MetaEvaluator (full, 100%) = {full_mae[0]:.2f} +/- {full_mae[1]:.2f} pp.\n"
+          f"Threshold = stop once the best remaining pick's marginal gain falls below this "
+          f"fraction of the first pick's gain (0 = no early stop, spends the full cap).\n")
+
+    for name, *_ in variants:
+        base_mae, base_ci = _mci(mae[name][0.0])
+        base_spend, _ = _mci(frac[name][0.0])
+        out["methods"][name] = {"base_mae": base_mae, "base_ci": base_ci, "thresholds": {}}
+        print(f"{name}  (0 threshold baseline: {base_mae:.2f} +/- {base_ci:.2f} pp @ "
+              f"{base_spend*100:.1f}% spend)")
+        print(f"  {'threshold':>10}  {'spend %':>8}  {'MAE (pp)':>14}  note")
+        best = None
+        for th in thresholds:
+            m, ci = _mci(mae[name][th])
+            f_mean, _ = _mci(frac[name][th])
+            spend_pct = f_mean * 100
+            out["methods"][name]["thresholds"][th] = {"mae": m, "ci": ci, "spend_pct": spend_pct}
+            note = ""
+            if th > 0 and spend_pct < max_budget_frac * 100 - 0.5 and m <= base_mae + base_ci:
+                note = "<= under-spends, matches/beats full cap"
+                if best is None or spend_pct < best[0]:
+                    best = (spend_pct, th, m)
+            print(f"  {th:10.4g}  {spend_pct:8.1f}  {m:6.2f} +/- {ci:4.2f}  {note}")
+        if best:
+            print(f"  --> cheapest matching threshold: {best[1]:.4g} ({best[0]:.1f}% spend, {best[2]:.2f} pp)")
+        else:
+            print("  --> no threshold under-spent while matching the full-cap MAE")
+        print()
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool", "threshold_budget"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -439,6 +769,16 @@ def main():
     elif args.mode == "entropy_mi_sweep":
         res = run_entropy_mi_sweep(seeds, [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0])
         out_path = "outputs/entropy_mi_sweep.json"
+    elif args.mode == "cost_budget":
+        res = run_cost_budget(seeds, args.budget_frac)
+        out_path = "outputs/cost_budget_benchmark.json"
+    elif args.mode == "fixed_model_pool":
+        res = run_fixed_model_pool(seeds, args.budget_frac)
+        out_path = "outputs/fixed_model_pool_benchmark.json"
+    elif args.mode == "threshold_budget":
+        res = run_threshold_budget(seeds, args.budget_frac,
+                                   [0.0, 1e-4, 3e-4, 1e-3, 3e-3, 0.01, 0.03, 0.1, 0.3])
+        out_path = "outputs/threshold_budget_benchmark.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])

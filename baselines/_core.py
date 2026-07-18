@@ -84,7 +84,8 @@ def select_kcenter(X, pair_model, pair_sample, target_mask, budget, *, rng, **kw
 
 def select_facility(X, pair_model, pair_sample, target_mask, budget, *, rng,
                     influence: np.ndarray | None = None,
-                    target_ref: np.ndarray | None = None, **kw) -> List[int]:
+                    target_ref: np.ndarray | None = None,
+                    gain_threshold: float | None = None, **kw) -> List[int]:
     """Target-aware (optionally influence-weighted) facility location.
 
     Maximises ``sum_{q in target} w(q) * max_{s in S} k(q, s)`` by greedy, i.e.
@@ -99,6 +100,14 @@ def select_facility(X, pair_model, pair_sample, target_mask, budget, *, rng,
     * ``target_mask`` -- legacy path: the target rows live inside ``X`` and both
       anchor the coverage objective and are themselves selectable. ``influence``
       weights the target anchors. Used when ``target_ref is None``.
+
+    ``gain_threshold``, if set, makes this an *adaptive-budget* selector: the
+    greedy loop stops as soon as the marginal coverage gain of the best
+    remaining candidate drops below ``gain_threshold`` of the first pick's
+    gain, and the result is **not** padded back up to ``budget`` -- fewer than
+    ``budget`` pairs may be returned. ``None`` (default) preserves the original
+    fixed-budget behaviour (pad with random candidates if the surrogate
+    saturates before reaching ``budget``).
     """
     n = len(X)
     budget = min(budget, n)
@@ -118,26 +127,39 @@ def select_facility(X, pair_model, pair_sample, target_mask, budget, *, rng,
     coverage = np.zeros(len(Q))
     chosen: List[int] = []
     avail = np.ones(n, bool)
+    first_gain = None
     for _ in range(budget):
         gain = (w[:, None] * np.clip(K - coverage[:, None], 0, None)).sum(0) * cand_w
         gain[~avail] = -np.inf
         pick = int(np.argmax(gain))
         if not np.isfinite(gain[pick]) or gain[pick] <= 0:
             break
+        if first_gain is None:
+            first_gain = gain[pick]
+        elif gain_threshold is not None and gain[pick] < gain_threshold * first_gain:
+            break
         chosen.append(pick)
         avail[pick] = False
         coverage = np.maximum(coverage, K[:, pick])
-    # top up with random if the surrogate saturated
-    if len(chosen) < budget:
+    # top up with random if the surrogate saturated -- but not when the caller
+    # deliberately asked to stop early on a low marginal gain (adaptive budget)
+    if gain_threshold is None and len(chosen) < budget:
         rest = [i for i in np.where(avail)[0]]
         rng.shuffle(rest)
         chosen.extend(rest[: budget - len(chosen)])
     return chosen
 
 
-def select_logdet(X, pair_model, pair_sample, target_mask, budget, *, rng, sigma=1.0, **kw) -> List[int]:
+def select_logdet(X, pair_model, pair_sample, target_mask, budget, *, rng, sigma=1.0,
+                  gain_threshold: float | None = None, **kw) -> List[int]:
     """Log-determinant / DPP-style diversity (Submodular benchmark selection,
-    Smola 2026; Kulesza & Taskar 2012). Greedy max of log det(I + K_S/sigma^2)."""
+    Smola 2026; Kulesza & Taskar 2012). Greedy max of log det(I + K_S/sigma^2).
+
+    ``gain_threshold`` (see :func:`select_facility`): stop early once the best
+    remaining candidate's conditional-variance gain drops below
+    ``gain_threshold`` of the first pick's gain, without padding back to
+    ``budget``.
+    """
     n = len(X)
     budget = min(budget, n)
     tau = _median_bandwidth(X, rng)
@@ -149,11 +171,16 @@ def select_logdet(X, pair_model, pair_sample, target_mask, budget, *, rng, sigma
     cov = np.zeros((n, 0))
     avail = np.ones(n, bool)
     cur_diag = 1.0 + diag
+    first_gain = None
     for _ in range(budget):
         gains = cur_diag.copy()
         gains[~avail] = -np.inf
         pick = int(np.argmax(gains))
         if not np.isfinite(gains[pick]) or gains[pick] <= 0:
+            break
+        if first_gain is None:
+            first_gain = gains[pick]
+        elif gain_threshold is not None and gains[pick] < gain_threshold * first_gain:
             break
         chosen.append(pick)
         avail[pick] = False
@@ -171,7 +198,7 @@ def select_logdet(X, pair_model, pair_sample, target_mask, budget, *, rng, sigma
             L = np.array([[d]])
             cov = (K[:, pick] / d)[:, None]
             cur_diag = np.clip(cur_diag - cov[:, 0] ** 2, 1e-9, None)
-    if len(chosen) < budget:
+    if gain_threshold is None and len(chosen) < budget:
         rest = list(np.where(avail)[0]); rng.shuffle(rest)
         chosen.extend(rest[: budget - len(chosen)])
     return chosen
@@ -288,20 +315,32 @@ def _target_universe(n: int, target_mask, rng: np.random.Generator, cap: int | N
     return q_idx
 
 
-def _pivoted_cholesky_entropy(Sigma: np.ndarray, k: int) -> List[int]:
+def _pivoted_cholesky_entropy(Sigma: np.ndarray, k: int,
+                              gain_threshold: float | None = None) -> List[int]:
     """Algorithm 1 (greedy entropy): pivot on argmax conditional variance,
-    with a rank-1 Cholesky update of the residual diagonal after each pick."""
+    with a rank-1 Cholesky update of the residual diagonal after each pick.
+
+    ``gain_threshold``: stop early (returning fewer than ``k`` indices) once
+    the pivot's conditional variance ``d[j_star]`` -- the point's remaining
+    "surprise" given what's already selected -- drops below ``gain_threshold``
+    of the first pivot's variance.
+    """
     N = Sigma.shape[0]
     k = min(k, N)
     d = np.diag(Sigma).copy().astype(np.float64)
     L = np.zeros((N, k), dtype=np.float64)
     selected: List[int] = []
     selected_set = set()
+    first_gain = None
     for t in range(k):
         d_masked = d.copy()
         if selected:
             d_masked[list(selected_set)] = -np.inf
         j_star = int(np.argmax(d_masked))
+        if first_gain is None:
+            first_gain = d[j_star]
+        elif gain_threshold is not None and d[j_star] < gain_threshold * first_gain:
+            break
         selected.append(j_star)
         selected_set.add(j_star)
         sqrt_d = np.sqrt(max(d[j_star], 1e-300))
@@ -328,16 +367,25 @@ def _complement_precision_diag(Sigma: np.ndarray, comp: np.ndarray) -> np.ndarra
         return np.sum(eigvecs ** 2 / eigvals[None, :], axis=1)
 
 
-def _pivoted_cholesky_mi(Sigma: np.ndarray, k: int) -> List[int]:
+def _pivoted_cholesky_mi(Sigma: np.ndarray, k: int,
+                         gain_threshold: float | None = None) -> List[int]:
     """Algorithm 2 (greedy mutual information): pivot on
     argmax_v [log sigma^2_{v|S} + log P_vv], where P_vv is the v-th diagonal
-    entry of the precision matrix of the currently-unselected complement."""
+    entry of the precision matrix of the currently-unselected complement.
+
+    ``gain_threshold``: stop early once the pivot's conditional variance
+    ``d[j_star]`` (the same "remaining surprise" quantity thresholded in
+    :func:`_pivoted_cholesky_entropy`, kept consistent so entropy and MI are
+    compared under the same stopping rule) drops below ``gain_threshold`` of
+    the first pivot's variance.
+    """
     N = Sigma.shape[0]
     k = min(k, N)
     d = np.diag(Sigma).copy().astype(np.float64)
     L = np.zeros((N, k), dtype=np.float64)
     selected: List[int] = []
     selected_set = set()
+    first_gain = None
     for t in range(k):
         comp = np.array([j for j in range(N) if j not in selected_set])
         P_diag_comp = _complement_precision_diag(Sigma, comp)
@@ -348,6 +396,10 @@ def _pivoted_cholesky_mi(Sigma: np.ndarray, k: int) -> List[int]:
         valid[list(selected_set)] = False
         scores[valid] = np.log(d[valid]) + np.log(P_full[valid])
         j_star = int(np.argmax(scores))
+        if first_gain is None:
+            first_gain = d[j_star]
+        elif gain_threshold is not None and d[j_star] < gain_threshold * first_gain:
+            break
         selected.append(j_star)
         selected_set.add(j_star)
         sqrt_d = np.sqrt(max(d[j_star], 1e-300))
@@ -361,17 +413,33 @@ def _pivoted_cholesky_mi(Sigma: np.ndarray, k: int) -> List[int]:
 
 
 def select_greedy_entropy(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                          cap: int | None = 200, **kw) -> List[int]:
+                          cap: int | None = 200, sigma: float | None = 1.0,
+                          gain_threshold: float | None = None, **kw) -> List[int]:
     """Greedy entropy (Alg. 1): pivoted-Cholesky greedy maximization of
-    log det(Sigma_S) over an RBF kernel restricted to the target-aligned pool."""
+    log det(Sigma_S) over an RBF kernel restricted to the target-aligned pool.
+
+    ``sigma`` defaults to 1.0, matching ``select_logdet``'s ridge-regularized
+    ``log det(I + K/sigma^2)`` objective -- the two are the same pivoted-Cholesky
+    greedy algorithm and should use the same regularization so they are directly
+    comparable. Pass ``sigma=None`` for the original near-zero jitter (``+1e-6``,
+    i.e. unregularized greedy entropy).
+
+    ``gain_threshold`` (see :func:`select_facility`): stop early -- returning
+    fewer than ``budget`` pairs, unpadded -- once the pivot's conditional
+    variance drops below this fraction of the first pivot's.
+    """
     n = len(X)
     budget = min(budget, n)
     q_idx = _target_universe(n, target_mask, rng, cap=cap)
     tau = _median_bandwidth(X[q_idx], rng)
-    Sigma = _rbf(X[q_idx], X[q_idx], tau) + 1e-6 * np.eye(len(q_idx))
-    local = _pivoted_cholesky_entropy(Sigma, budget)
+    K = _rbf(X[q_idx], X[q_idx], tau)
+    if sigma is None:
+        Sigma = K + 1e-6 * np.eye(len(q_idx))
+    else:
+        Sigma = K / (sigma ** 2) + np.eye(len(q_idx))
+    local = _pivoted_cholesky_entropy(Sigma, budget, gain_threshold=gain_threshold)
     chosen = list(q_idx[local])
-    if len(chosen) < budget:
+    if gain_threshold is None and len(chosen) < budget:
         avail = np.ones(n, bool)
         avail[chosen] = False
         rest = list(np.where(avail)[0])
@@ -381,18 +449,33 @@ def select_greedy_entropy(X, pair_model, pair_sample, target_mask, budget, *, rn
 
 
 def select_greedy_mi(X, pair_model, pair_sample, target_mask, budget, *, rng,
-                     cap: int | None = 200, **kw) -> List[int]:
+                     cap: int | None = 200, sigma: float | None = 1.0,
+                     gain_threshold: float | None = None, **kw) -> List[int]:
     """Greedy mutual information (Alg. 2): pivoted-Cholesky greedy
     maximization of I(X_S; X_{V\\S}) over an RBF kernel restricted to the
-    target-aligned pool."""
+    target-aligned pool.
+
+    ``sigma`` defaults to 1.0, matching ``select_logdet``'s ridge-regularized
+    ``log det(I + K/sigma^2)`` objective, so entropy/MI/logdet are compared under
+    the same regularization. Pass ``sigma=None`` for the original near-zero jitter
+    (``+1e-6``, i.e. unregularized greedy MI).
+
+    ``gain_threshold`` (see :func:`select_facility`): stop early -- returning
+    fewer than ``budget`` pairs, unpadded -- once the pivot's conditional
+    variance drops below this fraction of the first pivot's.
+    """
     n = len(X)
     budget = min(budget, n)
     q_idx = _target_universe(n, target_mask, rng, cap=cap)
     tau = _median_bandwidth(X[q_idx], rng)
-    Sigma = _rbf(X[q_idx], X[q_idx], tau) + 1e-6 * np.eye(len(q_idx))
-    local = _pivoted_cholesky_mi(Sigma, budget)
+    K = _rbf(X[q_idx], X[q_idx], tau)
+    if sigma is None:
+        Sigma = K + 1e-6 * np.eye(len(q_idx))
+    else:
+        Sigma = K / (sigma ** 2) + np.eye(len(q_idx))
+    local = _pivoted_cholesky_mi(Sigma, budget, gain_threshold=gain_threshold)
     chosen = list(q_idx[local])
-    if len(chosen) < budget:
+    if gain_threshold is None and len(chosen) < budget:
         avail = np.ones(n, bool)
         avail[chosen] = False
         rest = list(np.where(avail)[0])
@@ -407,19 +490,31 @@ def select_greedy_mi(X, pair_model, pair_sample, target_mask, budget, *, rng,
 
 def select_activeeval_sample(X, pair_model, pair_sample, target_mask, budget, *, rng,
                              influence: np.ndarray | None = None,
-                             target_ref: np.ndarray | None = None, **kw) -> List[int]:
+                             target_ref: np.ndarray | None = None,
+                             gain_threshold: float | None = None, **kw) -> List[int]:
     """ActiveEval-S: target-aware, influence-weighted facility location over
-    sample-sets only (the model axis is left uniform)."""
+    sample-sets only (the model axis is left uniform).
+
+    ``gain_threshold`` (see :func:`select_facility`): forwarded as-is, so this
+    may return fewer than ``budget`` pairs when set.
+    """
     return select_facility(X, pair_model, pair_sample, target_mask, budget,
-                           rng=rng, influence=influence, target_ref=target_ref)
+                           rng=rng, influence=influence, target_ref=target_ref,
+                           gain_threshold=gain_threshold)
 
 
 def select_activeeval_sm(X, pair_model, pair_sample, target_mask, budget, *, rng,
                          influence: np.ndarray | None = None,
-                         target_ref: np.ndarray | None = None, **kw) -> List[int]:
+                         target_ref: np.ndarray | None = None,
+                         gain_threshold: float | None = None, **kw) -> List[int]:
     """ActiveEval-S+M: two-stage. First pick behaviorally-diverse reference
     models (k-center in model-mean-descriptor space), then target-aware sample
-    sets within those models."""
+    sets within those models.
+
+    ``gain_threshold`` (see :func:`select_facility`) is forwarded to the
+    within-model facility-location stage only (the k-center model pick has no
+    natural gain to threshold), so this may return fewer than ``budget`` pairs.
+    """
     models = np.unique(pair_model)
     # behavioral coverage of models: mean pair descriptor per model
     centroids = np.stack([X[pair_model == m].mean(0) for m in models])
@@ -431,23 +526,30 @@ def select_activeeval_sm(X, pair_model, pair_sample, target_mask, budget, *, rng
     sub = np.where(mask)[0]
     infl = None if influence is None else influence[sub]
     local = select_facility(X[sub], pair_model[sub], pair_sample[sub], target_mask[sub],
-                            budget, rng=rng, influence=infl, target_ref=target_ref)
+                            budget, rng=rng, influence=infl, target_ref=target_ref,
+                            gain_threshold=gain_threshold)
     return list(sub[local])
 
 
 def select_activeeval_pair(X, pair_model, pair_sample, target_mask, budget, *, rng,
                            influence: np.ndarray | None = None,
-                           target_ref: np.ndarray | None = None, alpha=0.8, **kw) -> List[int]:
+                           target_ref: np.ndarray | None = None, alpha=0.8,
+                           gain_threshold: float | None = None, **kw) -> List[int]:
     """ActiveEval-Pair: direct pair selection blending target-coverage facility
     location with a log-determinant diversity term (the strongest variant). The
     coverage term pulls picks toward the (unlabeled) target region; the diversity
     term then spreads the remaining budget across the source pool near those picks
-    rather than clumping."""
+    rather than clumping.
+
+    ``gain_threshold`` (see :func:`select_facility`) is applied independently to
+    both the coverage and diversity greedy loops, so the pair may under-spend its
+    ``budget`` in either phase (whichever saturates first)."""
     n = len(X)
     budget = min(budget, n)
     b_cov = int(round(alpha * budget))
     cov = select_facility(X, pair_model, pair_sample, target_mask, b_cov,
-                          rng=rng, influence=influence, target_ref=target_ref)
+                          rng=rng, influence=influence, target_ref=target_ref,
+                          gain_threshold=gain_threshold)
     remaining = budget - len(cov)
     if remaining > 0:
         chosen_set = set(cov)
@@ -468,7 +570,8 @@ def select_activeeval_pair(X, pair_model, pair_sample, target_mask, budget, *, r
         if cand.size == 0:
             cand = np.array([i for i in range(n) if i not in chosen_set])
         div_local = select_logdet(X[cand], pair_model[cand], pair_sample[cand],
-                                  target_mask[cand], remaining, rng=rng)
+                                  target_mask[cand], remaining, rng=rng,
+                                  gain_threshold=gain_threshold)
         cov = cov + list(cand[div_local])
     return cov
 
