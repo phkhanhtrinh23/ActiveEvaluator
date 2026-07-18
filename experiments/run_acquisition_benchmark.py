@@ -659,9 +659,98 @@ def run_ablation(seeds, budget_frac):
     return out
 
 
+def run_threshold_budget(seeds, max_budget_frac, thresholds):
+    """Adaptive-budget check: given a hard cap (``max_budget_frac``), does
+    stopping a greedy acquisition loop early -- once its marginal gain falls
+    below ``threshold`` of the first pick's gain -- find a cheaper subset
+    (5/10/15% spend) that matches or beats spending the full cap?
+
+    Applies to every method whose greedy loop already tracks a monotonically
+    non-increasing per-step gain (facility-location coverage, log-det
+    diversity, greedy MI's pivoted-Cholesky conditional variance, and the
+    ActiveEval variants built from them). Because each is a greedy *prefix*
+    selection, stopping early at a given threshold is exactly equivalent to
+    having fixed the budget at the realized spend from the start -- this sweep
+    just locates that spend automatically per seed instead of grid-searching
+    budget fractions by hand (``threshold=0`` reproduces the full-cap,
+    no-early-stop selection, i.e. the method's normal row in the main table).
+    """
+    variants = [
+        ("Facility-location", "facility_location", dict(cover_all=True)),
+        ("Submod. benchmark", "submodular_benchmark", dict()),
+        ("Greedy MI (Alg. 2)", "greedy_mi", dict(cap=250)),
+        ("ActiveEval-S", "activeeval_s", dict(influence=True)),
+        ("ActiveEval-S+M", "activeeval_sm", dict(influence=True)),
+        ("ActiveEval-Pair", "activeeval_pair", dict(influence=True)),
+    ]
+    mae = {name: {t: [] for t in thresholds} for name, *_ in variants}
+    frac = {name: {t: [] for t in thresholds} for name, *_ in variants}
+    full = []
+    for seed in seeds:
+        prob = make_problem(seed)
+        P = len(prob["X"])
+        budget = max(1, int(max_budget_frac * P))
+        full.append(train_eval(prob, list(range(P)), seed))
+        rng = np.random.default_rng(1000 + seed)
+        for name, key, kw in variants:
+            fn = ACQUISITION_REGISTRY[key]
+            cover_all = kw.get("cover_all")
+            tmask = np.ones(P, bool) if cover_all else prob["target_mask"]
+            infl = prob["influence"] if kw.get("influence") else None
+            tref = None if cover_all else prob.get("X_target_ref")
+            extra = {k: v for k, v in kw.items() if k not in ("cover_all", "influence")}
+            for th in thresholds:
+                gt = None if th <= 0 else th
+                sel = fn(prob["X"], prob["pair_model"], prob["pair_sample"], tmask, budget,
+                         rng=np.random.default_rng(rng.integers(1 << 30)),
+                         influence=infl, target_ref=tref, gain_threshold=gt, **extra)
+                mae[name][th].append(train_eval(prob, sel, seed))
+                frac[name][th].append(len(sel) / P)
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    full_mae = _mci(full)
+    out = {"max_budget_frac": max_budget_frac, "seeds": len(seeds),
+           "full_mae": {"mae": full_mae[0], "ci": full_mae[1]}, "methods": {}}
+
+    print(f"\nAdaptive (threshold-stopped) budget under a {max_budget_frac*100:.0f}% cap "
+          f"({len(seeds)} seeds). MetaEvaluator (full, 100%) = {full_mae[0]:.2f} +/- {full_mae[1]:.2f} pp.\n"
+          f"Threshold = stop once the best remaining pick's marginal gain falls below this "
+          f"fraction of the first pick's gain (0 = no early stop, spends the full cap).\n")
+
+    for name, *_ in variants:
+        base_mae, base_ci = _mci(mae[name][0.0])
+        base_spend, _ = _mci(frac[name][0.0])
+        out["methods"][name] = {"base_mae": base_mae, "base_ci": base_ci, "thresholds": {}}
+        print(f"{name}  (0 threshold baseline: {base_mae:.2f} +/- {base_ci:.2f} pp @ "
+              f"{base_spend*100:.1f}% spend)")
+        print(f"  {'threshold':>10}  {'spend %':>8}  {'MAE (pp)':>14}  note")
+        best = None
+        for th in thresholds:
+            m, ci = _mci(mae[name][th])
+            f_mean, _ = _mci(frac[name][th])
+            spend_pct = f_mean * 100
+            out["methods"][name]["thresholds"][th] = {"mae": m, "ci": ci, "spend_pct": spend_pct}
+            note = ""
+            if th > 0 and spend_pct < max_budget_frac * 100 - 0.5 and m <= base_mae + base_ci:
+                note = "<= under-spends, matches/beats full cap"
+                if best is None or spend_pct < best[0]:
+                    best = (spend_pct, th, m)
+            print(f"  {th:10.4g}  {spend_pct:8.1f}  {m:6.2f} +/- {ci:4.2f}  {note}")
+        if best:
+            print(f"  --> cheapest matching threshold: {best[1]:.4g} ({best[0]:.1f}% spend, {best[2]:.2f} pp)")
+        else:
+            print("  --> no threshold under-spent while matching the full-cap MAE")
+        print()
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool", "threshold_budget"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -686,6 +775,10 @@ def main():
     elif args.mode == "fixed_model_pool":
         res = run_fixed_model_pool(seeds, args.budget_frac)
         out_path = "outputs/fixed_model_pool_benchmark.json"
+    elif args.mode == "threshold_budget":
+        res = run_threshold_budget(seeds, args.budget_frac,
+                                   [0.0, 1e-4, 3e-4, 1e-3, 3e-3, 0.01, 0.03, 0.1, 0.3])
+        out_path = "outputs/threshold_budget_benchmark.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])

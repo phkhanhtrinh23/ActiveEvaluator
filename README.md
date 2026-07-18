@@ -510,6 +510,50 @@ seeds, so treat the ranking as directional. Full analysis:
 [docs/fixed-model-pool-fairness-check.md](docs/fixed-model-pool-fairness-check.md)
 (`outputs/fixed_model_pool_benchmark.json`).
 
+### Adaptive (threshold-stopped) budget — is there a free lunch under a fixed cap?
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode threshold_budget --seeds 5 --budget-frac 0.20
+```
+
+Every table above hands each method a fixed budget and forces it to spend all
+of it (saturated greedy loops were padded with random picks up to the cap).
+This experiment asks the reverse question: given a hard cap (20%), can a method
+**stop itself early** — once its own marginal gain (coverage/log-det/mutual-info,
+whichever it already computes) drops below a `gain_threshold` fraction of its
+first pick's gain — and spend less while still matching full-cap accuracy? A
+new `gain_threshold` kwarg was added to every greedy selector that tracks a
+decreasing per-step gain (`select_facility`, `select_logdet`,
+`select_greedy_entropy`/`select_greedy_mi`, and the `ActiveEval-S`/`-S+M`/`-Pair`
+selectors built from them — [baselines/_core.py](baselines/_core.py)); when set,
+the greedy loop breaks early and the pre-existing "pad back up to budget" step
+is skipped, so the method can genuinely under-spend the cap. Because each of
+these is a greedy *prefix* selector, stopping early at a threshold is
+mathematically identical to fixing the budget at the realized spend from the
+start — the sweep just locates that point automatically.
+
+**Results** (5 seeds, 20% budget cap, log-spaced thresholds `1e-4`–`0.3`):
+
+| Method | Baseline (full 20% cap) | Cheapest match found | Verdict |
+| --- | --- | --- | --- |
+| **ActiveEval-S** | 4.02 ± 0.49 pp @ 20% | **4.33 ± 0.61 pp @ 12.3%** (`gain_threshold=1e-4`) | **Genuine free lunch** — 39% less budget, MAE within the full-cap CI. |
+| Greedy MI (Alg. 2) | 5.10 ± 0.37 pp @ 20% | 4.74 ± 0.47 pp @ 13.9% | Looks free, but is a `cap=250` search-universe artifact, not real gain decay — see the doc below. |
+| Submod. benchmark | 4.67 ± 0.38 pp @ 20% | — never under-spends | Diversity gain never decays enough in this range; always spends the full cap. |
+| ActiveEval-Pair | 4.79 ± 0.87 pp @ 20% | — never under-spends | Same — its diversity phase absorbs whatever budget the coverage phase leaves it. |
+| Facility-location | 4.94 ± 0.42 pp @ 20% | — decays too fast | Collapses to ≤6.5% spend with much worse MAE at the smallest tested threshold; no usable middle ground. |
+| ActiveEval-S+M | 4.61 ± 0.32 pp @ 20% | — decays too fast | Same pattern as Facility-location. |
+
+**ActiveEval-S is the only genuine result** — its realized spend strictly
+decreases as the threshold grows (20% → 12.3% → 8.5% → 3.7% → ...), a real
+gain-decay curve, and its cheapest match uses ~39% less budget for
+statistically indistinguishable accuracy. Greedy MI's apparent under-spend is a
+measurement artifact worth flagging honestly: its realized spend is *identical*
+(13.9%) across all 8 nonzero thresholds tested, because its search universe was
+already capped at 250 candidates for tractability — the gain threshold never
+actually triggered a break in this run, the pre-existing cap did. Full
+per-threshold tables, the cap-artifact explanation, and reading notes:
+[docs/adaptive-threshold-budget.md](docs/adaptive-threshold-budget.md)
+(`outputs/threshold_budget_benchmark.json`).
 
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 
