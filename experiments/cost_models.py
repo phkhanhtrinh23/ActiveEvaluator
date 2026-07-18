@@ -128,7 +128,6 @@ def make_cost_model(prob: dict, seed: int) -> Dict[str, Currency]:
     g_len = _logu(32.0, 256.0, n_models)       # per-model generated tokens / example
     n_ex = _logu(200.0, 3000.0, S)             # per-set example count
     p_len = _logu(128.0, 1024.0, S)            # per-set input tokens / example
-
     # broadcast per-model / per-set factors to per-action vectors
     pm = pair_model
     ps = np.array([s_index[int(s)] for s in pair_sample])

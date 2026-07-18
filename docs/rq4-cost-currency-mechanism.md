@@ -8,9 +8,9 @@ explains *why*, grounded in the selection code and one reproducible measurement.
 > (Alg. 1)` / `Greedy MI (Alg. 2)` rows specifically: an unmatched regularization
 > constant against `select_logdet`, and an unnecessary candidate-pool cap in the
 > `cost_budget` driver. Both are now fixed ([baselines/_core.py:364](../baselines/_core.py#L364),
-> [:394](../baselines/_core.py#L394), [experiments/run_acquisition_benchmark.py:413](../experiments/run_acquisition_benchmark.py#L413)).
-> The corrected numbers are folded into this note below; `README.md`'s RQ4 tables still
-> show the pre-fix numbers for these two rows and need a refresh.
+> [:394](../baselines/_core.py#L394), [experiments/run_acquisition_benchmark.py:413](../experiments/run_acquisition_benchmark.py#L413)),
+> and `README.md`'s RQ4 tables now reflect the corrected numbers (`Greedy entropy` is no
+> longer listed as its own row — see the footnote on `Submod. benchmark` there).
 
 ## The shared mechanism: selection is cost-agnostic
 
@@ -85,42 +85,349 @@ above is the current basis.)
 
 ## Group 2 — `storage`: a real inversion, with a concrete cause
 
-`storage` is qualitatively different: `checkpoint_gb` is paid **once per unique model**
-touched, not per action
+### Summary of the causal chain (details and evidence below)
+
+Under real (random) per-model checkpoint costs, `Submod. benchmark` ends up with
+**both** more distinct models touched **and** more actions bought than
+`ActiveEval-Pair`. It's tempting to treat both as structural advantages of
+`select_logdet`, but only **one** of them survives a clean test — the other is partly
+luck.
+
+**Isolating luck from structure**: which specific models get touched has nothing to do
+with which method is running (`checkpoint_gb` is drawn from an rng stream fully
+decoupled from the descriptors that drive selection — see the "coin flip" evidence
+further down), so re-running with checkpoint cost **neutralized** (every model priced
+identically) removes that luck entirely. Result (10 seeds, storage budget with a flat
+per-model price):
+
+```
+Submod. benchmark    median actions=167   median models=9   actions/model=18.6
+ActiveEval-Pair      median actions=67    median models=9   actions/model=7.4
+```
+
+**With cost-luck removed, both methods afford the exact same number of models (9 = 9).**
+So `select_logdet` touching *more* models than `ActiveEval-Pair` under real (random)
+costs (16 vs. 12 in the measurement below) is **not** a robust structural fact — in
+that specific 5-seed sample, cost-luck happened to tilt in `select_logdet`'s favor on
+top of the real effect. What *does* survive with luck fully removed, essentially
+unchanged, is **actions per model** (18.6 vs. 7.4, matching the original 15.6 vs. 7.5)
+— this is the one number that is genuinely structural, driven by the intrinsic-vs-extrinsic
+objective difference below, independent of which models happen to be cheap or expensive
+in any given run.
+
+1. Nearly all storage cost is the checkpoint, paid once per unique model
+   ([experiments/cost_models.py:145](../experiments/cost_models.py#L145)) — the cache
+   fee per pair is negligible. So "cost per action" ≈ "how often a new checkpoint is
+   needed."
+2. `select_logdet`'s objective is *intrinsic* (only about the selected set itself) and
+   — for this problem's descriptors — genuinely indifferent between "new sample-set,
+   same model" and "new model" (verified: both move the descriptor by the same amount
+   in expectation). It therefore has no structural pressure to change models often.
+   `select_facility`'s objective is *extrinsic* (covering a fixed target region built
+   from 8 independent unseen models) with diminishing returns per covered anchor, which
+   *does* structurally require sampling many different models (verified: at equal
+   action count with no budget constraint, it touches 60 of 60 models vs. `select_logdet`'s
+   35).
+3. Under a **fixed GB budget**, "extracts fewer actions per model" directly means
+   "burns the budget on checkpoints faster relative to actions gained," which directly
+   means "buys fewer total actions" — `ActiveEval-Pair` affords only ~90 actions before
+   running out of money (real costs) / 67 (neutralized costs); `select_logdet` affords
+   ~250 (real costs) / 167 (neutralized costs) in the same budget, because most of its
+   actions reuse an already-paid-for model.
+4. Whether the *number of models touched* also ends up higher for `select_logdet`
+   depends on cost-luck (see above) — with real random costs it usually does (the
+   larger action count, spread over even a similar or larger number of models, still
+   needs *some* new-model spending along the way), but it is not guaranteed the way the
+   actions-per-model gap is.
+
+So the one number to trust as a genuine, luck-independent mechanism is **actions per
+model touched**: `select_logdet` extracts roughly 2-2.5× more actions per checkpoint
+than `ActiveEval-Pair`, and that alone is what makes it buy far more total actions
+under the same GB ceiling — regardless of which specific models happen to be cheap or
+expensive in a given run.
+
+### The cost formula, and why it cares about *models*, not *pairs*
+
+```
+storage_cost(kept actions)  =  (# distinct models touched) × checkpoint_gb
+                              + (# kept actions)            × small_cache_gb
+```
+
 ([experiments/cost_models.py:145](../experiments/cost_models.py#L145),
-[:154-155](../experiments/cost_models.py#L154-L155)). A method that revisits the same
-few models pays the checkpoint charge fewer times and buys more actions for the same
-GB budget; a method that spreads its picks across many distinct models pays it over
-and over.
+[:154-155](../experiments/cost_models.py#L154-L155)): `checkpoint_gb` is paid **once
+per unique model**, the first time any of its pairs is kept; every *subsequent* pair
+from a model already touched costs only the small per-action cache fee.
+`checkpoint_gb ≫ small_cache_gb`, so the first term dominates. That means the number
+of actions a fixed GB budget can buy is governed almost entirely by **how many new
+models the selection order forces you to pay for**, not by how many pairs it selects
+or how feature-diverse those pairs are.
 
-**Measured** (single seed, budget = 15% of pool storage cost): actions kept before the
-selection order touches a new model —
+**Worked example** (checkpoint = 10 GB/model, cache ≈ 0.01 GB/action, budget = 25 GB).
+An order that stays on one model before moving to the next:
+
+| step | pick | model already touched? | marginal cost | running total |
+| --- | --- | --- | --- | --- |
+| 1 | (A, 1) | no → pay checkpoint | 10 + 0.01 | 10.01 |
+| 2 | (A, 2) | yes | 0.01 | 10.02 |
+| 3 | (A, 3) | yes | 0.01 | 10.03 |
+| 4 | (A, 4) | yes | 0.01 | 10.04 |
+| 5 | (A, 5) | yes | 0.01 | 10.05 |
+| 6 | (B, 1) | no → pay checkpoint | 10 + 0.01 | 20.06 |
+| 7 | (B, 2) | yes | 0.01 | 20.07 |
+
+→ 25 GB buys **7 actions**, paying the checkpoint only **twice**. Now an order that
+jumps to a new model on every pick:
+
+| step | pick | model already touched? | marginal cost | running total |
+| --- | --- | --- | --- | --- |
+| 1 | (A, 1) | no → pay checkpoint | 10 + 0.01 | 10.01 |
+| 2 | (B, 1) | no → pay checkpoint | 10 + 0.01 | 20.02 |
+| 3 | (C, 1) | no → pay checkpoint | 10 + 0.01 | 30.03 — **over budget, stop** |
+
+→ The same 25 GB buys only **2 actions**, because every pick demands a fresh
+checkpoint. This is what "a method extracts N actions per model touched" means
+concretely: it's how many *additional, nearly-free* pairs it manages to squeeze out of
+each model before it has to pay for a new one.
+
+### Two different notions of "diverse" — only one of them costs storage
+
+It's tempting to read the result as "`Submod. benchmark` picks fewer models but more
+(diverse) pairs, `ActiveEval` picks more models but fewer pairs." That's roughly the
+right shape but the causal story is the opposite of "choosing diversity": neither
+method is choosing *how many models* to touch as a goal. Model-count is a **side
+effect** of what each method's objective actually optimizes, and the two objectives
+live on different axes:
+
+- **Pair/feature diversity** (what `select_logdet`'s log-det objective directly
+  maximizes) is about spreading picks across the *descriptor space* `(u, v, u⊙v)`.
+  Crucially, changing the sample-set `v` alone — even for the *same* reference model
+  `u` — already moves the descriptor a lot (`make_problem`'s `descriptor(u, v)`,
+  [experiments/run_acquisition_benchmark.py:84-87](../experiments/run_acquisition_benchmark.py#L84-L87)).
+  So `select_logdet` can satisfy "pick a feature-diverse set" by taking many
+  *different sample-sets from the same model* — it never needs to change models to
+  keep scoring well, and in this problem instance it mostly doesn't.
+- **Model-identity spread** (what `storage` cost actually taxes) is a completely
+  separate axis. `select_facility` (ActiveEval's coverage term) is explicitly
+  indifferent to it — "**the model axis is left uniform**"
+  ([baselines/_core.py:411-414](../baselines/_core.py#L411-L414)) — its only goal is
+  covering the *target* region with the most target-similar pairs, full stop. In this
+  problem the handful of pairs closest to the target happen to be scattered thinly
+  across many different models (at most 1-2 near-target pairs per model), so chasing
+  target-similarity *incidentally* forces the selector to keep jumping to new models —
+  not because it values model variety, but because that's where the good pairs are.
+
+So the correct causal statement is: **`select_logdet` stays cheap under `storage`
+because pair-diversity doesn't require model-diversity here; `ActiveEval-Pair`
+becomes expensive because target-similarity does.** Neither method is "trying" to
+manage its model footprint at all — that's exactly the gap the Takeaway below points
+at.
+
+### Why, in algorithm-theoretic terms: two submodular objectives with different structure
+
+The two functions don't just happen to behave differently here — they are
+**structurally different classes of submodular objective**, and that difference
+predicts the model-touching behavior without appealing to luck:
+
+- **`select_logdet`/`select_greedy_entropy` maximize `log det(Σ_S)`**, a **k-DPP MAP /
+  D-optimal design** objective. It is entirely *intrinsic*: the marginal gain of a
+  candidate `x` given the already-selected set `S` is its **conditional variance**
+  `Var(x | S)`, a purely geometric quantity in kernel space with no reference to
+  anything outside `S`. Model identity never enters this computation — the function
+  literally cannot see `pair_model`.
+- **`select_facility` (ActiveEval's coverage term) maximizes
+  `Σ_{q∈Q} w(q)·max_{s∈S} k(q,s)`**, a **weighted facility-location / set-cover**
+  objective over the *external*, fixed target region `Q`. This class of function has a
+  well-known **diminishing-returns-per-anchor** property (Nemhauser, Wolsey & Fisher
+  1978): once some anchor `q ∈ Q` is well covered by an existing pick, *any* further
+  candidate similar to `q` — regardless of which model it came from — contributes
+  almost no additional gain for that anchor. The objective is therefore forced to keep
+  searching for candidates that cover *different, still-uncovered* anchors.
+
+**The model/workload axes are empirically interchangeable for the first objective, but
+not for the second.** `descriptor(u, v) = concat(u, v, u⊙v)` treats the model factor
+`u` and the workload factor `v` symmetrically. Measured directly on the data (seed 0,
+20,000 random pairs, mean squared descriptor distance):
 
 ```
-ActiveEval-Pair       ~7.3 actions/model  (9 models for 66 kept actions)
-ActiveEval-S          ~7.7 actions/model  (9 models for 69 kept actions)
-Submod. benchmark     ~14.0 actions/model (25 models for 350 kept actions)
-Bayesian opt. design  ~17.6 actions/model (15 models for 264 kept actions)
+same model,  different sample-set : 21.83
+different model,  same sample-set : 22.21   <- statistically the same as above
+different model AND sample-set    : 34.65   <- noticeably farther
 ```
 
-The cause is in the selection objective itself:
+This matches the closed-form prediction for `d_lat = 6`: switching *either single*
+axis moves the descriptor by `≈ 4 × d_lat = 24` in expectation; switching *both* moves
+it by `≈ 6 × d_lat = 36` (both u, v ~ N(0, I) independent, so the interaction term
+`u⊙v` contributes symmetric cross-variance regardless of which factor changed).
+Concretely: for `select_logdet`, taking another workload from an *already-touched*
+model is, in expectation, exactly as informative as jumping to a brand-new model —
+there is no structural incentive to prefer one over the other, so which axis its
+greedy path happens to exploit is essentially arbitrary (consistent with the 11/20
+"coin flip" on model cost above). It settles on reusing touched models substantially
+(not switching every step) simply because within-model diminishing returns are gentle:
+each already-selected workload from model `i` slightly reduces the residual variance
+of *other* workloads sharing that same `u_i`, but not by much, so a model's ~30
+available workloads keep paying off for many picks before a fresh model becomes
+clearly better.
 
-- `select_activeeval_sample` calls `select_facility` with the explicit design note
-  "**the model axis is left uniform**"
-  ([baselines/_core.py:411-414](../baselines/_core.py#L411-L414)) — its objective is to
-  cover the unlabeled target region `Q` with the cleanest, most target-similar source
-  pairs, indifferent to which of the 60 reference models produced them. It therefore
-  jumps to a new model almost every 1-2 picks.
-- `select_logdet` (Submod. benchmark) and `select_bayesian_design` maximize a
-  whole-pool diversity / D-optimal criterion with no target restriction. In this
-  problem instance that criterion exhausts several sample-sets of the *same* model
-  before moving to the next one, so its checkpoint cost amortizes far better.
+**`select_facility` has no such symmetry to exploit**, because `Q` is not just "the
+descriptor space" — it is specifically built from **8 independently-drawn unseen
+models** (`Uo`, `make_problem`). Covering those 8 structurally distinct directions
+well requires source pairs whose own `u` vectors happen to sit close to *each* of
+those 8 independent draws — and because training-model factors are themselves i.i.d.
+Gaussian, whichever training model is closest to unseen model #1 is essentially
+unrelated to whichever is closest to unseen model #2, ..., #8. Combined with
+diminishing returns once an anchor is covered, this is a **provable** requirement to
+sample from multiple different training models, not an accident of this particular
+run.
+
+### Rate vs. absolute count: why the theory (`select_facility` spreads more) and the storage table (`select_logdet` touches *more* models) don't conflict
+
+The theory above predicts `select_facility` has a *higher per-action rate* of
+touching new models than `select_logdet`. The storage table below seems to say the
+opposite — `select_logdet` touches **more** models in absolute terms (16 vs. 12). Both
+are true, and they don't contradict each other; they answer different questions.
+
+**Isolate the rate directly, on its own terms.** `_method_order` produces a single
+cost-agnostic ranking of up to 450 candidates per method
+([experiments/run_acquisition_benchmark.py:412-431](../experiments/run_acquisition_benchmark.py#L412-L431)).
+Take the first 270 entries of that ranking — the same cardinality budget the main
+table uses (`budget_frac=0.15` × `P≈1800` ≈ 270) — with **no GB budget or cost
+involved at all**, and count distinct models among them (10 seeds):
+
+```
+Submod. benchmark    median 35 models touched  (rate ≈ 35/270 = 0.130 new-model / action)
+ActiveEval-Pair      median 60 models touched  (rate ≈ 60/270 = 0.222 new-model / action)
+```
+
+This confirms the theory exactly: at equal action count, `ActiveEval-Pair` spreads
+across nearly *all 60* training models, while `Submod.` stays within about a third of
+them. The rate story is correct on its own.
+
+**The storage table is a *different* measurement, not the same rate re-expressed
+under a budget.** `greedy_fill` doesn't take a prefix of the order — it walks the
+*entire* 450-long ranking front-to-back and, for each candidate, either keeps it (if
+its marginal cost still fits the remaining GB) or **skips it and keeps scanning**
+([experiments/cost_models.py:88-104](../experiments/cost_models.py#L88-L104)). A
+skipped candidate costs nothing and does not mark its model as "touched" — only a
+*kept* candidate pays the checkpoint (once per model) and adds that model to the
+`used` set. So the set of kept actions under a GB budget can be a scattered subset of
+the 450-long order, not its first 270 entries — there is no clean formula turning the
+prefix-based rate above into the GB-budget outcome; the two have to be measured
+separately, which is exactly why both tables are reported as direct simulations
+rather than one being derived from the other.
+
+**Qualitatively, though, the mechanism is exactly what the rate predicts**:
+`ActiveEval-Pair` needs a fresh checkpoint roughly every ~7-8 kept actions (from the
+storage-budget measurement above) — consistent with its high per-action rate of
+finding new-model candidates near the front of its order — which burns a fixed GB
+ceiling far faster than `Submod.`'s roughly every ~15-16 kept actions. So
+`ActiveEval-Pair` only affords **90 actions total** before its GB budget is exhausted
+— it never gets to *keep* enough of its order to express its full spreading tendency,
+because it runs out of money first. `Submod.`, needing a fresh checkpoint far less
+often, affords **250 actions** in the same GB envelope, and simply by taking that many
+more kept actions, ends up touching more distinct models in total — even though, action
+for action, it explores new models at a *lower* rate than `ActiveEval-Pair` does.
+In short: **`select_facility`
+is *not* less inclined to explore models than `select_logdet` — it is far *more*
+inclined to. But under an amortized storage budget, that same inclination is what
+throttles its total spending power, so it ends up touching fewer models in absolute
+terms, not more.** The rate is a property of the algorithm; the absolute count is a
+property of the algorithm *combined with* how a GB budget interacts with that rate.
+
+**Measured** (5 seeds, budget = 15% of pool storage cost; median actions bought,
+median distinct models touched among those actions, and the ratio):
+
+| Method | median #actions | median #models touched | actions per model |
+| --- | --- | --- | --- |
+| Submod. benchmark | 250 | 16 | 15.6 |
+| Bayesian opt. design | 232 | 12 | 19.3 |
+| ActiveEval-S | 99 | 12 | 8.2 |
+| ActiveEval-Pair | 90 | 12 | 7.5 |
+| Random | 113 | 15 | 7.5 |
+
+Submod./Bayesian buy roughly **twice as many actions per new model** as
+ActiveEval-S/-Pair — each new model they touch "unlocks" ~16–19 further actions at
+near-zero marginal storage cost, while ActiveEval's target-chasing unlocks only ~7-8
+before it needs to pay for another model. (Random sits at the same ~7.5 ratio as
+ActiveEval here — not because it targets model spread either, but because
+`greedy_fill`'s skip-and-continue rule under a tight amortized budget already biases
+*any* order toward re-using already-paid-for models over brand-new ones; Random's
+absolute numbers are still worse because its order isn't optimizing anything, so it
+buys fewer total actions for the models it does touch.)
 
 Net effect: ActiveEval-Pair pays the checkpoint charge roughly twice as often per kept
-action as Submod./Bayesian. The 15% GB budget runs out after only ~91 actions
-(5-seed median from the README table) instead of ~251, erasing the information
-advantage that target-aware coverage otherwise provides — hence ActiveEval-Pair's drop
-to near-worst (6.81 pp) under `storage` despite leading almost every other table.
+action as Submod./Bayesian. The 15% GB budget runs out after only ~90 actions instead
+of ~250, erasing the information advantage that target-aware coverage otherwise
+provides — hence ActiveEval-Pair's drop to near-worst (6.81 pp) under `storage`
+despite leading almost every other table.
+
+### "Same 15% cost" is the budget rule, not a coincidence to explain
+
+It can look paradoxical that `Submod. benchmark` buys *both* more models (16) *and*
+more actions (250) than `ActiveEval-Pair` (12 models, 90 actions) for "the same 15%
+cost" — if cost were additive in a simple `models × fixed_price + actions ×
+fixed_price` sense, more of both should mean more total cost, not equal. The resolution
+is that `budget = 0.15 × pool_total` is a **fixed GB ceiling**, identical for every
+method by definition, and `greedy_fill` just keeps buying until it can't afford the
+next item ([experiments/cost_models.py:78-104](../experiments/cost_models.py#L78-L104))
+— so every method's *realized spend* converges to ≈ that same ceiling; there is nothing
+to explain there. The real question is what a method gets *for* that fixed spend, and
+the answer is that `checkpoint_gb` is **not a fixed per-model price** — it's drawn
+log-uniformly from each model's parameter count, 0.5B–70B params → 1–140 GB checkpoint
+([experiments/cost_models.py:127](../experiments/cost_models.py#L127),
+[:145](../experiments/cost_models.py#L145)), a **140×** spread, independent of which
+model the selection criterion happens to prefer.
+
+**Measured breakdown** (5 seeds; `checkpoint_sum` = total GB spent on model
+checkpoints, `cache_sum` = total GB spent on the small per-action fee — note it is
+3-4 orders of magnitude smaller and can be ignored):
+
+```
+seed 0  budget=237.8GB   Submod: 25 models @ 9.5 GB/model avg  (checkpoint_sum=237.7, cache_sum=0.07)
+                         AE-Pair: 9 models @ 26.4 GB/model avg (checkpoint_sum=237.6, cache_sum=0.02)
+seed 1  budget=224.0GB   Submod: 14 models @ 16.0 GB/model avg (checkpoint_sum=223.7, cache_sum=0.08)
+                         AE-Pair: 16 models @ 14.0 GB/model avg (checkpoint_sum=223.8, cache_sum=0.03)
+seed 2  budget=269.8GB   Submod: 10 models @ 26.9 GB/model avg (checkpoint_sum=269.3, cache_sum=0.04)
+                         AE-Pair: 12 models @ 22.4 GB/model avg (checkpoint_sum=268.9, cache_sum=0.01)
+seed 3  budget=242.3GB   Submod: 16 models @ 15.1 GB/model avg (checkpoint_sum=242.2, cache_sum=0.04)
+                         AE-Pair: 11 models @ 22.0 GB/model avg (checkpoint_sum=241.5, cache_sum=0.02)
+seed 4  budget=323.5GB   Submod: 18 models @ 18.0 GB/model avg (checkpoint_sum=323.4, cache_sum=0.07)
+                         AE-Pair: 12 models @ 26.9 GB/model avg (checkpoint_sum=323.4, cache_sum=0.02)
+```
+
+It's tempting to read the 5-seed table above as two compounding effects — "Submod.
+touches cheaper models *and* mines each one harder" — but a 20-seed check
+(`is Submod.'s avg per-model checkpoint cheaper than ActiveEval-Pair's?` vs. `is
+Submod.'s actions/model ratio higher?`) shows only one of those is a real mechanism:
+
+```
+Submod. cheaper avg checkpoint-per-model:  11 / 20 seeds   (≈ coin flip)
+Submod. higher actions-per-model:          20 / 20 seeds   (never flips)
+```
+
+**"Which models are cheap" is noise, not a mechanism.** `params_b` (a model's
+checkpoint cost) is drawn from a *separate* rng stream in `make_cost_model`
+(`np.random.default_rng(seed + 7919)`,
+[experiments/cost_models.py:122](../experiments/cost_models.py#L122)) than the one
+that drives each model's behavioral descriptor `U`/`V` in `make_problem`
+(`np.random.default_rng(seed)`,
+[experiments/run_acquisition_benchmark.py:53](../experiments/run_acquisition_benchmark.py#L53)).
+Neither `select_logdet` nor `select_facility` ever sees `params_b` — they only see
+`U`/`V`-derived descriptors — so there is no channel through which either selection
+criterion could systematically prefer cheap or expensive models. The 5-seed table
+above just happened to sample a run where Submod.'s touched models leaned cheaper in
+3 of 5 draws; over 20 seeds that settles to 11/20, i.e. statistically indistinguishable
+from a coin flip.
+
+**"Actions per model" is the real, 100%-consistent mechanism**, and it's exactly the
+structural story from the "two axes" section above: `select_logdet` can keep scoring
+well by re-using an already-paid-for model across several sample-sets (13-20
+actions/model touched, every seed), while `select_facility`'s target-similarity
+objective only finds 1-2 good matches per model before it has to pay for a new one
+(7-8.5 actions/model touched, every seed) — a ratio that never inverts across 20
+independent draws. This is the one lever that actually explains the storage gap; the
+per-model cost variation is real (140× spread) but contributes only noise around it,
+not a directional bias in either method's favor.
 
 ## Greedy entropy (Alg. 1) / greedy MI (Alg. 2) — two confounds, now removed
 
@@ -216,10 +523,10 @@ pool intractable per seed).
 
 Neither confound touches `select_logdet`, `select_facility` (ActiveEval-S/S+M/Pair),
 or `select_bayesian_design` — their numbers in this note and in the README are
-unaffected. `README.md`'s per-currency tables (`count`, `input_tok`, `output_tok`,
-`latency`, `memory`, `storage`) still report the pre-fix `Greedy entropy`/`Greedy MI`
-rows and the note "greedy MI/entropy capped at 250 via `_GREEDY_CAP`" — both need
-updating to match the corrected code and the numbers above.
+unaffected. `README.md`'s per-currency tables have been updated to match: `Greedy
+entropy (Alg. 1)` is no longer listed as a separate row (it duplicates `Submod.
+benchmark` once `sigma` is matched — see the footnote on that row), and `Greedy MI`'s
+rows now reflect `sigma=1.0`.
 
 ## Takeaway
 

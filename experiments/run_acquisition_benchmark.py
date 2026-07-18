@@ -526,6 +526,110 @@ def run_cost_budget(seeds, budget_frac):
     return out
 
 
+def run_fixed_model_pool(seeds, budget_frac):
+    """Model-set-controlled fairness check on the RQ4 storage finding.
+
+    Freezes the set of reference models that ``Submod. benchmark`` (select_logdet)
+    buys under the amortized ``storage`` budget (docs/rq4-cost-currency-mechanism.md),
+    then has every other acquisition method reselect its own pairs restricted to
+    *only that model set*, spending the same number of actions Submod. benchmark
+    bought. Each method is also run at that same action budget on the full,
+    unrestricted pool (same paired RNG draw) as the fairness baseline. The
+    fixed-vs-free delta isolates whether a method's storage-budget disadvantage
+    comes from spreading across more models, or from how it picks pairs once the
+    model set is fixed to match Submod. benchmark's.
+    """
+    acq = [(name, kind, key, kw) for name, kind, key, kw in METHODS
+           if kind == "acq" and key not in ("metaevaluator_full", "submodular_benchmark")]
+    sub_name, _sub_kind, sub_key, sub_kw = next(
+        (n, k, ky, kw) for n, k, ky, kw in METHODS if ky == "submodular_benchmark")
+
+    mae_fixed = {name: [] for name, *_ in acq}
+    mae_free = {name: [] for name, *_ in acq}
+    mae_source = []
+    full = []
+    budgets, n_models_sel = [], []
+
+    for seed in seeds:
+        prob = make_problem(seed)
+        cm = make_cost_model(prob, seed)
+        pm = np.asarray(prob["pair_model"])
+        ps = np.asarray(prob["pair_sample"])
+        P = len(prob["X"])
+        full.append(train_eval(prob, list(range(P)), seed))
+        rng = np.random.default_rng(1000 + seed)
+
+        order = _method_order(prob, sub_name, "acq", sub_key, sub_kw, min(P, _N_ORDER), rng)
+        storage = cm["storage"]
+        budget_cost = budget_frac * storage.pool_total(pm)
+        kept, _paid = greedy_fill(order, storage, budget_cost, pm)
+        model_list = np.unique(pm[kept])
+        k = len(kept)
+        budgets.append(k)
+        n_models_sel.append(len(model_list))
+        mae_source.append(train_eval(prob, kept, seed))
+
+        sub_idx = np.where(np.isin(pm, model_list))[0]
+        X_sub, pm_sub, ps_sub = prob["X"][sub_idx], pm[sub_idx], ps[sub_idx]
+        tmask_sub, infl_sub = prob["target_mask"][sub_idx], prob["influence"][sub_idx]
+        k_local = min(k, len(sub_idx))
+
+        for name, kind, key, kw in acq:
+            fn = ACQUISITION_REGISTRY[key]
+            cover_all = kw.get("cover_all")
+            extra = {kk: vv for kk, vv in kw.items() if kk not in ("cover_all", "influence")}
+            rseed = int(rng.integers(1 << 30))
+
+            tmask_f = np.ones(len(sub_idx), bool) if cover_all else tmask_sub
+            infl_f = infl_sub if kw.get("influence") else None
+            tref_f = None if cover_all else prob.get("X_target_ref")
+            sel_local = fn(X_sub, pm_sub, ps_sub, tmask_f, k_local,
+                           rng=np.random.default_rng(rseed), influence=infl_f, target_ref=tref_f, **extra)
+            sel_global = sub_idx[np.asarray(sel_local, int)]
+            mae_fixed[name].append(train_eval(prob, sel_global, seed))
+
+            tmask_full = np.ones(P, bool) if cover_all else prob["target_mask"]
+            infl_full = prob["influence"] if kw.get("influence") else None
+            tref_full = None if cover_all else prob.get("X_target_ref")
+            sel_free = fn(prob["X"], pm, ps, tmask_full, k,
+                         rng=np.random.default_rng(rseed), influence=infl_full, target_ref=tref_full, **extra)
+            mae_free[name].append(train_eval(prob, sel_free, seed))
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    full_mae = _mci(full)
+    src_mae = _mci(mae_source)
+    out = {"budget_frac": budget_frac, "seeds": len(seeds),
+           "median_budget_k": float(np.median(budgets)),
+           "median_models_selected": float(np.median(n_models_sel)),
+           "full_mae": {"mae": full_mae[0], "ci": full_mae[1]},
+           "submodular_source": {"mae": src_mae[0], "ci": src_mae[1]},
+           "methods": {}}
+    for name, *_ in acq:
+        fm, fc = _mci(mae_fixed[name])
+        rm, rc = _mci(mae_free[name])
+        out["methods"][name] = {
+            "fixed": {"mae": fm, "ci": fc}, "free": {"mae": rm, "ci": rc},
+            "delta": fm - rm}
+
+    print(f"\nFixed-model-pool fairness check ({len(seeds)} seeds, storage budget = "
+          f"{budget_frac*100:.0f}% of pool). Submod. benchmark bought a median of "
+          f"{out['median_budget_k']:.0f} actions across {out['median_models_selected']:.0f} models "
+          f"(source MAE {src_mae[0]:.2f} +/- {src_mae[1]:.2f} pp).\n")
+    width = max(len(n) for n, *_ in acq)
+    print(f"{'Method'.ljust(width)}  {'Free (unrestr.)':>16}  {'Fixed (same models)':>20}  {'Delta':>7}")
+    print("-" * (width + 2 + 18 + 22 + 9))
+    order_rows = sorted(acq, key=lambda t: out["methods"][t[0]]["delta"])
+    for name, *_ in order_rows:
+        r = out["methods"][name]
+        print(f"{name.ljust(width)}  {r['free']['mae']:7.2f} +/- {r['free']['ci']:.2f}   "
+              f"{r['fixed']['mae']:7.2f} +/- {r['fixed']['ci']:.2f}   {r['delta']:+6.2f}")
+    return out
+
+
 def run_ablation(seeds, budget_frac):
     """RQ5 ablation. This offline benchmark robustly isolates the component the paper
     finds most important---target-aware narrowing---against a no-structure random
@@ -557,7 +661,7 @@ def run_ablation(seeds, budget_frac):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -579,6 +683,9 @@ def main():
     elif args.mode == "cost_budget":
         res = run_cost_budget(seeds, args.budget_frac)
         out_path = "outputs/cost_budget_benchmark.json"
+    elif args.mode == "fixed_model_pool":
+        res = run_fixed_model_pool(seeds, args.budget_frac)
+        out_path = "outputs/fixed_model_pool_benchmark.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])

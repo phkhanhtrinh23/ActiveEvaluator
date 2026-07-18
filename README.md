@@ -432,11 +432,20 @@ each sorted by its own MAE — the top row is that currency's winner (**bold**).
 `latency`, `memory`) the ordering barely moves from `count` — ActiveEval-S/-Pair stay
 on top — because a cost-agnostic order draws a representative cost mix, so 15% of the
 cost buys ≈15% of the actions (~270) whatever the unit. The `storage` **budget
-inverts it**: checkpoints amortize per unique model, so methods that *concentrate* on
-few models buy far more actions and win (Submod. 4.99, Bayesian 5.22), while
-**target-aware methods collapse** (ActiveEval-Pair 6.81, near worst) — their picks
-spread across many models, so checkpoints eat the budget and buy only ~91 actions vs.
-~251 for the concentrating baselines.
+inverts it**, and the reason is a checkpoint accounting detail, not a difference in
+selection quality: `storage_cost = (#unique models touched) × checkpoint_gb + (#actions) ×
+small_cache_gb`, so a fixed GB budget buys actions almost in proportion to how few
+*new* models the selection order forces you to pay for
+([docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md) for the
+full derivation). `Submod. benchmark`'s pair-diversity objective happens to satisfy
+itself by revisiting the *same* model across several sample-sets (16 models bought 250
+actions, ≈15.6/model) — it was never trying to minimize model count, but pair
+diversity doesn't require model diversity here, so it stays cheap. `ActiveEval-Pair`'s
+coverage objective is explicitly indifferent to model identity (it optimizes purely
+for target-similarity), but the few pairs closest to the target happen to be spread
+across many different models, so chasing them forces a new checkpoint every ~7-8
+actions (12 models bought only 90 actions) — collapsing it to near-worst (6.81 pp)
+despite leading almost every other table.
 
 This is an honest limitation of *count*-optimal target-aware selection under a storage
 budget, and it points at the deferred next step: a **cost-benefit** (gain/cost
@@ -451,6 +460,56 @@ fraction recorded per cell.)
 For the code-level mechanism behind each table (why the additive currencies barely
 reorder while `storage` inverts the ranking), see
 [docs/rq4-cost-currency-mechanism.md](docs/rq4-cost-currency-mechanism.md).
+
+### Fixed-model-pool fairness check (RQ4 companion)
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode fixed_model_pool --seeds 5 --budget-frac 0.15
+```
+
+The `storage` currency above rewards methods that concentrate picks on few
+reference models (checkpoint cost is paid once per unique model), which is why
+`Submod. benchmark`/`Bayesian opt. design` win it and `ActiveEval-*` collapses to
+near-worst. This leaves it unclear whether ActiveEval is *penalized for
+spreading across more models*, or simply worse at picking pairs. This check
+controls for that directly: freeze the reference-model set `Submod. benchmark`
+buys under the storage budget, then let every other method reselect its own
+pairs restricted to **only that model set**, at the same action count. Each
+method is also measured **Free** (unrestricted pool, same action count, paired
+RNG) as the fairness baseline. `Delta = Fixed − Free`; positive means being
+confined to `Submod. benchmark`'s models hurts that method.
+
+**Results** (5 seeds, 15% of storage pool cost). `Submod. benchmark` bought a
+median of **251 actions across 16 models** (source MAE 5.08 ± 0.95 pp). Unseen
+MAE (pp), lower is better; sorted by delta.
+
+| Method | Free (unrestricted) | Fixed (Submod.'s models) | Delta |
+| --- | ---: | ---: | ---: |
+| **GRAD-MATCH** | 5.72 ± 1.63 | **5.02 ± 0.65** | **−0.70** |
+| Random | 5.62 ± 0.66 | 5.33 ± 0.82 | −0.29 |
+| Submod. benchmark (source) | 5.08 ± 0.95 | 5.08 ± 0.95 | 0 (defines the model set) |
+| k-center | 5.04 ± 0.53 | 5.11 ± 0.55 | +0.06 |
+| Bayesian opt. design | 4.82 ± 0.85 | 5.17 ± 0.88 | +0.35 |
+| Facility-location | 5.00 ± 0.44 | 5.36 ± 0.79 | +0.36 |
+| **ActiveEval-Pair** | **4.45 ± 0.36** | 5.02 ± 0.93 | +0.58 |
+| ActiveEval-S+M | 5.03 ± 0.58 | 5.62 ± 1.20 | +0.59 |
+| ActiveEval-S | 4.47 ± 0.47 | 5.06 ± 0.76 | +0.59 |
+| Active testing | 4.62 ± 0.72 | 5.26 ± 1.06 | +0.64 |
+| Greedy MI (Alg. 2) | 4.83 ± 0.46 | 5.54 ± 0.80 | +0.71 |
+| Matrix completion | 5.20 ± 0.45 | 5.95 ± 1.13 | +0.75 |
+
+**Best result:** lowest MAE overall is **ActiveEval-Pair, Free = 4.45 ± 0.36 pp**
+(best of every cell in the table). All three ActiveEval variants get worse
+(+0.58 to +0.59 pp) when confined to `Submod. benchmark`'s 16-model set —
+consistent with the RQ4 mechanism: part of ActiveEval's advantage comes from
+spreading picks across many models to stay close to the target region, which
+the model-concentrated pool takes away. GRAD-MATCH and Random go the other way
+(negative delta) — restricting the pool doesn't hurt methods that weren't
+exploiting model diversity to begin with. CIs overlap across most rows at 5
+seeds, so treat the ranking as directional. Full analysis:
+[docs/fixed-model-pool-fairness-check.md](docs/fixed-model-pool-fairness-check.md)
+(`outputs/fixed_model_pool_benchmark.json`).
+
 
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 
