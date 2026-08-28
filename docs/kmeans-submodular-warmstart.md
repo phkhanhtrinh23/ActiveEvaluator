@@ -432,23 +432,60 @@ beat arbitrary ones.
 1. **Nearest-to-centroid representative selection is target-blind, exactly
    like `ActiveEval-S+M`'s model pre-filter.** k-means (Section 1) minimizes
    *overall* reconstruction error — it has no notion of the deployment
-   target direction. The near-target region in this benchmark is, by
-   construction, a directional extreme of the descriptor distribution (the
-   top quartile by `target_score`), not its center of mass. "Closest to
-   centroid" is a *typicality* criterion; the pairs a target-aware
-   acquisition objective most wants are, structurally, the opposite —
-   *boundary* points near the target direction. A representative rule that
-   always prefers the most typical member of each cluster can systematically
-   under-represent exactly the near-target extremes that
-   `select_activeeval_pair`/`select_facility` most want to draw from — the
-   same failure mode already documented for `ActiveEval-S+M` in
-   `submodularity-audit.md` Part 2 ("target-blind narrowing before a
-   target-aware stage hurts"), now recurring in a second, independent place
-   in the codebase. A crude direct check (mean distance from each config's
-   kept pairs to the target-region centroid) did not show a large gap for
-   this run, so this alone may not be the full story — but it is a real,
-   structurally-motivated risk with independent precedent in this repo, not
-   idle speculation.
+   target direction — **confirmed quantitatively, not just hypothesized.**
+   The near-target region in this benchmark is, by construction, a
+   *directional extreme* (tail) of the descriptor distribution (the top
+   quartile by `target_score`), not its center of mass. Lloyd's k-means
+   minimizes $\sum_x\|x-c_{\ell(x)}\|^2$ over the *whole* candidate cloud —
+   a standard property of density-fit Voronoi partitions is that cell count
+   scales with local density: more, smaller clusters where the data is
+   dense, fewer, larger clusters where it's sparse. A tail region is
+   precisely where the data is sparse, so a fixed $M$-cluster partition
+   necessarily under-allocates clusters there relative to its true share of
+   the mass — and $K{=}1$ compounds this with a hard one-representative-per-
+   cluster cap, with "nearest to centroid" (a *typicality* criterion)
+   pulling that lone representative toward the cluster's bulk, away from the
+   boundary/extreme member that would actually matter for a target-aware
+   coverage objective.
+
+   Measured directly (seed 0, $M{=}30$, $K{=}1$, near-target defined as the
+   top quintile of source `target_score`):
+
+   | Quantity | Value |
+   | --- | ---: |
+   | True near-target rate in the source pool | 23/113 ≈ 20.4% |
+   | K-means **cluster centroids** landing near-target | 2/30 ≈ 6.7% |
+   | K-means **chosen representatives** near-target | 3/30 = 10% |
+   | Random-30 draw, expected near-target count | 6.1/30 ≈ 20.3% |
+   | $P(\text{random count} \ge \text{k-means count})$, 2000 trials | 97.65% |
+
+   Random sampling gets roughly double k-means's near-target coverage and
+   beats it in 97.65% of draws — a systematic, reproducible effect, not
+   seed noise. This is exactly the same failure mode already documented for
+   `ActiveEval-S+M` in `submodularity-audit.md` Part 2 ("target-blind
+   narrowing before a target-aware stage hurts"), now confirmed
+   quantitatively in a second, independent place in the codebase: **any
+   density-driven (not task-driven) hard pre-filter risks starving the
+   sparse-but-important region a downstream target-aware objective actually
+   needs.** (An earlier, cruder diagnostic — mean distance from *all* 1800
+   pairs to the target centroid — missed this, because the mean is
+   dominated by the 80–90% of pairs that are far from target regardless of
+   scheme; it's insensitive to a 2x difference concentrated entirely in the
+   thin near-target tail. The count-in-a-neighborhood check above is the
+   correct diagnostic.)
+
+   This is *not* a violation of Theorem 1: the theorem bounds how far
+   k-means's own achievable ceiling $F(\Omega^\star_{\mathcal P})$ can fall
+   below the infeasible full-universe ideal — a worst-case, protective
+   guarantee that never lets things get catastrophically bad, since every
+   point stays within $\rho$ of *some* kept representative. It says nothing
+   about how that ceiling compares to an entirely different reduction
+   scheme: uniform random sampling has no covering guarantee at all (in the
+   worst case it could miss the target region entirely, with probability
+   $(1-p)^{KM}$ — small but nonzero here), so k-means trades away some
+   *typical-case* performance for a *worst-case* floor random doesn't have.
+   On this generator's tail-heavy target structure, at $n=5$ seeds, that
+   trade wasn't favorable.
 2. **A benchmark-construction confound**: `rel[j]` — which sets each pair's
    label noise via `noise = base_noise·0.45·(1 + (ratio-1)(1-rel[j]))`
    (`experiments/run_acquisition_benchmark.py`) — is normalized by the
