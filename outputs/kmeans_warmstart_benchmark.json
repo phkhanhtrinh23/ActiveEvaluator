@@ -1,0 +1,101 @@
+{
+  "n_samplesets_full": 150,
+  "budget_frac": 0.15,
+  "seeds": 5,
+  "configs": {
+    "Full source pool": {
+      "n_triples_labelable": 6780.0,
+      "ActiveEval-Pair": {
+        "mae": 3.6803044751286507,
+        "ci": 0.6277978094056847
+      },
+      "Facility-location": {
+        "mae": 3.9386218041181564,
+        "ci": 0.5040624692899223
+      },
+      "Random": {
+        "mae": 4.393858723342419,
+        "ci": 0.947669986288824
+      }
+    },
+    "K-means M=30 K=1 (KM=30)": {
+      "n_triples_labelable": 1800.0,
+      "quantization_radius_max_mean": 2.2080485761682525,
+      "ActiveEval-Pair": {
+        "mae": 5.205247029662132,
+        "ci": 1.0436130811648028
+      },
+      "Facility-location": {
+        "mae": 5.113475024700165,
+        "ci": 0.7047372397801415
+      },
+      "Random": {
+        "mae": 5.906208753585815,
+        "ci": 1.252822798311312
+      }
+    },
+    "Random subset (n=30)": {
+      "n_triples_labelable": 1800.0,
+      "ActiveEval-Pair": {
+        "mae": 4.549315422773361,
+        "ci": 0.39145172722938354
+      },
+      "Facility-location": {
+        "mae": 5.031239837408066,
+        "ci": 0.41576825525620736
+      },
+      "Random": {
+        "mae": 4.706452190876007,
+        "ci": 0.22986838336604004
+      }
+    },
+    "K-means M=15 K=2 (KM=30)": {
+      "n_triples_labelable": 1764.0,
+      "quantization_radius_max_mean": 2.5184709281401427,
+      "ActiveEval-Pair": {
+        "mae": 6.314187943935394,
+        "ci": 3.6523595021493565
+      },
+      "Facility-location": {
+        "mae": 6.844974085688591,
+        "ci": 2.1463319617519026
+      },
+      "Random": {
+        "mae": 6.05330727994442,
+        "ci": 1.2889614518345949
+      }
+    },
+    "K-means M=10 K=3 (KM=30)": {
+      "n_triples_labelable": 1776.0,
+      "quantization_radius_max_mean": 2.8680959106275754,
+      "ActiveEval-Pair": {
+        "mae": 5.747232809662819,
+        "ci": 1.6395226762245612
+      },
+      "Facility-location": {
+        "mae": 6.44389808177948,
+        "ci": 1.1861186870329063
+      },
+      "Random": {
+        "mae": 6.429812237620354,
+        "ci": 1.6919773649088954
+      }
+    },
+    "K-means M=6 K=5 (KM=30)": {
+      "n_triples_labelable": 1800.0,
+      "quantization_radius_max_mean": 3.271547910779939,
+      "ActiveEval-Pair": {
+        "mae": 5.838553681969643,
+        "ci": 0.4394143520617803
+      },
+      "Facility-location": {
+        "mae": 7.431121617555618,
+        "ci": 2.3168198003059524
+      },
+      "Random": {
+        "mae": 5.884793177247047,
+        "ci": 0.898203815490387
+      }
+    }
+  }
+}

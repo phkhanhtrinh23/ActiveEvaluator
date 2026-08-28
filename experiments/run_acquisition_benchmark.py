@@ -42,13 +42,30 @@ from experiments.cost_models import make_cost_model, greedy_fill
 # ---------------------------------------------------------------------------
 
 def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=40,
-                 d_lat=6, base_noise=0.08, off_on_noise_ratio=2.0 / 0.45):
+                 d_lat=6, base_noise=0.08, off_on_noise_ratio=2.0 / 0.45,
+                 n_clusters=None, reps_per_cluster=None, random_subset_size=None):
     """Synthesise a meta-evaluation matrix with heteroscedastic label noise.
 
     The deployment target is a subset of sample-sets, HELD OUT of training. Source
     pairs far from the target region are noisier and over-represented, so a
     *target-aware* budget spent on clean, near-target source pairs predicts the
     held-out target workload better than a uniform slice of the matrix.
+
+    Optional cheap-vs-expensive two-stage reduction of the SOURCE sample-set
+    universe (getting a model's accuracy on a sample-set is expensive -- it means
+    running every example in it -- while a sample-set's shift descriptor is cheap
+    to compute up front for the whole universe). When ``n_clusters`` and
+    ``reps_per_cluster`` are both given, the ``n_samplesets`` source sample-sets
+    are first k-means clustered (in descriptor space) into ``n_clusters`` groups,
+    and only the ``reps_per_cluster`` sample-sets closest to each cluster centroid
+    are ever labeled -- i.e. only K*M (not the full source universe) sample-sets
+    ever get run against the N reference models, giving K*M*N labelable triples
+    instead of |source|*N. ``random_subset_size`` is a control: pick that many
+    source sample-sets uniformly at random instead of via k-means, to isolate
+    whether clustering (vs. plain subsampling) is what helps. Both are mutually
+    exclusive and off by default (exact prior behavior: use every source
+    sample-set). See docs/kmeans-submodular-warmstart.md for the theory this
+    feeds (``kmeans_diag.quantization_radius_max`` is the measured rho).
     """
     rng = np.random.default_rng(seed)
     # latent model / sample-set factors
@@ -62,7 +79,39 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
     target_score = V @ target_dir
     n_target = max(1, n_samplesets // 4)
     target_sets = set(np.argsort(-target_score)[:n_target].tolist())
-    source_sets = [j for j in range(n_samplesets) if j not in target_sets]
+    source_sets_all = [j for j in range(n_samplesets) if j not in target_sets]
+
+    kmeans_diag = None
+    if n_clusters is not None and reps_per_cluster is not None:
+        from sklearn.cluster import KMeans
+        Vs = V[source_sets_all]
+        m_eff = max(1, min(n_clusters, len(source_sets_all)))
+        km = KMeans(n_clusters=m_eff, n_init=10, random_state=seed).fit(Vs)
+        reps, radii = [], []
+        for c in range(m_eff):
+            members = [source_sets_all[i] for i in range(len(Vs)) if km.labels_[i] == c]
+            if not members:
+                continue
+            # distance of EVERY member to its centroid -- this is what bounds rho
+            # in the quantization-stability theorem, not just the chosen reps.
+            dists = sorted((float(np.linalg.norm(V[j] - km.cluster_centers_[c])), j) for j in members)
+            radii.extend(d for d, _ in dists)
+            reps.extend(j for _, j in dists[:reps_per_cluster])
+        source_sets = reps
+        kmeans_diag = {
+            "n_clusters": m_eff,
+            "reps_per_cluster": reps_per_cluster,
+            "n_source_full": len(source_sets_all),
+            "n_source_reduced": len(source_sets),
+            "quantization_radius_max": float(np.max(radii)) if radii else 0.0,
+            "quantization_radius_mean": float(np.mean(radii)) if radii else 0.0,
+            "inertia": float(km.inertia_),
+        }
+    elif random_subset_size is not None:
+        k = max(1, min(random_subset_size, len(source_sets_all)))
+        source_sets = sorted(rng.choice(source_sets_all, size=k, replace=False).tolist())
+    else:
+        source_sets = source_sets_all
     # source relevance: proximity of each source sample-set to the target region,
     # normalised to [0, 1] (1 = nearest). Near-target source pairs carry clean,
     # transferable signal; far ones are noisy and redundant, so a target-aware
@@ -143,7 +192,8 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
 
     return dict(X=X, a_true=a_true, a_noisy=a_noisy, pair_model=pm, pair_sample=ps,
                 target_mask=tmask, X_target_ref=X_target_ref, X_eval=Xe, a_eval=ae,
-                influence=influence, est_rows=est_rows)
+                influence=influence, est_rows=est_rows, kmeans_diag=kmeans_diag,
+                n_labelable_source=len(source_sets))
 
 
 # ---------------------------------------------------------------------------
@@ -630,6 +680,78 @@ def run_fixed_model_pool(seeds, budget_frac):
     return out
 
 
+def run_kmeans_warmstart(seeds, budget_frac, n_samplesets_full=150,
+                         cluster_grid=((30, 1), (15, 2), (10, 3), (6, 5))):
+    """K-means-reduced subset universe for the meta-training warm start.
+
+    Simulates: getting a model's accuracy on a sample-set is expensive (running
+    every example in it), but a sample-set's shift descriptor is cheap (no model
+    run needed). So before spending ANY labeling budget, first cheaply reduce the
+    universe of ``n_samplesets_full`` candidate source sample-sets down to M
+    k-means clusters x K representatives/cluster = K*M sample-sets -- only THOSE
+    ever get run against the N reference models (K*M*N labelable triples, not
+    |source|*N). Submodular acquisition (ActiveEval-Pair / Facility-location /
+    Random) then spends the usual ``budget_frac`` *within* that reduced pool.
+
+    Compares, at matched K*M sizes: (a) the full, unreduced source pool (upper
+    reference -- most triples, most expensive), (b) k-means-reduced pools across
+    a grid of (M, K), and (c) a random-subset-of-the-same-size control (same K*M
+    sample-sets, chosen uniformly at random instead of via k-means) -- isolating
+    whether clustering itself helps, versus just using fewer sample-sets. Also
+    reports the measured k-means quantization radius (rho) that
+    docs/kmeans-submodular-warmstart.md's stability bound is stated in terms of.
+    """
+    configs = [("Full source pool", dict())]
+    for m, k in cluster_grid:
+        configs.append((f"K-means M={m} K={k} (KM={m*k})", dict(n_clusters=m, reps_per_cluster=k)))
+        configs.append((f"Random subset (n={m*k})", dict(random_subset_size=m * k)))
+    methods = ["ActiveEval-Pair", "Facility-location", "Random"]
+    rows = {name: {meth: [] for meth in methods} for name, _ in configs}
+    triples = {name: [] for name, _ in configs}
+    radius = {name: [] for name, _ in configs}
+
+    for seed in seeds:
+        for name, kw in configs:
+            prob = make_problem(seed, n_samplesets=n_samplesets_full, **kw)
+            P = len(prob["X"])
+            triples[name].append(P)
+            if prob.get("kmeans_diag"):
+                radius[name].append(prob["kmeans_diag"]["quantization_radius_max"])
+            budget = max(1, int(budget_frac * P))
+            rows[name]["ActiveEval-Pair"].append(_acq(prob, "activeeval_pair", budget, seed, influence=True))
+            rows[name]["Facility-location"].append(_acq(prob, "facility_location", budget, seed, cover_all=True))
+            rows[name]["Random"].append(_acq(prob, "random", budget, seed))
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    out = {"n_samplesets_full": n_samplesets_full, "budget_frac": budget_frac,
+           "seeds": len(seeds), "configs": {}}
+    print(f"\nK-means subset-universe reduction ({len(seeds)} seeds, source universe = "
+          f"{n_samplesets_full - n_samplesets_full // 4} sample-sets, acquisition budget = "
+          f"{budget_frac*100:.0f}% of the (reduced) labelable pool). Unseen MAE (pp); lower is better.\n")
+    width = max(len(n) for n, _ in configs)
+    print(f"{'Config'.ljust(width)}  {'#triples':>9}  {'rho(max)':>9}  "
+          + "  ".join(f"{m:>16}" for m in methods))
+    print("-" * (width + 13 + 22 + 18 * len(methods)))
+    for name, _ in configs:
+        entry = {"n_triples_labelable": float(np.mean(triples[name]))}
+        if radius[name]:
+            entry["quantization_radius_max_mean"] = float(np.mean(radius[name]))
+        rho_str = f"{entry['quantization_radius_max_mean']:9.3f}" if radius[name] else "     --  "
+        cells = []
+        for meth in methods:
+            m, ci = _mci(rows[name][meth])
+            entry[meth] = {"mae": m, "ci": ci}
+            cells.append(f"{m:6.2f}+/-{ci:4.2f}")
+        out["configs"][name] = entry
+        print(f"{name.ljust(width)}  {entry['n_triples_labelable']:9.0f}  {rho_str}  "
+              + "  ".join(f"{c:>16}" for c in cells))
+    return out
+
+
 def run_ablation(seeds, budget_frac):
     """RQ5 ablation. This offline benchmark robustly isolates the component the paper
     finds most important---target-aware narrowing---against a no-structure random
@@ -750,7 +872,7 @@ def run_threshold_budget(seeds, max_budget_frac, thresholds):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool", "threshold_budget"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool", "threshold_budget", "kmeans_warmstart"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -779,6 +901,9 @@ def main():
         res = run_threshold_budget(seeds, args.budget_frac,
                                    [0.0, 1e-4, 3e-4, 1e-3, 3e-3, 0.01, 0.03, 0.1, 0.3])
         out_path = "outputs/threshold_budget_benchmark.json"
+    elif args.mode == "kmeans_warmstart":
+        res = run_kmeans_warmstart(seeds, args.budget_frac)
+        out_path = "outputs/kmeans_warmstart_benchmark.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])

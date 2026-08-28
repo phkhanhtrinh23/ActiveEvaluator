@@ -11,6 +11,13 @@ below), but the three-term joint objective as one combined greedy does not
 exist anywhere in the code** — what's implemented are three separate, only
 loosely related mechanisms.
 
+See [`docs/kmeans-submodular-warmstart.md`](kmeans-submodular-warmstart.md)
+for the extension of Part 1's facility-location proof to a k-means-quantized
+candidate pool (when the sample-set/workload universe is too expensive to
+label in full) — it proves a quantization-stability bound in terms of the
+number of clusters $M$, and reports a real, honestly-mixed empirical result
+from testing it.
+
 ---
 
 ## Part 1 — V1 facility location: proof of monotone submodularity
