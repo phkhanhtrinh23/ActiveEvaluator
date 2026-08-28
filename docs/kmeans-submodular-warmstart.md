@@ -28,6 +28,170 @@ does not, in the worst case, rely on $K$.
 
 ---
 
+## Primer — read this first if any of the above is unclear
+
+Everything past this section uses formal notation ($\phi$, $\rho$, $L_k$,
+...). This primer explains, from zero, the two ideas the rest of the note is
+built from: **what k-means/Lloyd's algorithm actually does** (a mechanical
+recipe, not a black box) and **what $\rho$ means** (one simple number, with
+a plain reason it shows up in the guarantee). No prior background assumed.
+
+### The problem, in plain English
+
+Imagine a big bag of marbles scattered on a table. Each marble is a
+candidate "workload" (sample-set) — its position on the table is its
+*descriptor* (a handful of numbers describing what kind of workload it is).
+Testing a model against a workload is expensive (you'd have to run the model
+on every example in it), so we can't afford to test every marble in the
+bag. We want to pick a *small* set of "stand-in" marbles that, together,
+represent the whole bag well enough that testing only against them doesn't
+lose too much information. **K-means is an automatic way to pick those
+stand-ins.**
+
+### What is a "cluster" and a "centroid"?
+
+- **Cluster** = a group of marbles sitting close to each other.
+- **Centroid** = a group's *average position* — literally: add up the
+  coordinates of every marble in the group and divide by how many there
+  are. It's the group's center of mass, not necessarily an actual marble.
+
+Tiny example: six marbles on a number line at positions
+$1, 2, 3, 10, 11, 12$. The "obvious" grouping into 2 clusters is
+$\{1,2,3\}$ and $\{10,11,12\}$, with centroids $2$ and $11$.
+
+### Lloyd's algorithm — the actual recipe that finds clusters, step by step
+
+"K-means" is the *name of the problem* (split the marbles into $M$ groups so
+each group is as tight as possible around its own centroid). **Lloyd's
+algorithm** is the standard, simple recipe that *solves* it — it's what
+`sklearn.cluster.KMeans` runs internally. It has exactly two steps, repeated
+until nothing changes:
+
+- **Step A — Assign.** For every marble, look at the current $M$ centroid
+  positions and assign the marble to whichever one is closest.
+- **Step B — Update.** For each group, recompute its centroid as the actual
+  average position of the marbles currently assigned to it.
+
+Repeat A, B, A, B, ... until an assignment step changes nothing — that's
+called *convergence*.
+
+**Full worked example**, using the six marbles above, $M=2$, starting from a
+deliberately *bad* guess ($c_1=1$, $c_2=2$ — both centroids near the low
+group, by accident):
+
+| Round | Step A: who's closest to $c_1$ vs $c_2$? | Step B: new centroids |
+| --- | --- | --- |
+| 1 | $c_1{=}1,c_2{=}2$ → $\{1\}\to c_1$; $\{2,3,10,11,12\}\to c_2$ (all closer to 2 than to 1... check 3: $|3-1|{=}2>|3-2|{=}1$, yes $c_2$) | $c_1=\text{avg}(1)=1$; $c_2=\text{avg}(2,3,10,11,12)=7.6$ |
+| 2 | $c_1{=}1,c_2{=}7.6$ → $1,2,3$ are all closer to $1$ than to $7.6$ ($|3-1|{=}2 < |3-7.6|{=}4.6$) → $\{1,2,3\}\to c_1$; $\{10,11,12\}\to c_2$ | $c_1=\text{avg}(1,2,3)=2$; $c_2=\text{avg}(10,11,12)=11$ |
+| 3 | $c_1{=}2,c_2{=}11$ → same grouping as round 2 comes out again: $\{1,2,3\}\to c_1$, $\{10,11,12\}\to c_2$ | **nothing changed — stop.** |
+
+Final answer: cluster $\{1,2,3\}$ with centroid $2$, cluster $\{10,11,12\}$
+with centroid $11$ — the "obvious" grouping, found automatically, even
+though we started from a bad guess. This *is* Lloyd's algorithm, on real
+numbers, start to finish.
+
+### Why does this always settle down instead of getting stuck flip-flopping?
+
+Define one number that measures "how messy is the current grouping":
+
+$$
+\mathcal D = \sum_{\text{every marble}} (\text{distance from that marble to its own group's centroid})^2.
+$$
+
+- **Step A can only shrink $\mathcal D$ or leave it the same.** You're
+  re-assigning each marble to whichever centroid is *closest* — by
+  definition that can't make any marble's own distance term bigger.
+- **Step B can only shrink $\mathcal D$ or leave it the same.** For a fixed
+  group of marbles, the point that minimizes the sum of squared distances
+  to all of them is *exactly their average* (a basic fact — try nudging the
+  center away from the average and the sum of squared distances goes up).
+  So recomputing the centroid as the average is the best possible choice
+  for that step.
+
+Both steps only ever shrink (or hold) $\mathcal D$, and $\mathcal D$ can't
+go below $0$ — so the process can't wobble forever; it has to settle
+somewhere. That's why Lloyd's algorithm always terminates. (Caveat, still
+in plain terms: it can settle into a grouping that's only "locally" good —
+like rolling a ball into a nearby dip in a hilly landscape instead of the
+deepest valley overall — which is why in practice you try several random
+starting points and keep the best one; that's what `n_init=10` in the code
+does.)
+
+### What is $\rho$ ("rho")? — the one idea everything else depends on
+
+Once Lloyd's algorithm has finished, *every* marble belongs to exactly one
+group and we know that group's centroid. Now ask one simple question:
+
+> **Across every single marble in the whole bag, what is the *largest*
+> distance from any marble to its own group's centroid?**
+
+That single number is $\rho$. In the six-marble example: marble $1$ is
+distance $1$ from its centroid ($2$); marble $3$ is also distance $1$;
+marble $10$ and $12$ are each distance $1$ from their centroid ($11$). The
+largest of these is $1$, so $\rho = 1$ for this tiny example.
+
+**What $\rho$ *means*, in one sentence:** if we throw away every marble
+except one stand-in per group, $\rho$ is the worst-case distance between any
+real marble we threw away and the stand-in we kept in its place. It's a
+built-in, honest "how much did we lose by simplifying?" number — and
+crucially, it's something you can just *measure* after running Lloyd's
+algorithm (that's exactly what `kmeans_diag.quantization_radius_max` is in
+the code), not something you have to guess at.
+
+### Why do we care about $\rho$ for our actual problem?
+
+In our real pipeline, "distance" between two workloads corresponds to "how
+different they look" (their descriptor vectors), and we use a **similarity
+score** between a workload and the validation/target points that fades
+*smoothly* as distance grows — the same way the warmth from a campfire
+fades smoothly as you step back, never jumping suddenly. (This smooth-fade
+score is the RBF kernel $k(v,s)=\exp(-\|\cdot\|^2/\tau)$ used throughout
+`submodularity-audit.md`.)
+
+Now suppose we throw away a real workload and use its cluster's stand-in
+instead when computing that similarity score. How wrong can the score be?
+Since the similarity curve fades *smoothly* — it has a steepest possible
+rate at which it can change per unit of distance moved (call that rate
+$L_k$, the "Lipschitz constant" — just a formal name for "the steepest
+slope the curve is ever allowed to have") — the error introduced by
+swapping in a stand-in that's $\rho$ away from the real thing is bounded by
+a simple multiplication:
+
+$$
+\text{worst-case error in the similarity score} \;\le\; \underbrace{\rho}_{\text{how far we moved}} \;\times\; \underbrace{L_k}_{\text{steepest possible rate the score can react}}.
+$$
+
+That's genuinely the entire content of the "quantization-stability" result
+later in this note. Everything from here is just: (1) our selection
+algorithm's total score is built out of *sums* and *maxima* of these
+similarity scores, and (2) sums/maxima of things that are each individually
+off by at most $\rho \cdot L_k$ can, in the worst case, be off by at most a
+(bounded) multiple of $\rho\cdot L_k$ too — never anything worse, and never
+anything that grows the more budget you spend downstream.
+
+### Glossary — formal symbol → plain English
+
+| Symbol | Plain-English meaning |
+| --- | --- |
+| $\mathcal X$ | The whole bag of possible candidate workloads |
+| $\phi(X)$ | Workload $X$'s position/coordinates (its descriptor) |
+| $M$ | How many groups (clusters) we split the bag into |
+| $c_\ell$ | The average position (centroid) of group $\ell$ |
+| $\mathcal C_\ell$ | The workloads that belong to group $\ell$ |
+| $\rho$ | The worst-case distance from any workload to its own group's centroid |
+| $r_\ell$ | The workload(s) we actually keep as the stand-in(s) for group $\ell$ |
+| $K$ | How many stand-ins we keep per group |
+| $k(v,s)$ | How similar workload $s$ looks to validation point $v$ — a number in $(0,1]$ that fades smoothly as they get further apart |
+| $L_k$ | The steepest possible rate that similarity score can change per unit of distance |
+| $F(\Omega)$ | The total "coverage score" of our selected set $\Omega$ — how well it, taken together, represents the important validation points |
+| $\bar I$ | Total importance (influence weight) of all the validation points we're trying to cover |
+
+Everything below this point is the same story, written formally, with a
+proof for exactly how the $\rho\cdot L_k$ per-point error bound propagates
+through the greedy selection algorithm's approximation guarantee.
+
+---
+
 ## 0. Two-stage pipeline (formalized)
 
 Let $\mathcal X$ be the universe of candidate sample-sets (workloads), with a
@@ -518,6 +682,75 @@ closest to the centroid; this stays inside the same $\rho$-ball, so
 Theorem 1's guarantee is unaffected, only the *choice* of representative
 changes) plus fixing the `rel`-normalization confound and running more
 seeds before drawing a firm conclusion either way.
+
+### 6.1 What happens as $M$ grows? Two follow-up checks
+
+**Check 1 — does the near-target under-representation (§6's diagnosed
+mechanism) actually close as $M$ grows?** Repeating the near-target-count
+diagnostic from earlier at a much larger candidate pool (800 candidates,
+600 in the source region, so even $M{=}500$ is nowhere near "keeping
+everything," avoiding the boundary artifact a smaller pool would introduce):
+
+| $M$ | % of source pool | k-means near-target rate | true rate | $P(\text{random}\ge\text{k-means})$ |
+| ---: | ---: | ---: | ---: | ---: |
+| 15 | 2.5% | 6.7% | 20.0% | 96.7% |
+| 30 | 5.0% | 6.7% | 20.0% | 99.1% |
+| 60 | 10.0% | 21.7% | 20.0% | 42.2% |
+| 100 | 16.7% | 19.0% | 20.0% | 66.2% |
+| 150 | 25.0% | 15.3% | 20.0% | 96.9% |
+| 225 | 37.5% | 20.9% | 20.0% | 38.6% |
+| 300 | 50.0% | 20.0% | 20.0% | 54.5% |
+| 400 | 66.7% | 20.0% | 20.0% | 55.9% |
+| 500 | 83.3% | 19.8% | 20.0% | 66.1% |
+
+The bias does close on average — from a 6.7%-vs-20% gap (random wins
+96–99% of the time) down to k-means matching the true rate almost exactly
+by $M{\ge}300$ (coin-flip territory, 54–56%). But the path is **not
+monotonic**: $M{=}60$ and $M{=}225$ look great (k-means favored,
+38–42%), while $M{=}150$ — sitting between two good values — is nearly as
+bad as the smallest $M$ tested (96.9%). This isn't sampling noise in the
+$P(\cdot)$ column (each is a 3000-trial Monte Carlo average); it's that
+Lloyd's algorithm is a **non-convex optimization** — even with `n_init=10`
+random restarts, the local optimum it lands on for a *given* $M$, on a
+*fixed* draw of candidate points, can happen to align well or poorly with
+the underlying geometry. This is the practical face of the caveat already
+flagged in Section 3: $\rho(M)=O(M^{-1/d})$ is the rate *optimal*
+quantization would achieve, not a guarantee Lloyd's local optima follow
+smoothly at every specific $M$.
+
+**Check 2 — does this translate into unseen-model MAE?** Re-running
+`--mode kmeans_warmstart` (4 seeds) with $K{=}1$ fixed and $M$ swept from
+30 to 90 (source pool = 113, as in the main §6 table):
+
+| Config | #triples | $\rho$ (max) | ActiveEval-Pair | Facility-location | Random |
+| --- | ---: | ---: | --- | --- | --- |
+| Full source pool | 6780 | — | **3.62 ± 0.80** | 3.95 ± 0.65 | 4.21 ± 1.13 |
+| K-means M=30 K=1 | 1800 | 2.183 | 4.97 ± 1.21 | 4.99 ± 0.85 | 5.32 ± 0.67 |
+| Random (n=30) | 1800 | — | 4.71 ± 1.02 | 5.12 ± 1.15 | 4.80 ± 0.60 |
+| K-means M=60 K=1 | 3600 | 1.277 | **4.06 ± 0.38** | 5.31 ± 0.62 | 5.06 ± 1.00 |
+| Random (n=60) | 3600 | — | 4.26 ± 0.91 | 5.18 ± 0.53 | 5.03 ± 1.29 |
+| K-means M=90 K=1 | 5400 | 0.801 | 4.04 ± 1.14 | 4.68 ± 1.36 | 4.24 ± 0.99 |
+| Random (n=90) | 5400 | — | **3.55 ± 0.47** | 4.55 ± 0.60 | 3.96 ± 0.55 |
+
+(Raw output: `outputs/kmeans_M_sweep.json`.) At $M{=}60$, ActiveEval-Pair on
+the k-means pool (4.06) actually edges out random (4.26) — consistent with
+Check 1's coverage result at the same $M$ (k-means favored, 42.2%). But at
+$M{=}90$, random pulls back ahead (3.55 vs. 4.04) despite Check 1 calling
+$M{\approx}90$ roughly a coin flip on *coverage* — a reminder that
+near-target coverage count is a proxy for downstream MAE, not identical to
+it, and both are measured with only 4–5 seeds here (wide, overlapping CIs
+throughout — e.g. K-means M=90's ±1.14 comfortably contains random's 3.55).
+
+**Honest reading of both checks together:** growing $M$ *does* close the
+systematic gap on average, and there is a real, non-trivial regime
+(roughly $M{\approx}50$–$60\%$ of the source pool on this generator) where
+k-means becomes competitive with, or better than, random — but it is not a
+smooth dial, the specific $M$ you land on matters and can be unlucky, and
+none of this settles the question with enough statistical confidence at
+$n{\le}5$ seeds. The clean, reliable fix remains **target-aware
+representative selection** (§6, end) — it directly removes the mechanism
+causing the bias, rather than relying on $M$ being large enough to
+statistically wash it out.
 
 ---
 
