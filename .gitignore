@@ -12,3 +12,4 @@ shift_predictor/__pycache__
 .claude
 pdfs
 # benchmark-selection/
+.DS_Store
