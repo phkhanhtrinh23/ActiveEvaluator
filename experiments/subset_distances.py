@@ -115,15 +115,28 @@ def all_distance_matrices(clouds: Sequence[np.ndarray]) -> Dict[str, np.ndarray]
     return {name: pairwise_distance_matrix(clouds, fn) for name, fn in DISTANCE_FNS.items()}
 
 
-def combined_distance_matrix(base: Dict[str, np.ndarray]) -> np.ndarray:
-    """Standardize each of the three matrices then sum -- 'sum of all 3'."""
+def combined_distance_matrix(base: Dict[str, np.ndarray],
+                             weights: Dict[str, float] | None = None) -> np.ndarray:
+    """Standardize each of the three matrices then take a weighted sum.
+
+    D_sum(b_i,b_j) = sum_m w_m * z(D_m)_ij,  z(D_m) = (D_m - mean(D_m)) / std(D_m)
+
+    weights=None gives the equal-weighted 'sum of all 3' (w_m=1 each, the
+    original formula in Sec 3.4/27.2). Passing e.g.
+    {"hausdorff": 2.0, "kernel_mean": 1.0, "sliced_wasserstein": 1.0} gives
+    hausdorff double weight relative to the other two -- the
+    'sum_hausdorff_weighted' formula in Sec 27.7, motivated by hausdorff
+    being the standout performer at K=60 (Sec 27.6).
+    """
     total = None
-    for D in base.values():
+    for name, D in base.items():
+        w = 1.0 if weights is None else weights.get(name, 1.0)
         iu = np.triu_indices_from(D, k=1)
         vals = D[iu]
         mu, sd = float(vals.mean()), float(vals.std()) + 1e-9
         Dz = (D - mu) / sd
-        total = Dz if total is None else total + Dz
+        term = w * Dz
+        total = term if total is None else total + term
     return total
 
 
@@ -194,6 +207,16 @@ def build_clouds(V: np.ndarray, source_idx: Sequence[int], *,
     return [V[j] + spread * rng.normal(size=(n_points_per_subset, d)) for j in source_idx]
 
 
+# Named weighted-sum variants: formula name -> per-metric weight dict passed
+# to combined_distance_matrix. "sum" (equal weights) stays the unweighted
+# default, handled separately below so existing results/callers are untouched.
+WEIGHTED_SUM_FORMULAS: Dict[str, Dict[str, float]] = {
+    # Hausdorff was the standout performer at K=60 (Sec 27.6); double its
+    # weight relative to kernel_mean/sliced_wasserstein in the combined sum.
+    "sum_hausdorff_weighted": {"hausdorff": 2.0, "kernel_mean": 1.0, "sliced_wasserstein": 1.0},
+}
+
+
 def select_via_distance_formula(seed: int, formula: str, *, n_train_models: int,
                                 n_unseen_models: int, n_samplesets_full: int, d_lat: int,
                                 budget_K: int, n_points_per_subset: int = 20,
@@ -210,6 +233,9 @@ def select_via_distance_formula(seed: int, formula: str, *, n_train_models: int,
     if formula == "sum":
         base = all_distance_matrices(clouds)
         D = combined_distance_matrix(base)
+    elif formula in WEIGHTED_SUM_FORMULAS:
+        base = all_distance_matrices(clouds)
+        D = combined_distance_matrix(base, weights=WEIGHTED_SUM_FORMULAS[formula])
     else:
         D = pairwise_distance_matrix(clouds, DISTANCE_FNS[formula])
     t_distmat = time.time() - t1

@@ -760,7 +760,8 @@ def run_kmeans_warmstart(seeds, budget_frac, n_samplesets_full=150,
 
 
 def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, budget_K=30,
-                                    n_points_per_subset=20):
+                                    n_points_per_subset=20,
+                                    formulas=("kernel_mean", "sliced_wasserstein", "hausdorff", "sum")):
     """Alternative Stage-1 warm-start: submodular facility-location coreset
     selection of K representative source sample-sets ("best represent the
     meta-dataset", no target-awareness), under four distance formulas
@@ -775,7 +776,7 @@ def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, b
     there is no token cost to report; wall-clock seconds is the real,
     reportable resource cost here.
     """
-    formulas = ["kernel_mean", "sliced_wasserstein", "hausdorff", "sum"]
+    formulas = list(formulas)
     configs = [(f"Distance: {f}", f) for f in formulas]
     configs += [("Full source pool", None), ("Random subset", None)]
     methods = ["ActiveEval-Pair", "Facility-location", "Random"]

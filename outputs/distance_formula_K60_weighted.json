@@ -1,0 +1,103 @@
+{
+  "n_samplesets_full": 150,
+  "budget_K": 60,
+  "budget_frac": 0.15,
+  "seeds": 5,
+  "configs": {
+    "Distance: hausdorff": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 3.8128333911299706,
+        "ci": 0.6456517835156548
+      },
+      "Facility-location": {
+        "mae": 4.829962328076363,
+        "ci": 0.570658609983135
+      },
+      "Random": {
+        "mae": 5.249233916401863,
+        "ci": 0.9986297124042492
+      }
+    },
+    "Distance: sum": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.542332366108894,
+        "ci": 0.9734797581626115
+      },
+      "Facility-location": {
+        "mae": 5.1061224192380905,
+        "ci": 0.8366240686934179
+      },
+      "Random": {
+        "mae": 4.598311372101307,
+        "ci": 0.9371799956323202
+      }
+    },
+    "Distance: sum_hausdorff_weighted": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.161572344601154,
+        "ci": 0.7825260403104222
+      },
+      "Facility-location": {
+        "mae": 4.610825702548027,
+        "ci": 0.5739282912894408
+      },
+      "Random": {
+        "mae": 4.828479737043381,
+        "ci": 0.8184807327375084
+      }
+    },
+    "Full source pool": {
+      "n_triples_labelable": 6780.0,
+      "ActiveEval-Pair": {
+        "mae": 3.6803044751286507,
+        "ci": 0.6277978094056847
+      },
+      "Facility-location": {
+        "mae": 3.9386218041181564,
+        "ci": 0.5040624692899223
+      },
+      "Random": {
+        "mae": 4.393858723342419,
+        "ci": 0.947669986288824
+      }
+    },
+    "Random subset": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.410583004355431,
+        "ci": 0.764939998781261
+      },
+      "Facility-location": {
+        "mae": 5.489043369889259,
+        "ci": 0.7243055025885003
+      },
+      "Random": {
+        "mae": 5.249193161725998,
+        "ci": 1.0880636513122524
+      }
+    }
+  },
+  "timing": {
+    "hausdorff": {
+      "seconds_build_clouds": 0.0007294654846191406,
+      "seconds_distance_matrix": 0.870024299621582,
+      "seconds_greedy_select": 0.001460886001586914,
+      "seconds_total": 0.8722146511077881
+    },
+    "sum": {
+      "seconds_build_clouds": 0.0008593559265136719,
+      "seconds_distance_matrix": 2.7708568572998047,
+      "seconds_greedy_select": 0.0012755393981933594,
+      "seconds_total": 2.772991752624512
+    },
+    "sum_hausdorff_weighted": {
+      "seconds_build_clouds": 0.0007219314575195312,
+      "seconds_distance_matrix": 2.7771671295166014,
+      "seconds_greedy_select": 0.0012719154357910157,
+      "seconds_total": 2.779160976409912
+    }
+  }
+}

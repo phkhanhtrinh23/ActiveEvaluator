@@ -2465,3 +2465,55 @@ since $K{=}90$ mostly erases it. A more targeted follow-up (e.g. comparing
 *which specific* sample-sets each formula picks at $K{=}60$, rather than
 aggregate summary statistics of the selected set) would be needed to
 actually explain it rather than merely observe it.
+
+### 27.7 Weighting Hausdorff more heavily inside the sum
+
+Given Hausdorff's standout showing in §27.6, `sum` was generalized to a
+weighted combination:
+
+$$
+D_{\text{sum,weighted}}(b_i,b_j) \;=\; \sum_m w_m\, \tilde D^{(m)}_{ij},
+\qquad
+\tilde D^{(m)}_{ij} = \frac{D^{(m)}_{ij} - \mu_m}{\sigma_m}
+$$
+
+where $\tilde D^{(m)}$ is the same z-score standardization already used for
+the equal-weighted `sum` (§27.2), and $\mu_m,\sigma_m$ are the mean/std of
+$D^{(m)}$ over the candidate pool's pairwise entries. Tested weighting:
+**double Hausdorff, keep the other two at 1**:
+
+$$
+w_{\mathrm{KME}} = 1, \qquad w_{\mathrm{SW}} = 1, \qquad w_{\mathrm H} = 2.
+$$
+
+Implemented as `experiments/subset_distances.py::combined_distance_matrix(base,
+weights={"hausdorff": 2.0, "kernel_mean": 1.0, "sliced_wasserstein": 1.0})`,
+registered as formula `"sum_hausdorff_weighted"`. Reproduce:
+
+```python
+from experiments.run_acquisition_benchmark import run_distance_formula_comparison
+run_distance_formula_comparison(list(range(5)), 0.15, n_samplesets_full=150, budget_K=60,
+                                formulas=("hausdorff", "sum", "sum_hausdorff_weighted"))
+```
+
+**Results** (5 seeds, $K{=}60$, same 113-source pool as §27.6). Raw output:
+`outputs/distance_formula_K60_weighted.json`.
+
+| Config | ActiveEval-Pair MAE |
+| --- | --- |
+| Full source pool (ref.) | 3.68 ± 0.63 |
+| Hausdorff (alone) | **3.81 ± 0.65** |
+| **sum, Hausdorff-weighted ($w_H{=}2$)** | **4.16 ± 0.78** |
+| Random subset | 4.41 ± 0.76 |
+| sum (equal weights, $w_H{=}1$) | 4.54 ± 0.97 |
+
+**Doubling Hausdorff's weight moves the combined formula from losing to
+random (4.54) to beating it (4.16)** — a real, meaningful shift in the
+direction predicted, though it doesn't fully close the gap to Hausdorff
+alone (3.81); combining in kernel_mean and sliced_wasserstein still costs
+something even at the reduced $w_m{=}1$ weight. This is consistent with
+(though doesn't newly explain) §27.6's honest conclusion that Hausdorff's
+mechanism at $K{=}60$ isn't yet identified — reweighting toward it
+transfers some of its benefit into the combined formula without requiring
+that mechanism to be understood first, which is a useful practical result
+even though the underlying "why" remains open.
