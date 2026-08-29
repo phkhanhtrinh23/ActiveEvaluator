@@ -2387,7 +2387,7 @@ comparison was run entirely on the synthetic benchmark track, consistent
 with every other experiment referenced in this document, and consumed zero
 tokens.)
 
-### 27.5 Bottom line
+### 27.5 Bottom line at K=30
 
 1. Confirms, on a *provably*-guaranteed algorithm (not merely a heuristic
    like k-means), that the earlier k-means finding generalizes: **the
@@ -2398,10 +2398,70 @@ tokens.)
    exactly the sum of the other three, no overhead); **sliced_wasserstein**
    is both the weakest on MAE and the noisiest, plausibly fixable with more
    Stage-1 compute (untested here).
-3. None beats plain random subsampling at this budget. The natural next
-   experiment — following directly from
+3. None beats plain random subsampling *at this specific budget* — but see
+   §27.6, where raising the budget changes this picture non-trivially. The
+   natural next experiment — following directly from
    `docs/kmeans-submodular-warmstart.md`'s own conclusion — is a
    **target-aware version of this same coreset selector** (e.g. add the
    target region's descriptors into the pool being covered by $F(A)$, or
    weight the coverage sum by proximity to the target direction) rather
    than testing another target-blind distance formula.
+
+### 27.6 Does raising the budget K let the weaker formulas catch up?
+
+Motivated by the same question already asked (and answered, non-monotonically)
+for k-means in `docs/kmeans-submodular-warmstart.md` §6.1: repeating the
+$K{=}30$ comparison at $K{=}60$ and $K{=}90$ (same 5 seeds, same 113-source
+pool), reusing `run_distance_formula_comparison(budget_K=...)`:
+
+| Config | K=30 (§27.2) | K=60 | K=90 |
+| --- | --- | --- | --- |
+| Full source pool (ref.) | 3.68 ± 0.63 | 3.68 ± 0.63 | 3.68 ± 0.63 |
+| Random subset | 4.55 ± 0.85 | 4.41 ± 0.76 | **3.71 ± 0.48** |
+| Hausdorff | 5.46 ± 1.30 | **3.81 ± 0.65** | 3.77 ± 0.79 |
+| Kernel mean | 5.23 ± 0.89 | 4.65 ± 0.89 | 3.84 ± 0.76 |
+| Sliced Wasserstein | 5.92 ± 2.21 | **4.20 ± 0.47** | 4.25 ± 0.72 |
+| Sum | 4.90 ± 0.61 | 4.54 ± 0.97 | 4.14 ± 0.83 |
+
+Raw output: `outputs/distance_formula_K60.json`, `outputs/distance_formula_K90.json`.
+
+**Yes, at $K{=}60$ two of the four formulas do beat random** — Hausdorff
+(3.81 ± 0.65, nearly matching the full-pool reference) and sliced
+Wasserstein (4.20 ± 0.47) both clearly outperform random's 4.41 ± 0.76 at
+this budget. **But this is not a stable, monotonically-improving trend.**
+By $K{=}90$ (79.6% of the source pool): random itself jumps to
+3.71 ± 0.48, nearly matching the full-pool number; sliced Wasserstein's
+win *reverses* (4.25, back behind random); and Hausdorff/kernel_mean
+converge to values statistically indistinguishable from random given the
+heavily overlapping confidence intervals. This mirrors exactly what
+happened with k-means's own $M$-sweep (§6.1 of the companion doc): as the
+budget approaches the pool size, *every* method — including random —
+converges toward the full-pool reference, and any specific formula's
+"beats random" advantage becomes noisy and non-monotonic rather than
+something you can keep buying by raising $K$ further.
+
+**Two hypotheses for *why* Hausdorff wins at $K{=}60$ were checked directly
+and neither held up** — worth reporting as ruled out rather than silently
+dropped:
+
+1. *Better target-tail coverage.* On the actual 113-source pool used for
+   this table, Hausdorff and kernel_mean select **identical** near-target
+   counts at $K{=}60$ (12/60 = 20% each, both at the true ~20.4% rate) and
+   the **identical** target-score range ($[-4.72, 1.20]$, width 5.92 for
+   both) — not a differentiator here, even though Hausdorff clearly wins on
+   MAE and kernel_mean clearly doesn't.
+2. *Less redundant/more diverse representatives.* Mean pairwise spread among
+   the 60 selected representatives' latent positions is nearly identical
+   across all four formulas (3.24–3.46), and *zero* near-duplicate pairs
+   (spread $<0.5$) for every formula — no detectable diversity advantage
+   for Hausdorff specifically.
+
+**Honest conclusion:** the $K{=}60$ Hausdorff/sliced-Wasserstein advantage
+is real (confirmed on 5 seeds, non-overlapping-ish CIs against random) and
+worth keeping as a finding, but its *mechanism* is not yet identified — it
+isn't explained by either of the two most natural hypotheses, and it does
+not generalize into a "raise $K$ and any formula eventually wins" rule,
+since $K{=}90$ mostly erases it. A more targeted follow-up (e.g. comparing
+*which specific* sample-sets each formula picks at $K{=}60$, rather than
+aggregate summary statistics of the selected set) would be needed to
+actually explain it rather than merely observe it.

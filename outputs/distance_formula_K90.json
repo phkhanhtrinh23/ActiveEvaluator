@@ -1,0 +1,124 @@
+{
+  "n_samplesets_full": 150,
+  "budget_K": 90,
+  "budget_frac": 0.15,
+  "seeds": 5,
+  "configs": {
+    "Distance: kernel_mean": {
+      "n_triples_labelable": 5400.0,
+      "ActiveEval-Pair": {
+        "mae": 3.8405511155724525,
+        "ci": 0.7628636879265625
+      },
+      "Facility-location": {
+        "mae": 4.419520795345306,
+        "ci": 0.6711545397404856
+      },
+      "Random": {
+        "mae": 4.001813419163227,
+        "ci": 0.6586226089056213
+      }
+    },
+    "Distance: sliced_wasserstein": {
+      "n_triples_labelable": 5400.0,
+      "ActiveEval-Pair": {
+        "mae": 4.246716797351837,
+        "ci": 0.7209749509045877
+      },
+      "Facility-location": {
+        "mae": 4.617895781993866,
+        "ci": 0.7219606473334066
+      },
+      "Random": {
+        "mae": 4.567433372139931,
+        "ci": 0.5809131202797216
+      }
+    },
+    "Distance: hausdorff": {
+      "n_triples_labelable": 5400.0,
+      "ActiveEval-Pair": {
+        "mae": 3.7725483626127243,
+        "ci": 0.7889331960725517
+      },
+      "Facility-location": {
+        "mae": 4.209568053483963,
+        "ci": 0.5230716856885333
+      },
+      "Random": {
+        "mae": 4.082947410643101,
+        "ci": 0.8681523728532349
+      }
+    },
+    "Distance: sum": {
+      "n_triples_labelable": 5400.0,
+      "ActiveEval-Pair": {
+        "mae": 4.144241474568844,
+        "ci": 0.8328879861313547
+      },
+      "Facility-location": {
+        "mae": 4.164369106292725,
+        "ci": 0.563799491792547
+      },
+      "Random": {
+        "mae": 4.229910746216774,
+        "ci": 0.669445676596844
+      }
+    },
+    "Full source pool": {
+      "n_triples_labelable": 6780.0,
+      "ActiveEval-Pair": {
+        "mae": 3.6803044751286507,
+        "ci": 0.6277978094056847
+      },
+      "Facility-location": {
+        "mae": 3.9386218041181564,
+        "ci": 0.5040624692899223
+      },
+      "Random": {
+        "mae": 4.393858723342419,
+        "ci": 0.947669986288824
+      }
+    },
+    "Random subset": {
+      "n_triples_labelable": 5400.0,
+      "ActiveEval-Pair": {
+        "mae": 3.7077630311250687,
+        "ci": 0.4797047944933575
+      },
+      "Facility-location": {
+        "mae": 4.5586056262254715,
+        "ci": 0.4649646345408278
+      },
+      "Random": {
+        "mae": 3.9008019864559174,
+        "ci": 0.44017987142492754
+      }
+    }
+  },
+  "timing": {
+    "kernel_mean": {
+      "seconds_build_clouds": 0.0008331298828125,
+      "seconds_distance_matrix": 0.5650803565979003,
+      "seconds_greedy_select": 0.0015764713287353515,
+      "seconds_total": 0.5674899578094482
+    },
+    "sliced_wasserstein": {
+      "seconds_build_clouds": 0.0008386611938476562,
+      "seconds_distance_matrix": 1.3357462406158447,
+      "seconds_greedy_select": 0.001627206802368164,
+      "seconds_total": 1.3382121086120606
+    },
+    "hausdorff": {
+      "seconds_build_clouds": 0.0006414413452148438,
+      "seconds_distance_matrix": 0.853894567489624,
+      "seconds_greedy_select": 0.0016830921173095702,
+      "seconds_total": 0.8562191009521485
+    },
+    "sum": {
+      "seconds_build_clouds": 0.0005948543548583984,
+      "seconds_distance_matrix": 2.7474289417266844,
+      "seconds_greedy_select": 0.0016139030456542968,
+      "seconds_total": 2.7496376991271974
+    }
+  }
+}
