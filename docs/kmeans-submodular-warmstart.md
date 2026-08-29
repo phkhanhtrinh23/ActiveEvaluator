@@ -786,3 +786,11 @@ genuine sample-set axis there first (e.g. multiple candidate evaluation
 subsets per model, not just the one `meta_val`/`meta_test`/`dev` split each
 model currently gets); that is future work, not something this note claims
 to have measured on real Text2SQL/LLM data.
+
+See [`docs/representative_meta_dataset_facility_location_full.md`](representative_meta_dataset_facility_location_full.md)
+(§27, "Empirical Results") for a follow-up that replaces k-means with a
+*provably*-guaranteed submodular facility-location coreset selector (four
+distance formulas tested: kernel mean/MMD, sliced Wasserstein, Hausdorff,
+and their sum) — which confirms, on a structurally different algorithm,
+that the under-representation of the target-relevant tail is caused by the
+target-blind *objective*, not by k-means's specific heuristic.

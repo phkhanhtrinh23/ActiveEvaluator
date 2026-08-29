@@ -35,6 +35,7 @@ import torch
 from active_evaluator.model import ActiveEvaluator
 from baselines import ACQUISITION_REGISTRY, ESTIMATOR_REGISTRY
 from experiments.cost_models import make_cost_model, greedy_fill
+from experiments.subset_distances import select_via_distance_formula
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +44,8 @@ from experiments.cost_models import make_cost_model, greedy_fill
 
 def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=40,
                  d_lat=6, base_noise=0.08, off_on_noise_ratio=2.0 / 0.45,
-                 n_clusters=None, reps_per_cluster=None, random_subset_size=None):
+                 n_clusters=None, reps_per_cluster=None, random_subset_size=None,
+                 fixed_source_sets=None):
     """Synthesise a meta-evaluation matrix with heteroscedastic label noise.
 
     The deployment target is a subset of sample-sets, HELD OUT of training. Source
@@ -110,6 +112,11 @@ def make_problem(seed: int, n_train_models=60, n_unseen_models=8, n_samplesets=4
     elif random_subset_size is not None:
         k = max(1, min(random_subset_size, len(source_sets_all)))
         source_sets = sorted(rng.choice(source_sets_all, size=k, replace=False).tolist())
+    elif fixed_source_sets is not None:
+        # Caller (e.g. experiments.subset_distances.select_via_distance_formula)
+        # already picked which source sample-sets to keep, via its own
+        # reduction rule -- use exactly that list unchanged.
+        source_sets = list(fixed_source_sets)
     else:
         source_sets = source_sets_all
     # source relevance: proximity of each source sample-set to the target region,
@@ -752,6 +759,86 @@ def run_kmeans_warmstart(seeds, budget_frac, n_samplesets_full=150,
     return out
 
 
+def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, budget_K=30,
+                                    n_points_per_subset=20):
+    """Alternative Stage-1 warm-start: submodular facility-location coreset
+    selection of K representative source sample-sets ("best represent the
+    meta-dataset", no target-awareness), under four distance formulas
+    between sample-set point clouds (experiments/subset_distances.py):
+    kernel_mean (MMD), sliced_wasserstein, hausdorff, and their standardized
+    sum. Compared against the k-means-clustering reduction and a matched-size
+    random-subset control from run_kmeans_warmstart, at the same K.
+
+    Reports unseen-model MAE plus wall-clock cost of the Stage-1 reduction
+    itself (cloud construction, pairwise distance matrix, greedy selection)
+    per formula -- this is a pure CPU/NumPy benchmark with no LLM calls, so
+    there is no token cost to report; wall-clock seconds is the real,
+    reportable resource cost here.
+    """
+    formulas = ["kernel_mean", "sliced_wasserstein", "hausdorff", "sum"]
+    configs = [(f"Distance: {f}", f) for f in formulas]
+    configs += [("Full source pool", None), ("Random subset", None)]
+    methods = ["ActiveEval-Pair", "Facility-location", "Random"]
+    rows = {name: {meth: [] for meth in methods} for name, _ in configs}
+    triples = {name: [] for name, _ in configs}
+    timing = {f: [] for f in formulas}
+
+    for seed in seeds:
+        for name, formula in configs:
+            if formula is not None:
+                sel_idx, diag = select_via_distance_formula(
+                    seed, formula, n_train_models=60, n_unseen_models=8,
+                    n_samplesets_full=n_samplesets_full, d_lat=6, budget_K=budget_K,
+                    n_points_per_subset=n_points_per_subset)
+                timing[formula].append(diag)
+                prob = make_problem(seed, n_samplesets=n_samplesets_full, fixed_source_sets=sel_idx)
+            elif name == "Full source pool":
+                prob = make_problem(seed, n_samplesets=n_samplesets_full)
+            else:  # matched-size random control
+                prob = make_problem(seed, n_samplesets=n_samplesets_full, random_subset_size=budget_K)
+            P = len(prob["X"])
+            triples[name].append(P)
+            budget = max(1, int(budget_frac * P))
+            rows[name]["ActiveEval-Pair"].append(_acq(prob, "activeeval_pair", budget, seed, influence=True))
+            rows[name]["Facility-location"].append(_acq(prob, "facility_location", budget, seed, cover_all=True))
+            rows[name]["Random"].append(_acq(prob, "random", budget, seed))
+
+    def _mci(v):
+        v = np.asarray(v, float)
+        ci = 1.96 * v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else 0.0
+        return float(v.mean()), float(ci)
+
+    out = {"n_samplesets_full": n_samplesets_full, "budget_K": budget_K,
+           "budget_frac": budget_frac, "seeds": len(seeds), "configs": {}, "timing": {}}
+    print(f"\nDistance-formula coreset comparison ({len(seeds)} seeds, source universe "
+          f"~{n_samplesets_full - n_samplesets_full//4} sample-sets, K={budget_K} representatives, "
+          f"acquisition budget = {budget_frac*100:.0f}% of the reduced pool). Unseen MAE (pp).\n")
+    width = max(len(n) for n, _ in configs)
+    print(f"{'Config'.ljust(width)}  {'#triples':>9}  " + "  ".join(f"{m:>16}" for m in methods))
+    print("-" * (width + 11 + 18 * len(methods)))
+    for name, _ in configs:
+        entry = {"n_triples_labelable": float(np.mean(triples[name]))}
+        cells = []
+        for meth in methods:
+            m, ci = _mci(rows[name][meth])
+            entry[meth] = {"mae": m, "ci": ci}
+            cells.append(f"{m:6.2f}+/-{ci:4.2f}")
+        out["configs"][name] = entry
+        print(f"{name.ljust(width)}  {entry['n_triples_labelable']:9.0f}  "
+              + "  ".join(f"{c:>16}" for c in cells))
+
+    print(f"\nStage-1 reduction wall-clock cost (seconds, mean over {len(seeds)} seeds; no LLM calls "
+          f"in this synthetic benchmark, so there is no token cost to report):")
+    print(f"{'Formula':<20} {'build_clouds':>13} {'dist_matrix':>13} {'greedy_select':>14} {'total':>8}")
+    for f in formulas:
+        keys = ["seconds_build_clouds", "seconds_distance_matrix", "seconds_greedy_select", "seconds_total"]
+        means = {k: float(np.mean([d[k] for d in timing[f]])) for k in keys}
+        out["timing"][f] = means
+        print(f"{f:<20} {means['seconds_build_clouds']:13.3f} {means['seconds_distance_matrix']:13.3f} "
+              f"{means['seconds_greedy_select']:14.3f} {means['seconds_total']:8.3f}")
+    return out
+
+
 def run_ablation(seeds, budget_frac):
     """RQ5 ablation. This offline benchmark robustly isolates the component the paper
     finds most important---target-aware narrowing---against a no-structure random
@@ -872,7 +959,7 @@ def run_threshold_budget(seeds, max_budget_frac, thresholds):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool", "threshold_budget", "kmeans_warmstart"], default="main")
+    ap.add_argument("--mode", choices=["main", "sweep", "ablation", "entropy_mi_sweep", "noise_sweep", "cost_budget", "fixed_model_pool", "threshold_budget", "kmeans_warmstart", "distance_formula_comparison"], default="main")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--budget-frac", type=float, default=0.15)
     ap.add_argument("--out", default="outputs/acquisition_benchmark.json")
@@ -904,6 +991,9 @@ def main():
     elif args.mode == "kmeans_warmstart":
         res = run_kmeans_warmstart(seeds, args.budget_frac)
         out_path = "outputs/kmeans_warmstart_benchmark.json"
+    elif args.mode == "distance_formula_comparison":
+        res = run_distance_formula_comparison(seeds, args.budget_frac)
+        out_path = "outputs/distance_formula_comparison.json"
     else:
         res = run(seeds, args.budget_frac)
         order = sorted(res.items(), key=lambda kv: kv[1]["mae"])
