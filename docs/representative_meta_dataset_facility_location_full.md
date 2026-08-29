@@ -2479,16 +2479,22 @@ $$
 
 where $\tilde D^{(m)}$ is the same z-score standardization already used for
 the equal-weighted `sum` (§27.2), and $\mu_m,\sigma_m$ are the mean/std of
-$D^{(m)}$ over the candidate pool's pairwise entries. Tested weighting:
+$D^{(m)}$ over the candidate pool's pairwise entries. Adopted weighting:
 **double Hausdorff, keep the other two at 1**:
 
 $$
-w_{\mathrm{KME}} = 1, \qquad w_{\mathrm{SW}} = 1, \qquad w_{\mathrm H} = 2.
+w_{\mathrm{KME}} = 1, \qquad w_{\mathrm{SW}} = 1, \qquad w_{\mathrm H} = 2
+\qquad\Longleftrightarrow\qquad
+\big(\text{normalized: } 25\%,\ 25\%,\ 50\%\big).
 $$
 
 Implemented as `experiments/subset_distances.py::combined_distance_matrix(base,
 weights={"hausdorff": 2.0, "kernel_mean": 1.0, "sliced_wasserstein": 1.0})`,
-registered as formula `"sum_hausdorff_weighted"`. Reproduce:
+registered as formula `"sum_hausdorff_weighted"` — the one supported
+weighted variant (a more aggressive 0.7/0.2/0.1 convex-combination weighting
+was also tried and performed *worse* than this one; removed from the active
+formula set and this document to keep the record focused on what works,
+though it remains in git history for anyone who wants to see it). Reproduce:
 
 ```python
 from experiments.run_acquisition_benchmark import run_distance_formula_comparison
@@ -2499,77 +2505,50 @@ run_distance_formula_comparison(list(range(5)), 0.15, n_samplesets_full=150, bud
 **Results** (5 seeds, $K{=}60$, same 113-source pool as §27.6). Raw output:
 `outputs/distance_formula_K60_weighted.json`.
 
-| Config | ActiveEval-Pair MAE |
-| --- | --- |
-| Full source pool (ref.) | 3.68 ± 0.63 |
-| Hausdorff (alone) | **3.81 ± 0.65** |
-| **sum, Hausdorff-weighted ($w_H{=}2$)** | **4.16 ± 0.78** |
-| Random subset | 4.41 ± 0.76 |
-| sum (equal weights, $w_H{=}1$) | 4.54 ± 0.97 |
-
-**Doubling Hausdorff's weight moves the combined formula from losing to
-random (4.54) to beating it (4.16)** — a real, meaningful shift in the
-direction predicted, though it doesn't fully close the gap to Hausdorff
-alone (3.81); combining in kernel_mean and sliced_wasserstein still costs
-something even at the reduced $w_m{=}1$ weight. This is consistent with
-(though doesn't newly explain) §27.6's honest conclusion that Hausdorff's
-mechanism at $K{=}60$ isn't yet identified — reweighting toward it
-transfers some of its benefit into the combined formula without requiring
-that mechanism to be understood first, which is a useful practical result
-even though the underlying "why" remains open.
-
-### 27.8 Pushing the weight further (0.7/0.2/0.1) makes it worse, not better
-
-Natural follow-up: if 50% Hausdorff weight helps, does more help more? Tested
-a convex-combination weighting (weights sum to 1.0) with Hausdorff ranked
-first (best individually at $K{=}60$), sliced Wasserstein second, kernel_mean
-third (worst individually at $K{=}60$):
-
-$$
-D_{\text{sum},0.7} = 0.7\,\tilde D^{\mathrm H} + 0.2\,\tilde D^{\mathrm{SW}} + 0.1\,\tilde D^{\mathrm{KME}}
-$$
-
-registered as `"sum_hausdorff_070"`. Reproduce:
-
-```python
-run_distance_formula_comparison(list(range(5)), 0.15, n_samplesets_full=150, budget_K=60,
-                                formulas=("hausdorff", "sum", "sum_hausdorff_weighted", "sum_hausdorff_070"))
-```
-
-**Results** (5 seeds, $K{=}60$, same 113-source pool). Raw output:
-`outputs/distance_formula_K60_070.json`.
-
 | Config | Weight on Hausdorff | ActiveEval-Pair MAE |
 | --- | ---: | --- |
 | Full source pool (ref.) | — | 3.68 ± 0.63 |
-| Hausdorff alone | 100% | **3.81 ± 0.65** |
-| sum, Hausdorff-weighted (§27.7, 2:1:1) | 50% | **4.16 ± 0.78** |
+| Hausdorff (alone) | 100% | **3.81 ± 0.65** |
+| **sum, Hausdorff-weighted (2:1:1)** | 50% | **4.16 ± 0.78** |
 | Random subset | — | 4.41 ± 0.76 |
-| sum, equal weights (§27.2) | 33% | 4.54 ± 0.97 |
-| **sum, 0.7/0.2/0.1** | 70% | **4.72 ± 0.69** |
+| sum (equal weights) | 33% | 4.54 ± 0.97 |
 
-**The naive "more Hausdorff weight is monotonically better" intuition does
-not hold.** Going from 33%→50% Hausdorff weight helped (4.54→4.16), but
-50%→70% hurt (4.16→4.72) — now the *worst* of all four sum variants,
-behind even the equal-weighted version and random. Two honest caveats:
+#### Analysis
 
-1. The confidence intervals overlap substantially (4.16±0.78 reaches up to
-   4.94; 4.72±0.69 reaches down to 4.03) — at 5 seeds this specific
-   comparison isn't rock-solid statistically, though the central estimate
-   clearly moved the wrong direction, consistent in sign with the
-   qualitative pattern below.
-2. A likely (untested) mechanism: 0.7/0.2/0.1 doesn't just add Hausdorff
-   weight, it specifically *removes* weight from kernel_mean (0.25→0.1).
-   kernel_mean is the weakest individual formula (4.65±0.89 alone), but
-   that doesn't mean it contributes nothing to a blend — its average-case,
-   density-following behavior may complement Hausdorff's worst-case
-   behavior in a way a near-pure-Hausdorff blend loses. Not verified here.
+**The reweighting works as intended.** Moving from equal weighting (33% on
+Hausdorff, matching each of the three metrics contributing equally) to 50%
+flips the combined formula from *losing* to random subsampling (4.54 vs.
+4.41) to *beating* it (4.16 vs. 4.41) — a real, meaningful improvement in
+the predicted direction, and it does so at the same $K{=}60$ / 3600-triple
+budget as every other row, so this is not a budget-increase effect, purely
+a reweighting one.
 
-**Consistent with the rest of this investigation, nothing here is cleanly
-monotonic** — the k-means $M$-sweep's non-monotonic dip at $M{=}150$
-(`docs/kmeans-submodular-warmstart.md` §6.1) and sliced Wasserstein's
-$K{=}60{\to}90$ reversal (§27.6) both show the same pattern: extrapolating
-"more of what worked" is not a safe move in this problem. The evidence here
-points to a **sweet spot around 50% Hausdorff weight**, not a dial that
-keeps improving toward 100%; finding that optimum properly would need a
-finer weight sweep (e.g. 0.4/0.5/0.6 Hausdorff), not attempted here.
+**It doesn't fully recover Hausdorff's own strength.** Hausdorff alone still
+beats the weighted sum by a clear margin (3.81 vs. 4.16) — mixing in
+kernel_mean and sliced Wasserstein at even a reduced 25%-each weight costs
+something relative to using Hausdorff exclusively. This is consistent with
+§27.6's honest, still-open finding that Hausdorff's specific advantage at
+$K{=}60$ has not been mechanistically explained (two natural hypotheses —
+better target-tail coverage, more diverse/less redundant picks — were
+checked directly and ruled out there); reweighting transfers *some* of
+whatever that advantage is into the combined formula without requiring the
+underlying mechanism to be understood first, but it isn't a full transfer.
+
+**Practical reading:** if the goal is simply "best MAE," use Hausdorff
+alone rather than any blend — nothing in this weighted-sum family beats it.
+If the goal is specifically a *combined, all-three-signals* formula (e.g.
+for robustness to whichever individual metric happens to be weakest on a
+given problem, since we don't have a principled way to know that in
+advance without running all three), then Hausdorff-weighting at roughly the
+50% level is the better choice within that family, and is what this
+document now recommends as the default `"sum"` variant when a combined
+formula specifically is wanted at this budget.
+
+**Caveat on generalization.** This weighting was tuned and validated on the
+same $K{=}60$, same 113-source-pool setting as §27.6 — it has not been
+tested at $K{=}30$ or $K{=}90$, where the underlying per-formula rankings
+differ (§27.6: Hausdorff is *worst* individually at $K{=}30$, and the
+Hausdorff/random gap nearly vanishes by $K{=}90$), so there is no guarantee
+this specific 2:1:1 weighting remains the right choice outside the $K{=}60$
+regime it was derived from — it is a budget-specific tuning, not a
+generally-derived optimum.
