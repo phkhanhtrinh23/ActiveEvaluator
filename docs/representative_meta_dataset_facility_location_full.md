@@ -2517,3 +2517,59 @@ mechanism at $K{=}60$ isn't yet identified — reweighting toward it
 transfers some of its benefit into the combined formula without requiring
 that mechanism to be understood first, which is a useful practical result
 even though the underlying "why" remains open.
+
+### 27.8 Pushing the weight further (0.7/0.2/0.1) makes it worse, not better
+
+Natural follow-up: if 50% Hausdorff weight helps, does more help more? Tested
+a convex-combination weighting (weights sum to 1.0) with Hausdorff ranked
+first (best individually at $K{=}60$), sliced Wasserstein second, kernel_mean
+third (worst individually at $K{=}60$):
+
+$$
+D_{\text{sum},0.7} = 0.7\,\tilde D^{\mathrm H} + 0.2\,\tilde D^{\mathrm{SW}} + 0.1\,\tilde D^{\mathrm{KME}}
+$$
+
+registered as `"sum_hausdorff_070"`. Reproduce:
+
+```python
+run_distance_formula_comparison(list(range(5)), 0.15, n_samplesets_full=150, budget_K=60,
+                                formulas=("hausdorff", "sum", "sum_hausdorff_weighted", "sum_hausdorff_070"))
+```
+
+**Results** (5 seeds, $K{=}60$, same 113-source pool). Raw output:
+`outputs/distance_formula_K60_070.json`.
+
+| Config | Weight on Hausdorff | ActiveEval-Pair MAE |
+| --- | ---: | --- |
+| Full source pool (ref.) | — | 3.68 ± 0.63 |
+| Hausdorff alone | 100% | **3.81 ± 0.65** |
+| sum, Hausdorff-weighted (§27.7, 2:1:1) | 50% | **4.16 ± 0.78** |
+| Random subset | — | 4.41 ± 0.76 |
+| sum, equal weights (§27.2) | 33% | 4.54 ± 0.97 |
+| **sum, 0.7/0.2/0.1** | 70% | **4.72 ± 0.69** |
+
+**The naive "more Hausdorff weight is monotonically better" intuition does
+not hold.** Going from 33%→50% Hausdorff weight helped (4.54→4.16), but
+50%→70% hurt (4.16→4.72) — now the *worst* of all four sum variants,
+behind even the equal-weighted version and random. Two honest caveats:
+
+1. The confidence intervals overlap substantially (4.16±0.78 reaches up to
+   4.94; 4.72±0.69 reaches down to 4.03) — at 5 seeds this specific
+   comparison isn't rock-solid statistically, though the central estimate
+   clearly moved the wrong direction, consistent in sign with the
+   qualitative pattern below.
+2. A likely (untested) mechanism: 0.7/0.2/0.1 doesn't just add Hausdorff
+   weight, it specifically *removes* weight from kernel_mean (0.25→0.1).
+   kernel_mean is the weakest individual formula (4.65±0.89 alone), but
+   that doesn't mean it contributes nothing to a blend — its average-case,
+   density-following behavior may complement Hausdorff's worst-case
+   behavior in a way a near-pure-Hausdorff blend loses. Not verified here.
+
+**Consistent with the rest of this investigation, nothing here is cleanly
+monotonic** — the k-means $M$-sweep's non-monotonic dip at $M{=}150$
+(`docs/kmeans-submodular-warmstart.md` §6.1) and sliced Wasserstein's
+$K{=}60{\to}90$ reversal (§27.6) both show the same pattern: extrapolating
+"more of what worked" is not a safe move in this problem. The evidence here
+points to a **sweet spot around 50% Hausdorff weight**, not a dial that
+keeps improving toward 100%; finding that optimum properly would need a
+finer weight sweep (e.g. 0.4/0.5/0.6 Hausdorff), not attempted here.

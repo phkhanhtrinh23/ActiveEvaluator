@@ -214,6 +214,10 @@ WEIGHTED_SUM_FORMULAS: Dict[str, Dict[str, float]] = {
     # Hausdorff was the standout performer at K=60 (Sec 27.6); double its
     # weight relative to kernel_mean/sliced_wasserstein in the combined sum.
     "sum_hausdorff_weighted": {"hausdorff": 2.0, "kernel_mean": 1.0, "sliced_wasserstein": 1.0},
+    # Weights sum to 1.0 (a convex combination): 0.7 to hausdorff (best at
+    # K=60, Sec 27.6), 0.2 to sliced_wasserstein (second-best), 0.1 to
+    # kernel_mean (worst of the three at K=60).
+    "sum_hausdorff_070": {"hausdorff": 0.7, "sliced_wasserstein": 0.2, "kernel_mean": 0.1},
 }
 
 
