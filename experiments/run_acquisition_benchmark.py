@@ -761,7 +761,8 @@ def run_kmeans_warmstart(seeds, budget_frac, n_samplesets_full=150,
 
 def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, budget_K=30,
                                     n_points_per_subset=20,
-                                    formulas=("kernel_mean", "sliced_wasserstein", "hausdorff", "sum")):
+                                    formulas=("kernel_mean", "sliced_wasserstein", "hausdorff", "sum"),
+                                    include_kmeans=False):
     """Alternative Stage-1 warm-start: submodular facility-location coreset
     selection of K representative source sample-sets ("best represent the
     meta-dataset", no target-awareness), under four distance formulas
@@ -778,6 +779,8 @@ def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, b
     """
     formulas = list(formulas)
     configs = [(f"Distance: {f}", f) for f in formulas]
+    if include_kmeans:
+        configs += [("K-means (M=K, reps=1)", "__kmeans__")]
     configs += [("Full source pool", None), ("Random subset", None)]
     methods = ["ActiveEval-Pair", "Facility-location", "Random"]
     rows = {name: {meth: [] for meth in methods} for name, _ in configs}
@@ -786,7 +789,10 @@ def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, b
 
     for seed in seeds:
         for name, formula in configs:
-            if formula is not None:
+            if formula == "__kmeans__":
+                prob = make_problem(seed, n_samplesets=n_samplesets_full,
+                                    n_clusters=budget_K, reps_per_cluster=1)
+            elif formula is not None:
                 sel_idx, diag = select_via_distance_formula(
                     seed, formula, n_train_models=60, n_unseen_models=8,
                     n_samplesets_full=n_samplesets_full, d_lat=6, budget_K=budget_K,

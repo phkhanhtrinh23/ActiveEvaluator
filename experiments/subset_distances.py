@@ -170,6 +170,128 @@ def select_representative_subsets(D: np.ndarray, budget_K: int) -> List[int]:
 
 
 # ---------------------------------------------------------------------------
+# ProbCover (Yehuda, Bagon, Baskin & Radzyner, "Active Learning Through a
+# Covering Lens", NeurIPS 2022; reference implementation:
+# github.com/orobix/active-learning, activelearning/queries/representative/
+# probcover_query.py)
+# ---------------------------------------------------------------------------
+
+
+def select_probcover(D: np.ndarray, budget_K: int, delta: float | None = None) -> List[int]:
+    """ProbCover coreset selection, adapted from a pre-labeled-set active-learning
+    query to a from-scratch coreset problem (no pre-existing labeled set here,
+    unlike the reference implementation's X_start).
+
+    Hard-threshold coverage: two candidates are "adjacent" iff D_ij <= delta.
+    Greedily pick the candidate that covers the most currently-uncovered
+    candidates (including itself), mark those covered, repeat. If no
+    candidate covers anything new, halve delta and retry (mirrors the
+    reference implementation's response to running out of uncovered points);
+    if that still finds nothing, fall back to picking an arbitrary remaining
+    candidate so the budget is always filled.
+
+    Unlike facility location's smooth RBF coverage (max similarity, i.e.
+    diminishing returns from *how close* a match is), ProbCover only cares
+    whether a point is within delta at all -- a hard covering-radius
+    criterion, not a submodular-guaranteed one (this is a heuristic greedy,
+    with its own covering-radius argument from the source paper, not the
+    NWF78 (1-1/e) bound proven for facility location in
+    docs/submodularity-audit.md Part 1).
+    """
+    n = D.shape[0]
+    if delta is None:
+        iu = np.triu_indices(n, k=1)
+        delta = float(np.median(D[iu])) if iu[0].size else 1.0
+        delta = delta if delta > 0 else 1.0
+
+    adjacency = D <= delta
+    np.fill_diagonal(adjacency, True)  # a point always covers itself
+
+    covered = np.zeros(n, dtype=bool)
+    avail = np.ones(n, dtype=bool)
+    selected: List[int] = []
+    for _ in range(min(budget_K, n)):
+        uncovered = ~covered
+        gains = (adjacency & uncovered[None, :]).sum(axis=1).astype(float)
+        gains[~avail] = -1.0
+        best = int(np.argmax(gains))
+        if gains[best] <= 0:
+            delta = delta / 2.0
+            adjacency = D <= delta
+            np.fill_diagonal(adjacency, True)
+            gains = (adjacency & uncovered[None, :]).sum(axis=1).astype(float)
+            gains[~avail] = -1.0
+            best = int(np.argmax(gains))
+            if gains[best] <= 0:
+                remaining = np.where(avail)[0]
+                if remaining.size == 0:
+                    break
+                best = int(remaining[0])
+        selected.append(best)
+        avail[best] = False
+        covered = covered | adjacency[best]
+    return selected
+
+
+# ---------------------------------------------------------------------------
+# Kernel herding (Chen, Welling & Smola, ICML 2010)
+# ---------------------------------------------------------------------------
+
+
+def compute_subset_kernel_gram(clouds: Sequence[np.ndarray], tau: float | None = None,
+                                rng: np.random.Generator | None = None) -> np.ndarray:
+    """Gram matrix G[i,j] = <mu_i, mu_j>_H = mean_{a in cloud_i, b in cloud_j} k(a,b)
+    under a shared RBF kernel -- the inner product between subset i and j's
+    kernel mean embeddings (Sec 3.1). This is exactly the cross term used
+    inside kernel_mean_distance, computed once for every pair so kernel
+    herding can be run purely from G (no explicit feature map needed).
+    """
+    n = len(clouds)
+    if tau is None:
+        rng = rng or np.random.default_rng(0)
+        pooled = np.concatenate(clouds, axis=0)
+        tau = _median_bandwidth(pooled, rng)
+    G = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i, n):
+            g = float(_rbf_gram(clouds[i], clouds[j], tau).mean())
+            G[i, j] = G[j, i] = g
+    return G
+
+
+def select_kernel_herding(G: np.ndarray, budget_K: int) -> List[int]:
+    """Kernel herding: greedily pick the candidate whose embedding best fills
+    the current gap between the full-set kernel mean mu_B and the selected
+    subset's kernel mean mu_{A_t}, using only the Gram matrix G.
+
+    a_{t+1} = argmax_i < phi(b_i), mu_B - mu_{A_t} >
+            = argmax_i [ mean_j G[i,j]  -  mean_{a in A_t} G[i,a] ]
+
+    Minimizes MMD(A,B) directly -- a *global distribution-matching*
+    objective, structurally different from facility location's *coverage*
+    objective (every b_j has a good representative in A). -MMD(A,B) is not
+    generally monotone or submodular, so this does not carry the (1-1/e)
+    guarantee proven for facility location in docs/submodularity-audit.md
+    Part 1 -- it has its own convergence theory (empirical kernel mean
+    convergence, Chen/Welling/Smola 2010), not a submodular one.
+    """
+    n = G.shape[0]
+    target = G.mean(axis=1)  # <phi(b_i), mu_B> for every i
+    running_sum = np.zeros(n)  # sum_{a in A_t} G[:, a]
+    avail = np.ones(n, dtype=bool)
+    selected: List[int] = []
+    for t in range(1, min(budget_K, n) + 1):
+        current_mean_proj = running_sum / max(t - 1, 1)  # <phi(b_i), mu_{A_{t-1}}>, 0 when t=1
+        score = target - current_mean_proj
+        score = np.where(avail, score, -np.inf)
+        best = int(np.argmax(score))
+        selected.append(best)
+        avail[best] = False
+        running_sum = running_sum + G[:, best]
+    return selected
+
+
+# ---------------------------------------------------------------------------
 # end-to-end: regenerate the exact source pool a given make_problem() call
 # will build, then pick K representatives per distance formula
 # ---------------------------------------------------------------------------
@@ -233,7 +355,18 @@ def select_via_distance_formula(seed: int, formula: str, *, n_train_models: int,
     t_clouds = time.time() - t0
 
     t1 = time.time()
-    if formula == "sum":
+    if formula == "kernel_herding":
+        # Needs the Gram matrix (inner products), not a distance matrix --
+        # branches to select_kernel_herding below instead of the shared
+        # facility-location/ProbCover distance-matrix path.
+        D = None
+        G = compute_subset_kernel_gram(clouds)
+    elif formula == "probcover":
+        # ProbCover is distance-metric-agnostic; defaults to the kernel_mean
+        # (MMD) distance matrix as the closest analogue to the reference
+        # implementation's plain Euclidean distance.
+        D = pairwise_distance_matrix(clouds, DISTANCE_FNS["kernel_mean"])
+    elif formula == "sum":
         base = all_distance_matrices(clouds)
         D = combined_distance_matrix(base)
     elif formula in WEIGHTED_SUM_FORMULAS:
@@ -244,7 +377,12 @@ def select_via_distance_formula(seed: int, formula: str, *, n_train_models: int,
     t_distmat = time.time() - t1
 
     t2 = time.time()
-    local_selected = select_representative_subsets(D, budget_K)
+    if formula == "kernel_herding":
+        local_selected = select_kernel_herding(G, budget_K)
+    elif formula == "probcover":
+        local_selected = select_probcover(D, budget_K)
+    else:
+        local_selected = select_representative_subsets(D, budget_K)
     t_select = time.time() - t2
 
     selected_original = [source_idx[i] for i in local_selected]
