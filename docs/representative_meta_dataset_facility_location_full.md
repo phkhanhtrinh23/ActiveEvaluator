@@ -3049,6 +3049,14 @@ the Gram must be approximated — subsample points per cloud, or use
 Nyström / random Fourier features to avoid the $O(M^2)$ term. **Not tested
 here**; flagged as required future work rather than assumed to work.
 
+> **§30 derives all of this from first principles**: Theorem A proves the
+> Gram needs $\Omega(M^2)$ (sums admit no certificates); Theorem B proves
+> Hausdorff needs only $O(M)$ on average (one witness retires an inner
+> loop); the fitted cost model predicts the crossover at
+> $M^\star = 82.4$, confirmed by measured parity at $M{=}80$. §30.5 gives
+> the Random-Fourier-Feature fix and shows it is the exact *dual* of
+> §28.2's additivity argument.
+
 ---
 
 ## Part B — Why kernel herding is still accurate
@@ -3520,3 +3528,245 @@ Further limitations, for the record:
   points-per-sample-set is unrealistically small (§28.4), and $d_H$'s
   behaviour — hence $\varepsilon$ — may differ substantially at realistic
   $M$.
+
+---
+
+## 30. Why kernel herding loses to Hausdorff as $M$ grows — a complexity-theoretic account
+
+§28.4 *reported* the crossover ($M\approx100$) as a measurement. This
+section *derives* it. The question is precise:
+
+> Let $M$ = points per sample-set. Why does exact Gram computation cost
+> $\Theta(M^2)$ while exact Hausdorff costs $O(M)$ on average — and where
+> exactly do the curves cross?
+
+The answer is a genuine asymmetry in the two objectives' **certificate
+structure**, and it turns out to be the *exact dual* of the additivity
+argument in §28.2. Everything below concerns **computational cost only** —
+not accuracy.
+
+### 30.1 Theorem A — exact Gram evaluation requires $\Omega(M^2)$
+
+$$
+G_{ij} \;=\; \frac{1}{M^2}\sum_{m=1}^{M}\sum_{n=1}^{M} k(x_{im},x_{jn}).
+$$
+
+**Theorem A.** In the kernel-oracle model (an algorithm learns kernel
+values only by querying $k(x_{im},x_{jn})$ for chosen $(m,n)$), any
+algorithm computing $G_{ij}$ **exactly** must issue all $M^2$ queries.
+
+*Proof (adversary argument).* Suppose algorithm $\mathcal A$ halts and
+outputs the correct value after querying a proper subset
+$Q\subsetneq\{1,\dots,M\}^2$, and pick $(m_0,n_0)\notin Q$. Construct a
+second instance identical on every queried entry but with the
+$(m_0,n_0)$ entry perturbed by $\delta\neq0$. Since $\mathcal A$'s control
+flow and output depend only on the values it queried, it returns the *same*
+number on both instances. But the true values differ by
+$\delta/M^2\neq0$, so $\mathcal A$ is wrong on at least one. $\blacksquare$
+
+**Why the sum is "rigid":** every term has non-zero influence,
+$\partial G_{ij}/\partial k(x_{im},x_{jn}) = 1/M^2 \neq 0$. **No partial
+information certifies anything about the remainder** — there is no
+subset of terms whose values ever let you skip the rest.
+
+*Scope:* this lower bound is for **exact** computation in the oracle model.
+It does **not** forbid fast *approximation* from the raw point coordinates
+— which is precisely the escape route of §30.5 (and why tree codes / Fast
+Gauss Transform / random features exist).
+
+### 30.2 Theorem B — Hausdorff admits $o(M^2)$ *exact* evaluation
+
+The directed Hausdorff distance is a nested extremum,
+
+$$
+d_H^{\rightarrow}(A,B) \;=\; \max_{x\in A}\, g(x), \qquad g(x) := \min_{y\in B}\lVert x-y\rVert .
+$$
+
+**Theorem B (certificate structure).** Computing $\max_x g(x)$ exactly does
+**not** require computing $g(x)$ exactly for all $x$. It suffices to know:
+
+1. $g(x^\star)$ exactly for the maximiser $x^\star$, and
+2. for every other $x$, a **certificate** that $g(x)\le g(x^\star)$.
+
+And such a certificate is a *single point*: if any $y\in B$ satisfies
+$\lVert x-y\rVert < c$, then
+
+$$
+g(x) \;=\; \min_{y'\in B}\lVert x-y'\rVert \;\le\; \lVert x-y\rVert \;<\; c ,
+$$
+
+so $x$ cannot attain a maximum already known to be $\ge c$. One kernel of
+work retires an entire inner loop. $\blacksquare$
+
+This is exactly the early-break in SciPy's `directed_hausdorff` (Taha &
+Hanbury, *IEEE TPAMI* 2015): maintain the running maximum `cmax`, and
+abandon the inner scan the instant any $y$ falls within `cmax`.
+
+> **The fundamental asymmetry, stated once:**
+> $$\text{certificate complexity of }\textstyle\sum_{m,n} \;=\; \Theta(M^2), \qquad \text{certificate complexity of } \max_x\min_y \;=\; O(M).$$
+> A **sum** has no witnesses — every term must be seen. A **max-min** is
+> certified by one witness per outer point. This, not implementation
+> quality, is why one prunes and the other cannot.
+
+**Proposition (expected cost under randomised scan order).** Fix $x$ and
+let `cmax` be the running maximum. Let
+
+$$
+S_x \;=\; \big|\{\,y\in B:\ \lVert x-y\rVert < \texttt{cmax}\,\}\big|, \qquad p_x = S_x/M .
+$$
+
+Scanning $B$ in uniformly random order, the number of inner iterations
+$T_x$ before the first witness is the position of the first "success" when
+drawing without replacement from $M$ items containing $S_x$ successes:
+
+$$
+\boxed{\ \mathbb E[T_x] \;=\; \frac{M+1}{S_x+1} \;=\; \frac{M+1}{M p_x + 1}\ }
+$$
+
+Hence the expected total work is
+$\mathbb E\big[\sum_{x\in A}T_x\big] = \sum_{x\in A}\frac{M+1}{Mp_x+1}$, and:
+
+- if $p_x=\Theta(1)$ for typical $x$ — i.e. a constant fraction of $B$ lies
+  within `cmax` — then $\mathbb E[T_x]=O(1)$ and the total is $\boxed{O(M)}$;
+- only the few points near the true maximiser have $p_x\to0$ and pay a full
+  $O(M)$ scan;
+- in the adversarial case $p_x=\Theta(1/M)$ for all $x$, the bound degrades
+  to the worst case $O(M^2)$.
+
+**Why $p_x=\Theta(1)$ holds here.** `cmax` rapidly approaches
+$h=\max_x g(x)$, which is a *maximum* over nearest-neighbour distances. A
+typical $x$ has $g(x)\ll h$, so a ball of radius $h$ about $x$ contains a
+constant fraction of $B$. In this benchmark the clouds are Gaussian blobs
+of spread $0.3$ around latent centres $O(1)$ apart, so this holds
+comfortably — and the measured affine fit below confirms it.
+
+### 30.3 The cost model, and a falsifiable prediction
+
+Theorems A and B predict per-pair costs of the form
+
+$$
+C_{\mathrm{haus}}(M) = c_0 + c_1 M \quad (\text{affine}), \qquad
+C_{\mathrm{gram}}(M) = c_2 M^2 \quad (\text{quadratic}),
+$$
+
+where $c_0$ is fixed Python$\to$C call overhead (paid twice per pair).
+Fitting **only** the endpoints $M\in\{10,640\}$ ($N{=}30$ clouds, 435
+pairs, µs/pair):
+
+$$
+\widehat C_{\mathrm{haus}}(M) = 138.3 + 0.1456\,M, \qquad
+\widehat C_{\mathrm{gram}}(M) = 0.02215\,M^2 .
+$$
+
+**Held-out validation** at $M\in\{40,80,160\}$ (not used in the fit):
+
+| $M$ | Hausdorff pred. | measured | Gram pred. | measured |
+| ---: | ---: | ---: | ---: | ---: |
+| 40 | 144.2 | 140.6 | 35.4 | 40.4 |
+| 80 | 150.0 | 145.6 | 141.7 | 138.9 |
+| 160 | 161.6 | 157.9 | 566.9 | 555.5 |
+
+Both functional forms are confirmed to within 3–14%. In particular
+Hausdorff really is **affine** in $M$ — $64\times$ more points costs only
+$1.7\times$ more time — vindicating the $O(M)$-average claim of §30.2, and
+the Gram is cleanly **quadratic**, vindicating Theorem A.
+
+**Crossover.** Setting $c_0+c_1M=c_2M^2$ and taking the positive root:
+
+$$
+\boxed{\ M^\star \;=\; \frac{c_1+\sqrt{c_1^2+4c_0c_2}}{2c_2} \;=\; \frac{0.1456+\sqrt{0.1456^2+4(138.3)(0.02215)}}{2(0.02215)} \;=\; 82.4\ }
+$$
+
+**Measured at $M{=}80$: cost ratio $= 0.95$** — parity, as predicted, to
+within 3% of $M^\star$. The full curve:
+
+| $M$ | Hausdorff µs/pair | Gram µs/pair | ratio (gram/haus) |
+| ---: | ---: | ---: | ---: |
+| 10 | 139.8 | 7.7 | 0.05 (**herding 18× faster**) |
+| 40 | 140.6 | 40.4 | 0.29 |
+| **80** | **145.6** | **138.9** | **0.95 ← crossover** |
+| 160 | 157.9 | 555.5 | 3.52 |
+| 640 | 231.5 | 9071.0 | **39.2 (Hausdorff 39× faster)** |
+
+The asymptotic ratio grows without bound:
+$C_{\mathrm{gram}}/C_{\mathrm{haus}} = \Theta(M^2)/\Theta(M) = \Theta(M)$.
+So the disadvantage is not a constant penalty — **it grows linearly in the
+number of examples per workload.**
+
+### 30.4 Practical consequence
+
+Real Text2SQL workloads have $M$ in the hundreds to thousands. At $M{=}640$
+the exact-Gram route is already $39\times$ slower; at $M{=}5000$ the model
+predicts $\approx 0.02215\cdot 5000^2 = 554$ ms/pair versus $\approx 0.9$
+ms/pair for Hausdorff — a $600\times$ gap, and $\binom{113}{2}$ pairs would
+take roughly an hour versus six seconds. **The §27.9 benchmark's $M{=}20$
+sits an order of magnitude below the crossover, which is the sole reason
+herding appeared cheap there.**
+
+### 30.5 The fix — and why it is the *dual* of §28.2
+
+Herding's $\Theta(M^2)$ is **not intrinsic to the method**; it is an
+artifact of evaluating the Gram *exactly through the kernel trick*.
+Theorem A's lower bound applies to the kernel-oracle model — but we have
+the raw coordinates, and because the mean embedding is **additive** we can
+linearise it.
+
+**Random Fourier Features (Rahimi & Recht, NIPS 2007).** By Bochner's
+theorem a shift-invariant kernel is the Fourier transform of a probability
+measure; for the Gaussian $k(x,y)=e^{-\lVert x-y\rVert^2/\tau}$ that
+measure is $\mathcal N\!\big(0,\tfrac{2}{\tau}I\big)$. Draw
+$\omega_1,\dots,\omega_D\sim\mathcal N(0,\tfrac2\tau I)$ and
+$b_r\sim\mathrm{Unif}[0,2\pi]$, and set
+
+$$
+z(x) \;=\; \sqrt{\tfrac2D}\,\Big(\cos(\omega_1^\top x+b_1),\ \dots,\ \cos(\omega_D^\top x+b_D)\Big)\ \in\ \mathbb R^{D},
+\qquad \mathbb E\big[z(x)^\top z(y)\big] = k(x,y).
+$$
+
+Now the crucial step — **because $\mu_i$ is an average, the feature map
+commutes with it**:
+
+$$
+\hat\mu_i \;=\; \frac1M\sum_{m=1}^{M} z(x_{im}) \ \in\ \mathbb R^{D}
+\qquad\Longrightarrow\qquad
+G_{ij} \;\approx\; \hat\mu_i^\top\hat\mu_j .
+$$
+
+Cost: $O(MD)$ **once per cloud** to build $\hat\mu_i$, then $O(D)$ **per
+pair** — total $O(NMD + N^2D)$ instead of $O(N^2M^2)$. **Linear in $M$**,
+with uniform approximation error $O\big(\sqrt{\log M/D}\big)$.
+
+**Hausdorff admits no such linearisation.** §28.2 proved the max-min does
+not decompose into per-cloud summaries — there is no finite-dimensional
+$\psi$ with $d_H(A,B)\approx f(\psi(A),\psi(B))$. It cannot be linearised;
+it can only be **pruned**.
+
+This yields a pleasing duality — the two structures are opposites in *both*
+respects:
+
+| | Structure | Exact cost | Gets to $O(M)$ by | Summarisable? |
+| --- | --- | --- | --- | --- |
+| **Kernel herding** | additive $\sum$ | $\Theta(M^2)$ (Thm A) | **linearisation** (RFF) | **yes** — one vector $\hat\mu_i$ |
+| **Hausdorff** | nested $\max\min$ | $O(M)$ avg (Thm B) | **pruning** (certificates) | **no** (§28.2) |
+
+The very additivity that makes herding's *selection loop* cheap (§28.2 —
+one reusable vector) is what makes its *exact Gram* expensive; and it is
+simultaneously what provides the escape hatch. Conversely the nested
+extremum that makes Hausdorff *unsummarisable* is exactly what makes it
+*prunable*. **Each objective's weakness is the source of its own remedy.**
+
+⚠️ **Not implemented or tested.** The RFF route is a proposal derived here,
+not a measured result. It carries its own trade-offs — the $O(\sqrt{\log M/D})$
+error perturbs $G$, and §29's covering-radius/MMD guarantees would need
+re-deriving under that perturbation. Treat as the natural next experiment,
+not as a solved problem.
+
+### 30.6 Summary
+
+| Question | Answer |
+| --- | --- |
+| Why is the Gram $\Theta(M^2)$? | **Theorem A**: every one of the $M^2$ terms has non-zero influence on a sum, so an adversary can invalidate any answer that skipped one. Sums admit **no certificates**. |
+| Why is Hausdorff $O(M)$? | **Theorem B**: a single witness $y$ with $\lVert x-y\rVert<\texttt{cmax}$ certifies that $x$ is irrelevant, retiring its whole inner loop. Expected inner length $\frac{M+1}{Mp_x+1}=O(1)$ when a constant fraction of $B$ is within `cmax`. |
+| Where do they cross? | $M^\star=\frac{c_1+\sqrt{c_1^2+4c_0c_2}}{2c_2}=82.4$ from endpoint-only fits; **measured parity at $M{=}80$ (ratio 0.95)**. |
+| How bad does it get? | Ratio grows as $\Theta(M)$ — unbounded. $39\times$ at $M{=}640$; a predicted $\sim600\times$ at $M{=}5000$. |
+| Is it fixable? | **Yes, in principle** — additivity permits RFF linearisation to $O(MD)$. Untested here, and it perturbs the guarantees of §29. |

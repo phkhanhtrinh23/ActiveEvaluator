@@ -626,7 +626,9 @@ explains the extremes but **not** the middle of the ranking (§29.7).
 Full derivations, proofs, profiling, and honest limits:
 [docs/representative_meta_dataset_facility_location_full.md](docs/representative_meta_dataset_facility_location_full.md)
 §27.9 (results), §28 (why herding is fast *and* accurate), §29 (what Hausdorff
-provably guarantees) — `outputs/herding_probcover_comparison_K60_timed.json`.
+provably guarantees), §30 (why herding's cost advantage reverses as $M$ grows —
+$\Omega(M^2)$ vs $O(M)$, with the crossover *predicted* at $M^\star{=}82.4$ and
+measured at 80) — `outputs/herding_probcover_comparison_K60_timed.json`.
 
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 
