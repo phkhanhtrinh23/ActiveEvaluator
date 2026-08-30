@@ -2466,6 +2466,17 @@ since $K{=}90$ mostly erases it. A more targeted follow-up (e.g. comparing
 aggregate summary statistics of the selected set) would be needed to
 actually explain it rather than merely observe it.
 
+> **Update — this open question is now largely resolved.** §29 identifies
+> the mechanism: Hausdorff-induced facility location controls the
+> **covering radius** $\varepsilon(A)$ (Lemma 1, Theorem 2), and measuring
+> $\varepsilon(A)$ directly (§29.6) shows Hausdorff has *no* coverage
+> advantage at $K{=}15$, a negligible 1.9% one at $K{=}30$, and a decisive
+> 9–34% one from $K{=}60$ — tracking its MAE record (worst at $K{=}30$,
+> best at $K{=}60$) exactly. §28.8 supplies the complementary half: at
+> small $K$ it spends its budget on extremes (0/10, 0/15 near-target
+> picks), so it obtains neither a uniform coverage guarantee nor a
+> distributional match. Caveats and what remains unexplained: §29.7.
+
 ### 27.7 Weighting Hausdorff more heavily inside the sum
 
 Given Hausdorff's standout showing in §27.6, `sum` was generalized to a
@@ -3243,3 +3254,269 @@ coverage, would settle it).
 | **Why still accurate?** | The Gaussian kernel is **characteristic**, so the mean embedding is **injective** — one vector determines the whole distribution (it secretly stores every moment). MMD is therefore a true metric, not a lossy proxy. |
 | **Why beat random?** | Herding **is** Frank–Wolfe on $\tfrac12\lVert g-\mu_B\rVert^2$, giving $O(1/T)$ vs random's $O(1/\sqrt T)$ — conditionally (interior condition may fail in infinite dimensions, degrading to parity). |
 | **Why *not quite* beat Hausdorff?** | Different objectives: herding matches the **distribution**, Hausdorff covers the **worst case**. At $K{=}60$ worst-case coverage wins by 0.38 pp — but the CIs overlap, and at *small* $K$ the ordering reverses (§27.6, §28.8). |
+
+---
+
+## 29. What Hausdorff *provably* guarantees, and why that guarantee binds at $K\ge60$
+
+### 29.0 Scope — what is and is not claimed here
+
+**This section does not prove that Hausdorff is empirically best.** That
+claim cannot honestly be proved, for three reasons visible in our own data:
+
+1. The confidence intervals **overlap** (Hausdorff $3.81\pm0.65$ vs.
+   Hausdorff-weighted sum $4.16\pm0.78$ vs. herding $4.19\pm0.90$ at 5
+   seeds) — "best" is a central-estimate ordering, not a separated result.
+2. The ordering **reverses at $K{=}30$**, where Hausdorff was the *worst*
+   method tested (5.46 pp, §27.2).
+3. Empirical superiority on a synthetic generator is not the kind of
+   statement a theorem can establish.
+
+What **can** be proved, and is proved below, is strictly this: the two
+families optimise **logically independent guarantees** — Hausdorff-induced
+facility location controls a **uniform ($L^\infty$)** quantity, kernel
+herding controls an **average ($L^1$)** one. Section 29.6 then shows,
+by measurement, that Hausdorff's guarantee only becomes *materially
+stronger than its competitors'* at $K\gtrsim60$ — which is exactly where
+its empirical advantage appears. That is a **mechanistic explanation
+consistent with the data**, not a proof of the empirical ranking, and
+§29.7 states plainly what it fails to explain.
+
+### 29.1 Definitions
+
+Fix a metric $d$ on sample-sets (below, $d = d_H$, the Hausdorff metric of
+§3.3). For a selected set $A$, write the **distance-to-nearest-representative**
+and the **covering radius**:
+
+$$
+d(j,A) \;:=\; \min_{i\in A} d(b_i,b_j),
+\qquad
+\boxed{\ \varepsilon(A) \;:=\; \max_{1\le j\le N} d(j,A)\ }
+$$
+
+In words: $\varepsilon(A)$ is *the distance from the worst-served candidate
+to its closest chosen representative*. Small $\varepsilon(A)$ means **no
+candidate anywhere in the pool is far from something we selected**.
+
+### 29.2 Lemma 1 — the facility-location objective controls the covering radius
+
+Recall $S_{ij}=\exp(-d_{ij}^2/\tau)$ and $F(A)=\sum_{j=1}^N\max_{i\in A}S_{ij}$
+(§6). Since $t\mapsto e^{-t^2/\tau}$ is decreasing,
+$\max_{i\in A}S_{ij}=\exp(-d(j,A)^2/\tau)$, so
+
+$$
+F(A) \;=\; \sum_{j=1}^{N} \exp\!\Big(-\frac{d(j,A)^2}{\tau}\Big).
+$$
+
+**Lemma 1(a) — unconditional direction.** Since $d(j,A)\le\varepsilon(A)$
+for every $j$,
+
+$$
+F(A) \;\ge\; N\exp\!\Big(-\frac{\varepsilon(A)^2}{\tau}\Big).
+$$
+
+*Proof.* Termwise monotonicity of $\exp(-t^2/\tau)$. $\blacksquare$
+
+**Lemma 1(b) — converse.** Let $\Delta := N - F(A) \ge 0$. If $\Delta < 1$
+then
+
+$$
+\boxed{\ \varepsilon(A) \;\le\; \sqrt{\ \tau\,\ln\frac{1}{1-\Delta}\ }\ }
+$$
+
+*Proof.* Every summand of
+$N-F(A)=\sum_j\big(1-e^{-d(j,A)^2/\tau}\big)$ is non-negative, so any
+single one is at most the total. Applying this to the index $j^\star$
+attaining $d(j^\star,A)=\varepsilon(A)$:
+
+$$
+1-e^{-\varepsilon(A)^2/\tau} \;\le\; \Delta
+\;\Longrightarrow\;
+e^{-\varepsilon(A)^2/\tau} \;\ge\; 1-\Delta
+\;\Longrightarrow\;
+\frac{\varepsilon(A)^2}{\tau} \;\le\; \ln\frac{1}{1-\Delta},
+$$
+
+and taking square roots gives the claim. $\blacksquare$
+
+**Honest note on Lemma 1(b):** it is informative only when $\Delta<1$,
+i.e. $F(A)>N-1$ — coverage must be near-saturated before the bound says
+anything. This is a genuine limitation, not a formality: at small $K$,
+$\Delta\gg1$ and the bound is vacuous. That is the first hint of why
+Hausdorff needs a large enough budget before its guarantee means anything.
+
+### 29.3 Theorem 2 — covering radius bounds *worst-case* label transfer
+
+Here is why $\varepsilon(A)$ is the quantity we should care about.
+
+**Assumption (A1, Lipschitz accuracy).** The true accuracy functional
+$a^\star(b)\in[0,1]$ — the accuracy a fixed reference model attains on
+workload $b$ — is $L$-Lipschitz with respect to $d_H$:
+
+$$
+|a^\star(b)-a^\star(b')| \;\le\; L\,d_H(b,b') \qquad \forall b,b'.
+$$
+
+*(This is an assumption, not a theorem. It is plausible for $d_H$
+specifically: $d_H(b,b')$ small means every example in $b$ has a nearby
+counterpart in $b'$ and vice versa, so a model behaving continuously on
+inputs should score similarly. It is **not verified** on this generator.)*
+
+**Theorem 2.** Under (A1), for every candidate $b_j$ let
+$i^\star(j)=\arg\min_{i\in A}d_H(b_i,b_j)$ be its nearest selected
+representative. Then
+
+$$
+\boxed{\ \max_{1\le j\le N}\ \big|a^\star(b_j)-a^\star\big(b_{i^\star(j)}\big)\big| \;\le\; L\,\varepsilon(A)\ }
+$$
+
+*Proof.* Fix $j$. By (A1) and the definition of $i^\star(j)$,
+
+$$
+\big|a^\star(b_j)-a^\star(b_{i^\star(j)})\big| \;\le\; L\,d_H\big(b_j,b_{i^\star(j)}\big) \;=\; L\,d(j,A) \;\le\; L\,\varepsilon(A).
+$$
+
+Taking the maximum over $j$ preserves the inequality. $\blacksquare$
+
+**Interpretation.** The label we *did* pay for at $b_{i^\star(j)}$ is within
+$L\varepsilon(A)$ of the label we *did not* pay for at $b_j$ — **uniformly,
+for every unlabelled candidate simultaneously**. Chaining with Lemma 1(b):
+whenever $F(A)>N-1$,
+
+$$
+\max_j\big|a^\star(b_j)-a^\star(b_{i^\star(j)})\big| \;\le\; L\sqrt{\tau\ln\tfrac{1}{1-\Delta}} .
+$$
+
+### 29.4 Theorem 3 — kernel herding bounds only the *average*
+
+Now the contrast. Work in the subset-level RKHS of §27.9, where
+$\varphi(b_i)=\mu_i$ and $G_{ij}=\langle\varphi(b_i),\varphi(b_j)\rangle_{\mathcal H}$,
+with $\mu_B=\frac1N\sum_j\varphi(b_j)$ and $\mu_A=\frac1{|A|}\sum_{i\in A}\varphi(b_i)$.
+
+**Theorem 3.** For any $f\in\mathcal H$,
+
+$$
+\boxed{\ \Big|\ \frac1N\sum_{j=1}^{N} f(b_j)\ -\ \frac1{|A|}\sum_{i\in A} f(b_i)\ \Big| \;\le\; \lVert f\rVert_{\mathcal H}\,\big\lVert \mu_B-\mu_A\big\rVert_{\mathcal H}\ }
+$$
+
+*Proof.* By the reproducing property $f(b)=\langle f,\varphi(b)\rangle$, so
+by linearity $\frac1N\sum_j f(b_j)=\langle f,\mu_B\rangle$ and
+$\frac1{|A|}\sum_{i\in A}f(b_i)=\langle f,\mu_A\rangle$. Hence the
+left-hand side equals $|\langle f,\mu_B-\mu_A\rangle|$, and Cauchy–Schwarz
+gives the bound. $\blacksquare$
+
+Applying this to $f=a^\star$ (assuming $a^\star\in\mathcal H$ with
+$\lVert a^\star\rVert_{\mathcal H}\le R$) yields exactly what herding
+controls:
+
+$$
+\Big|\underbrace{\tfrac1N\textstyle\sum_j a^\star(b_j)}_{\text{pool mean accuracy}} \;-\; \underbrace{\tfrac1{|A|}\textstyle\sum_{i\in A} a^\star(b_i)}_{\text{mean over what we labelled}}\Big| \;\le\; R\,\lVert\mu_B-\mu_A\rVert_{\mathcal H}.
+$$
+
+**This is an average over the pool, and it is the *only* thing bounded.**
+It permits individual candidates to be arbitrarily mis-represented so long
+as the errors cancel.
+
+### 29.5 The two guarantees are *logically independent*
+
+Neither implies the other — both directions fail, by explicit
+counterexample.
+
+**(i) Small MMD $\;\not\Rightarrow\;$ small covering radius.**
+Let the pool consist of $99$ copies of a workload at descriptor $x_0$ and
+one outlier at $x_1$, with $\lVert\varphi(x_1)-\varphi(x_0)\rVert = c$.
+Select $A$ = any $K$ of the $99$ copies. Then $\mu_A=\varphi(x_0)$ and
+
+$$
+\lVert\mu_B-\mu_A\rVert = \Big\lVert \tfrac{99}{100}\varphi(x_0)+\tfrac{1}{100}\varphi(x_1)-\varphi(x_0)\Big\rVert = \tfrac{c}{100},
+$$
+
+i.e. **MMD is tiny** — herding is perfectly satisfied. Yet the outlier is
+entirely unrepresented: $\varepsilon(A)=d(x_1,x_0)$, which can be
+arbitrarily large, and by Theorem 2 nothing at all is guaranteed about
+$a^\star(x_1)$.
+
+**(ii) Small covering radius $\;\not\Rightarrow\;$ small MMD.**
+Same pool. Select $A$ with half its budget near $x_0$ and half near $x_1$.
+Now $\varepsilon(A)\approx0$ — perfect coverage — but
+$\mu_A\approx\tfrac12\varphi(x_0)+\tfrac12\varphi(x_1)$ while
+$\mu_B\approx\tfrac{99}{100}\varphi(x_0)+\tfrac1{100}\varphi(x_1)$, giving
+$\lVert\mu_B-\mu_A\rVert\approx0.49\,c$ — **MMD is large**. The *frequencies*
+are badly wrong even though every region is covered.
+
+$$
+\boxed{\ \text{coverage } (L^\infty) \ \ \text{and} \ \ \text{distribution matching } (L^1) \ \ \text{are incomparable guarantees.}\ }
+$$
+
+This is the precise mathematical sense in which §28.8's empirical
+observation (herding reproduces frequencies; Hausdorff chases extremes) is
+not an accident of implementation but a **necessary consequence of the two
+objectives**.
+
+### 29.6 Measured — Hausdorff's guarantee only *separates* at $K\gtrsim60$
+
+Theory says $\varepsilon(A)$ is what Hausdorff buys. Measuring it directly
+(seed 0, covering radius computed in the Hausdorff metric for every
+method's selection, so all rows are comparable):
+
+| $K$ | Hausdorff | Kernel mean | Herding | sum (2:1:1) | ProbCover |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 15 | 3.242 | 3.577 | 3.458 | 3.345 | **3.177** |
+| 30 | **2.522** | 2.570 | 2.666 | 3.257 | 3.177 |
+| 60 | **1.764** | 1.930 | 2.658 | 2.764 | 2.687 |
+| 90 | **1.491** | 1.845 | 2.191 | 2.687 | 2.280 |
+
+Read the *margins*, not the ranks:
+
+| $K$ | Hausdorff $\varepsilon$ | best competitor | Hausdorff's margin |
+| ---: | ---: | ---: | --- |
+| 15 | 3.242 | 3.177 (ProbCover) | **none — it loses** |
+| 30 | 2.522 | 2.570 (kernel mean) | 1.9% — negligible |
+| 60 | 1.764 | 1.930 (kernel mean) | **9.4%**; vs herding **34%** |
+| 90 | 1.491 | 1.845 (kernel mean) | **24%** |
+
+**This resolves the open question from §27.6.** Hausdorff's covering-radius
+advantage is *absent* at $K{=}15$, *negligible* at $K{=}30$, and only
+becomes substantial from $K{=}60$ — tracking its MAE record exactly:
+worst method at $K{=}30$ (5.46 pp), best at $K{=}60$ (3.81 pp). The
+mechanism the theory predicts and the measurement confirms:
+
+- **At small $K$**, Lemma 1(b) is vacuous ($\Delta\gg1$), Hausdorff has no
+  meaningful coverage edge, *and* (§28.8) it spends its budget on extremes
+  — 0/10 and 0/15 near-target picks. It gets neither guarantee: no uniform
+  bound and no distributional match. Worst of both worlds, hence worst MAE.
+- **At $K\gtrsim60$**, $\varepsilon(A)$ drops sharply and separates from
+  every competitor. Theorem 2's uniform bound becomes tight, no region of
+  descriptor space is left for the meta-evaluator to extrapolate into
+  blindly, and its MAE becomes best.
+
+### 29.7 What this does *not* explain — stated plainly
+
+Covering radius is **not** a sufficient statistic for MAE. Two rows in our
+own $K{=}60$ data contradict a simple "lower $\varepsilon$ ⟹ lower MAE"
+reading:
+
+| Method | $\varepsilon$ rank | MAE rank |
+| --- | --- | --- |
+| Hausdorff | 1st (1.764) | 1st (3.81) ✓ |
+| Kernel mean | **2nd** (1.930) | **4th** (4.65) ✗ |
+| sum (2:1:1) | **5th** (2.764) | **2nd** (4.16) ✗ |
+
+So $\varepsilon$ cleanly explains the Hausdorff *extremes* of the story —
+why it fails at small $K$ and wins at large $K$ — but it does **not**
+order the middle of the field. Something else (plausibly the
+distribution-matching axis of §29.4, on which `sum` and herding do well and
+`kernel_mean` does not) is also in play; a two-factor account is needed and
+is not developed here.
+
+Further limitations, for the record:
+
+- **(A1) is assumed, not verified.** No test was run for Lipschitzness of
+  $a^\star$ in $d_H$ on this generator.
+- **The covering-radius table is a single seed.** The MAE numbers are 5
+  seeds; these are not.
+- **The MAE ranking is not statistically separated** (§29.0).
+- **All of this is on the synthetic benchmark.** §27.9's $M{=}20$
+  points-per-sample-set is unrealistically small (§28.4), and $d_H$'s
+  behaviour — hence $\varepsilon$ — may differ substantially at realistic
+  $M$.

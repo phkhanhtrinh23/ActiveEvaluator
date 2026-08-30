@@ -608,10 +608,25 @@ realistic data.** It holds at this benchmark's 20 points/sample-set, but the ker
 Gram is $O(M^2)$ in points-per-sample-set while SciPy's Hausdorff is ~$O(M)$
 average-case; measured crossover is $M\approx100$, and at $M{=}640$ Hausdorff is
 **40× faster** than herding. Real workloads have hundreds of examples each, so
-expect this ranking to flip. Full derivation, profiling, and the theory of *why*
-herding stays accurate despite being a cheap average:
+expect this ranking to flip.
+
+**Why Hausdorff wins — and why it *lost* at $K{=}30$.** The two families optimise
+**logically independent** guarantees (proved by counterexample in §29.5):
+Hausdorff-induced facility location controls the **covering radius**
+$\varepsilon(A)=\max_j\min_{i\in A}d_H(b_i,b_j)$, which bounds *worst-case*
+label transfer uniformly over every unlabelled candidate
+($\max_j|a^\star(b_j)-a^\star(\mathrm{rep}(j))|\le L\,\varepsilon(A)$, Theorem 2);
+kernel herding controls $\lVert\mu_B-\mu_A\rVert$, which bounds only the
+*pool-average* accuracy (Theorem 3). Measuring $\varepsilon(A)$ directly shows
+Hausdorff has **no** coverage edge at $K{=}15$, a negligible 1.9% edge at
+$K{=}30$, and a decisive 9–34% edge from $K{=}60$ — tracking its MAE record
+(worst method at $K{=}30$, best at $K{=}60$) exactly. Caveat: covering radius
+explains the extremes but **not** the middle of the ranking (§29.7).
+
+Full derivations, proofs, profiling, and honest limits:
 [docs/representative_meta_dataset_facility_location_full.md](docs/representative_meta_dataset_facility_location_full.md)
-§27.9–§27.10 (`outputs/herding_probcover_comparison_K60_timed.json`).
+§27.9 (results), §28 (why herding is fast *and* accurate), §29 (what Hausdorff
+provably guarantees) — `outputs/herding_probcover_comparison_K60_timed.json`.
 
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 
