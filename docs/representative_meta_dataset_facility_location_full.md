@@ -2764,13 +2764,20 @@ computation, not about anything new implemented in this section.
 On ActiveEval-Pair it lands at 4.19 ± 0.90 — third overall, essentially
 tied with sliced Wasserstein (4.20 ± 0.47) and the Hausdorff-weighted sum
 (4.16 ± 0.78), clearly ahead of random (4.41), k-means (4.61), and
-kernel_mean alone (4.65). And its Stage-1 cost (0.087s) is **7× cheaper**
-than the next-cheapest method (kernel_mean/ProbCover, ~0.6s) and **35×
-cheaper** than the Hausdorff-weighted sum (3.0s) — it needs only *one*
+kernel_mean alone (4.65). And its Stage-1 cost (0.093s) is **~6× cheaper**
+than the next-cheapest method (ProbCover/kernel_mean, ~0.58s) and **~31×
+cheaper** than the Hausdorff-weighted sum (2.86s) — it needs only *one*
 Gram-matrix pass, not a pairwise-distance computation per point followed by
 standardization and combination. This is a real, practically useful
 finding: **kernel herding gets most of the benefit of the best
 distance-formula methods at a small fraction of the Stage-1 compute.**
+
+> ⚠️ **But see §28.4**: this speed advantage is **regime-specific and
+> reverses** at realistic sample-set sizes. The kernel Gram is $O(M^2)$ in
+> points-per-sample-set while SciPy's Hausdorff is $O(M)$ average-case with
+> high fixed overhead; measured crossover is $M\approx100$, and at $M{=}640$
+> Hausdorff is $40\times$ *faster*. The benchmark's $M{=}20$ sits deep in
+> the regime that favours herding. §28 derives why, and what to do about it.
 
 This is worth pausing on given §27.9's own theory: kernel herding carries
 *no* submodular guarantee (its objective, $-\mathrm{MMD}(A,B)$, is not
@@ -2831,3 +2838,408 @@ the Hausdorff-weighted sum, which needed the $K{=}60$-specific tuning
 documented in §27.7–27.8 to become competitive). **ProbCover is not
 recommended at this budget regime** without further investigation at
 smaller $K$ or a different base distance.
+
+---
+
+## 28. Why is kernel herding both *fast* and *nearly as accurate* as Hausdorff?
+
+The §27.9 result is surprising on its face. Kernel herding scored
+**4.19 ± 0.90** vs Hausdorff's **3.81 ± 0.65** — statistically
+indistinguishable at 5 seeds — while using **~9× less** Stage-1 compute
+(0.093s vs 0.876s). Two questions deserve real answers:
+
+> **(A)** Why is it *faster*?
+> **(B)** How can something that just takes an *average* be nearly as good
+> as something that carefully examines the *worst-case* point?
+
+This section answers both from scratch. No prior background is assumed:
+every symbol is defined, every claim is either proved or explicitly marked
+as measured/cited. **Section 28.4 contains an important correction** to the
+naive reading of the speed result — the advantage is real but
+regime-specific, and it *reverses* on realistic data.
+
+---
+
+### 28.1 Setup and notation (plain English first)
+
+We have $N$ candidate sample-sets ("workloads"). Sample-set $b_i$ is a
+**cloud of $M$ points** in $\mathbb R^d$:
+
+$$
+b_i = \{x_{i1}, x_{i2}, \ldots, x_{iM}\}, \qquad x_{im}\in\mathbb R^d.
+$$
+
+Think: each $x_{im}$ is one example inside that workload (an embedded
+prompt), and the cloud is the whole workload. In §27's benchmark
+$M{=}20$, $d{=}6$, $N{=}113$.
+
+To pick representatives we must **compare two clouds**. That comparison is
+where all the cost lives, and where the two methods differ fundamentally.
+
+**The two comparison rules, in plain English:**
+
+- **Hausdorff** asks: *"What is the single worst-matched point?"* For every
+  point in cloud $A$, find its nearest neighbour in cloud $B$; take the
+  worst of those. Then repeat in the other direction and take the worse of
+  the two. It is a **worst-case** question.
+- **Kernel mean / herding** asks: *"On average, do these clouds look
+  alike?"* Summarise each cloud by an average, then compare the averages.
+  It is an **average-case** question.
+
+Formally:
+
+$$
+d_H(b_i,b_j) = \max\Big\{\ \max_{x\in b_i}\min_{y\in b_j}\lVert x-y\rVert,\ \ \max_{y\in b_j}\min_{x\in b_i}\lVert x-y\rVert\ \Big\}
+$$
+
+$$
+\mu_i \;=\; \frac1M\sum_{m=1}^{M}\varphi(x_{im}) \;\in\; \mathcal H,
+\qquad
+\operatorname{MMD}(b_i,b_j) = \lVert \mu_i - \mu_j\rVert_{\mathcal H}
+$$
+
+where $\varphi$ maps a point into a feature space $\mathcal H$ with
+$\langle\varphi(x),\varphi(y)\rangle_{\mathcal H} = k(x,y)$, and $k$ is the
+Gaussian/RBF kernel $k(x,y)=\exp(-\lVert x-y\rVert^2/\tau)$.
+
+---
+
+## Part A — Why kernel herding is faster
+
+### 28.2 The structural reason: *additive* vs *nested-extremum* aggregation
+
+This is the heart of it, and it is worth stating precisely.
+
+**Kernel herding's aggregation is additive (a sum).** Look at $\mu_i$: it
+is $\frac1M\sum_m \varphi(x_{im})$ — each point contributes its own term,
+independently, and the terms are added. The consequence is that the whole
+cloud **collapses into one single vector** $\mu_i$. Two clouds are then
+compared by comparing two vectors:
+
+$$
+\langle \mu_i,\mu_j\rangle_{\mathcal H}
+= \Big\langle \tfrac1M\textstyle\sum_m \varphi(x_{im}),\ \tfrac1M\textstyle\sum_n \varphi(x_{jn})\Big\rangle
+= \frac1{M^2}\sum_{m=1}^{M}\sum_{n=1}^{M} k(x_{im},x_{jn})
+\;=:\; G_{ij}.
+$$
+
+The middle step uses only bilinearity of the inner product — that is the
+*entire* mathematical content, and it is exactly what makes the method
+cheap. Everything herding needs is a function of the $N\times N$ matrix
+$G$:
+
+$$
+\operatorname{MMD}^2(b_i,b_j) = \lVert\mu_i-\mu_j\rVert^2 = G_{ii} + G_{jj} - 2G_{ij},
+$$
+
+$$
+\langle\varphi(b_i),\mu_B\rangle = \tfrac1N\textstyle\sum_j G_{ij},
+\qquad
+\langle\varphi(b_i),\mu_{A_t}\rangle = \tfrac1t\textstyle\sum_{a\in A_t} G_{ia}.
+$$
+
+**Once $G$ is built, the raw points are never touched again.**
+
+**Hausdorff's aggregation is a nested extremum (max of min), which does not
+decompose.** In $\max_{x}\min_{y}\lVert x-y\rVert$, the contribution of a
+point $x\in b_i$ is $\min_{y\in b_j}\lVert x-y\rVert$ — a quantity that
+depends on *every point of the other cloud*. You cannot compute it from a
+per-cloud summary, because $\min$ and $\max$ are not linear and do not
+commute with aggregation:
+
+$$
+\min_y \lVert x - y\rVert \ \ \text{is \textit{not} expressible as}\ \ f\big(x,\ \text{summary}(b_j)\big)
+$$
+
+for any fixed finite summary. Concretely: $\mathbb E[\min] \neq
+\min[\mathbb E]$, and no amount of pre-averaging cloud $b_j$ recovers the
+nearest-neighbour structure. **So Hausdorff must keep all $M$ points of
+both clouds and re-scan them for every pair.** There is no $G$-like object
+to precompute and reuse.
+
+> **The one-sentence version:** kernel herding gets to *summarise each
+> cloud once and reuse that summary in all $N-1$ of its comparisons*;
+> Hausdorff must re-examine the raw points afresh for every single pair.
+
+### 28.3 Exact operation counts, and measured confirmation
+
+The structural difference cashes out into a concrete arithmetic saving.
+Note $G_{ii}$ (the self-term) appears in every $\operatorname{MMD}$
+involving cloud $i$ — but it only has to be computed **once**, on the
+diagonal.
+
+| | Kernel-matrix blocks per pair | Total $M^2$-blocks over all pairs |
+| --- | --- | --- |
+| `kernel_mean_distance` (as used by the MMD distance formula) | $K_{AA}, K_{BB}, K_{AB}$ → **3** | $3\cdot\binom{N}{2} = 18{,}984$ |
+| `compute_subset_kernel_gram` (herding's path) | $K_{AB}$ only → **1** | $\binom{N}{2}+N = 6{,}441$ |
+
+Predicted speedup $\approx 3\times$. Plus a second saving: the MMD path
+re-estimates the kernel bandwidth $\tau$ **per pair**, whereas the Gram
+path estimates it **once globally**.
+
+**Measured** ($N{=}113$, $M{=}20$, $d{=}6$, 6328 pairs):
+
+| Operation | Time | Notes |
+| --- | ---: | --- |
+| Hausdorff, all pairs | 0.883s | 2 SciPy calls per pair |
+| `kernel_mean_distance`, all pairs (default) | 0.576s | 3 blocks + per-pair $\tau$ |
+| `kernel_mean_distance`, all pairs (shared $\tau$) | 0.274s | 3 blocks, $\tau$ once |
+| **`compute_subset_kernel_gram`** | **0.079s** | **1 block, $\tau$ once** |
+| *(isolated)* per-pair $\tau$ re-estimation alone | 0.290s | the overhead removed above |
+
+Both predictions check out quantitatively:
+
+- **3-blocks-vs-1:** $0.274 / 0.079 = 3.5\times$ ✓ (predicted $\approx 3\times$)
+- **Bandwidth overhead is additive:** $0.274 + 0.290 = 0.564 \approx 0.576$ ✓
+- **Net vs Hausdorff:** $0.883/0.079 = 11.2\times$ (§27.9's end-to-end
+  figure was $9.4\times$; the difference is the small fixed cost of cloud
+  construction included there).
+
+### 28.4 ⚠️ Important correction — the speed advantage *reverses* at realistic scale
+
+The naive conclusion — *"kernel herding is asymptotically cheaper"* — is
+**wrong**, and the measured data says so plainly. Sweeping $M$ (points per
+sample-set) with $N{=}30$ clouds fixed:
+
+| $M$ | Hausdorff (all pairs) | Gram (all pairs) | ratio | Hausdorff µs/pair |
+| ---: | ---: | ---: | ---: | ---: |
+| 10 | 0.061s | 0.003s | **18.9× faster** | 139 |
+| 40 | 0.061s | 0.017s | **3.5× faster** | 140 |
+| 160 | 0.069s | 0.243s | 0.28× (**3.5× slower**) | 159 |
+| 640 | 0.102s | 4.151s | 0.02× (**40× slower**) | 234 |
+
+Read the last column: Hausdorff's cost per pair is **nearly flat** —
+$64\times$ more points ($10\to640$) costs only $1.7\times$ more time. The
+Gram meanwhile scales cleanly as $O(M^2)$ (each $4\times$ in $M$ gives
+$\approx16\times$ in time). **They cross over at $M\approx100$.**
+
+Why is Hausdorff nearly flat? Two reasons:
+
+1. **SciPy's `directed_hausdorff` is not the naive $O(M^2)$ double loop.**
+   It implements Taha & Hanbury (2015)'s early-break algorithm, which is
+   $O(M)$ *average case* (worst case $O(M^2)$): it scans points in a
+   randomised order and abandons the inner nearest-neighbour search as soon
+   as the running distance cannot beat the current maximum.
+2. **At small $M$, fixed call overhead dominates everything.** ~139 µs/pair
+   is spent on Python→C marshalling for the two `directed_hausdorff` calls,
+   *independent of $M$*. At $M{=}20$ this overhead **is** the measurement.
+
+So the honest statement is:
+
+> **Kernel herding's speed win comes from low per-pair overhead (one
+> vectorised NumPy operation) and 3× fewer kernel blocks — *not* from
+> better asymptotic complexity. It is a small-$M$ effect.**
+
+**This matters practically.** The benchmark's $M{=}20$ points per
+sample-set is unrealistically small; a real Text2SQL workload has hundreds
+or thousands of examples. At $M{\gtrsim}100$ the ranking inverts and
+Hausdorff becomes the cheap option. If herding is used at realistic scale,
+the Gram must be approximated — subsample points per cloud, or use
+Nyström / random Fourier features to avoid the $O(M^2)$ term. **Not tested
+here**; flagged as required future work rather than assumed to work.
+
+---
+
+## Part B — Why kernel herding is still accurate
+
+Now the harder question. Averaging usually *destroys* information: the
+average of $\{0,10\}$ and of $\{5,5\}$ are both $5$, yet the two sets are
+completely different. So how can a method built on an average compete with
+one that inspects worst-case geometry?
+
+### 28.5 The answer: average in the *right space* and nothing is lost
+
+The resolution is that $\mu_i$ is **not** the average of the raw points.
+It is the average of the *features* $\varphi(x)$ — and for the Gaussian
+kernel, $\varphi$ maps into an **infinite-dimensional** space in which the
+average retains everything.
+
+**Definition (characteristic kernel).** A kernel $k$ is *characteristic* if
+the mean-embedding map
+
+$$
+P \;\longmapsto\; \mu_P := \mathbb E_{x\sim P}\big[\varphi(x)\big]
+$$
+
+is **injective** over probability distributions — that is,
+
+$$
+\mu_P = \mu_Q \iff P = Q .
+$$
+
+**Fact.** The Gaussian RBF kernel is characteristic on $\mathbb R^d$
+(Sriperumbudur, Gretton, Fukumizu, Schölkopf & Lanckriet, *JMLR* 2010).
+
+This is the whole answer to question (B) at the theoretical level: for a
+characteristic kernel, **the single vector $\mu_P$ determines the entire
+distribution $P$ uniquely.** No information is lost by summarising a cloud
+into its mean embedding. Consequently
+
+$$
+\operatorname{MMD}(P,Q) = \lVert\mu_P-\mu_Q\rVert_{\mathcal H} = 0 \iff P = Q,
+$$
+
+i.e. MMD is a genuine **metric** on distributions, not a lossy proxy.
+
+**Why injectivity holds — the dual/IPM view.** MMD has an equivalent
+variational form:
+
+$$
+\operatorname{MMD}(P,Q) \;=\; \sup_{\lVert f\rVert_{\mathcal H}\le 1}\Big(\mathbb E_{P}[f] - \mathbb E_{Q}[f]\Big).
+$$
+
+So $\operatorname{MMD}(P,Q)=0$ means $P$ and $Q$ give the *same expectation
+to every function* in the RKHS unit ball. Because the Gaussian RKHS is rich
+enough to separate distributions, agreeing on all such test functions
+forces $P=Q$.
+
+### 28.6 Concretely: the mean embedding secretly stores *all moments*
+
+Here is why the Gaussian feature map is rich enough, made explicit. Expand
+the kernel:
+
+$$
+k(x,y)=\exp\!\Big(-\tfrac{\lVert x-y\rVert^2}{\tau}\Big)
+= \underbrace{e^{-\lVert x\rVert^2/\tau}}_{a(x)}\ \underbrace{e^{-\lVert y\rVert^2/\tau}}_{a(y)}\ e^{2\langle x,y\rangle/\tau},
+$$
+
+and expand the last factor as a power series:
+
+$$
+e^{2\langle x,y\rangle/\tau} \;=\; \sum_{r=0}^{\infty}\frac{1}{r!}\Big(\tfrac{2}{\tau}\Big)^{r}\langle x,y\rangle^{r}.
+$$
+
+The term $\langle x,y\rangle^{r}$ expands into all degree-$r$ monomials in
+the coordinates of $x$ (paired with those of $y$). Therefore the feature
+map has, as its components, **every monomial of every degree**, weighted:
+
+$$
+\varphi(x) \;\propto\; a(x)\Big(1,\ \sqrt{\tfrac{2}{\tau}}\,x_1,\ \ldots,\ \sqrt{\tfrac{2}{\tau}}\,x_d,\ \ \sqrt{\tfrac{(2/\tau)^2}{2!}}\,x_1^2,\ \ldots\Big).
+$$
+
+Taking the average of $\varphi$ over the cloud therefore computes
+
+$$
+\mu_i \;=\; \Big(\mathbb E[a],\ \mathbb E[a\,x_1],\ \ldots,\ \mathbb E[a\,x_1^2],\ \mathbb E[a\,x_1x_2],\ \ldots\Big),
+$$
+
+i.e. **a weighted list of every moment of the cloud** — mean, variance,
+covariance, skewness, kurtosis, and on forever.
+
+> **Plain-English answer to "isn't averaging lossy?"** It *is* an average —
+> but of an infinitely long feature vector holding every moment at once. So
+> the "cheap average" is cheap to *compute* (via the kernel trick, never
+> forming $\varphi$ explicitly) while being **statistically complete**.
+> That is the trick, and it is why a one-vector-per-cloud summary can
+> compete with a method that re-examines raw geometry.
+
+### 28.7 Why herding beats random sampling: it is Frank–Wolfe in disguise
+
+Injectivity says the *objective* is sound. This says the *greedy* is good.
+
+Recall the herding rule from §27.9:
+
+$$
+a_{t+1} = \arg\max_{b_i} \big\langle \varphi(b_i),\ \mu_B - \mu_{A_t}\big\rangle_{\mathcal H}.
+$$
+
+**Theorem (Bach, Lacoste-Julien & Obozinski, ICML 2012).** Kernel herding
+is *exactly* the Frank–Wolfe (conditional gradient) algorithm applied to
+
+$$
+\min_{g\in\mathcal M} J(g),\qquad J(g)=\tfrac12\lVert g-\mu_B\rVert^2_{\mathcal H},
+\qquad \mathcal M = \operatorname{conv}\{\varphi(b): b\in B\}.
+$$
+
+*Sketch.* Frank–Wolfe picks the vertex minimising the linearised
+objective: $\nabla J(g_t) = g_t - \mu_B$, so
+
+$$
+\arg\min_{g\in\mathcal M}\ \langle \nabla J(g_t),\, g\rangle
+= \arg\min_{b}\ \langle g_t-\mu_B,\ \varphi(b)\rangle
+= \arg\max_{b}\ \langle \varphi(b),\ \mu_B-g_t\rangle,
+$$
+
+which is the herding rule verbatim. With FW step size $\gamma_t =
+1/(t{+}1)$ the iterate $g_t$ is precisely the running average
+$\mu_{A_t}$. $\blacksquare$
+
+**Convergence rates.** Let $T=|A|$ be the number selected:
+
+| Method | Rate of $\lVert\mu_B-\mu_{A_T}\rVert$ |
+| --- | --- |
+| i.i.d. random sampling | $O(1/\sqrt T)$ (CLT / Hilbert-space concentration) |
+| kernel herding | $O(1/T)$ — *conditionally*, see below |
+
+The $O(1/T)$ rate (Chen, Welling & Smola, UAI 2010 — the "super-samples"
+result) is **quadratically faster** than random sampling, and is the formal
+reason herding should beat a random subset. **Honest caveat:** Bach et al.
+(2012) showed this fast rate requires $\mu_B$ to lie in the *relative
+interior* of the marginal polytope $\mathcal M$ (with a ball of positive
+radius). In an infinite-dimensional RKHS that condition frequently fails,
+and the guaranteed rate degrades toward $O(1/\sqrt T)$ — i.e. back to
+random-sampling parity. So the theory predicts "**at least as good as
+random, often better**", not a guaranteed win. Our measurement — herding
+**4.19 ± 0.90** vs random subset **4.41 ± 0.76** — is consistent with
+exactly that: better on the central estimate, not separated at 5 seeds.
+
+Note this is a *different kind* of guarantee from facility location's
+$(1-1/e)$: that bounds how close greedy gets to the best possible subset
+*for its own coverage objective*; this bounds how fast the selected set's
+distribution converges to the full pool's. Neither implies the other.
+
+### 28.8 Measured confirmation — herding really does reproduce the distribution
+
+The theory makes a falsifiable prediction: because herding minimises
+$\operatorname{MMD}(A,B)$, the selected set should be **proportionally
+representative** of the pool — matching sub-region frequencies. Hausdorff,
+optimising worst-case coverage, has no such property and should chase
+*extremes* instead.
+
+Testing this directly (seed 0; "near-target" = top quintile of source
+`target_score`, whose true pool frequency is **20.4%**):
+
+| $K$ | Kernel herding | Hausdorff | Kernel mean | ProbCover |
+| ---: | --- | --- | --- | --- |
+| 10 | 10.0% (−10.4) | **0.0% (−20.4)** | 10.0% (−10.4) | 20.0% (−0.4) |
+| 15 | **20.0% (−0.4)** | **0.0% (−20.4)** | 13.3% (−7.0) | 20.0% (−0.4) |
+| 25 | 16.0% (−4.4) | **4.0% (−16.4)** | 16.0% (−4.4) | 28.0% (+7.6) |
+| 60 | 23.3% (+3.0) | 20.0% (−0.4) | 20.0% (−0.4) | 16.7% (−3.7) |
+
+*(deviation from the true 20.4% in parentheses)*
+
+**The prediction is confirmed.** At small $K$, kernel herding tracks the
+true frequency closely (deviations −10.4, −0.4, −4.4 pp) while **Hausdorff
+selects essentially zero near-target representatives** (0%, 0%, 4% — a
+−20.4 pp deviation, i.e. it misses that region entirely). Hausdorff is
+demonstrably *not* doing proportional representation; it is chasing
+boundary/extreme points, exactly as the worst-case objective implies.
+
+**This partially resolves the open question from §27.6** — why Hausdorff
+was the *worst* method at $K{=}30$ (5.46 pp) yet the *best* at $K{=}60$
+(3.81 pp). The coverage data offers a mechanism: at small budgets
+Hausdorff spends everything on extremes and never covers the
+target-relevant region at all; by $K{=}60$ (over half the pool) it has
+enough budget that extremes *and* interior are both covered, and its
+worst-case guarantee starts paying off. Kernel herding, by contrast, is
+distributionally stable across all $K$ — which is why it is the safer
+choice when the budget is small or unknown in advance.
+
+**Caveats, stated plainly:** this diagnostic is one seed and correlational.
+It is a mechanistically plausible and theoretically *predicted* account,
+not a controlled proof — §27.6's two earlier hypotheses were tested and
+ruled out, so this third one deserves the same scrutiny (a multi-seed
+version of this table, and a $K$-sweep of MAE against near-target
+coverage, would settle it).
+
+---
+
+### 28.9 Summary
+
+| Question | Answer |
+| --- | --- |
+| **Why faster?** | The mean embedding is an **additive** summary, so each cloud collapses to one reusable vector and all comparisons reduce to one $N\times N$ Gram matrix; Hausdorff's **nested max-min** does not decompose and must rescan raw points per pair. Concretely: 1 kernel block per pair instead of 3, one global bandwidth instead of per-pair, and one vectorised NumPy call instead of two per-pair SciPy calls. Measured $11.2\times$. |
+| **Is that speedup robust?** | **No — it is small-$M$ only.** SciPy's Hausdorff is $O(M)$-average with high fixed overhead; the Gram is $O(M^2)$ with low overhead. Crossover $M\approx100$; at $M{=}640$ Hausdorff is $40\times$ *faster*. Real workloads sit past the crossover. |
+| **Why still accurate?** | The Gaussian kernel is **characteristic**, so the mean embedding is **injective** — one vector determines the whole distribution (it secretly stores every moment). MMD is therefore a true metric, not a lossy proxy. |
+| **Why beat random?** | Herding **is** Frank–Wolfe on $\tfrac12\lVert g-\mu_B\rVert^2$, giving $O(1/T)$ vs random's $O(1/\sqrt T)$ — conditionally (interior condition may fail in infinite dimensions, degrading to parity). |
+| **Why *not quite* beat Hausdorff?** | Different objectives: herding matches the **distribution**, Hausdorff covers the **worst case**. At $K{=}60$ worst-case coverage wins by 0.38 pp — but the CIs overlap, and at *small* $K$ the ordering reverses (§27.6, §28.8). |

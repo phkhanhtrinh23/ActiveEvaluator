@@ -555,6 +555,64 @@ per-threshold tables, the cap-artifact explanation, and reading notes:
 [docs/adaptive-threshold-budget.md](docs/adaptive-threshold-budget.md)
 (`outputs/threshold_budget_benchmark.json`).
 
+### Representative-subset selection — which *sample-sets* should we pay to label at all?
+
+```bash
+python -m experiments.run_acquisition_benchmark --mode distance_formula_comparison --seeds 5
+```
+
+Every table above budgets **(model, sample-set) pairs** out of a fixed candidate
+pool. This experiment asks a stage *earlier* question: getting a model's accuracy
+on a sample-set is expensive (you must run every example in it), but a sample-set's
+*shift descriptor* is cheap (no model run). So before spending any labeling budget,
+can we cheaply pick the $K$ sample-sets that best **represent the whole
+meta-dataset** — and only ever run models against those? This is deliberately
+**target-blind**: the objective is "represent everything", not "resemble the
+deployment target".
+
+Each candidate sample-set becomes a point *cloud*; the selector needs a
+**distance between two clouds**. Six selection rules are compared, all at
+$K{=}60$ representatives (3600 of 6780 possible triples, a **47% cut** in
+expensive evaluation actions):
+
+| Method | Unseen MAE (pp) | Stage-1 select | Guarantee |
+| --- | --- | ---: | --- |
+| Full source pool (reference, 6780 triples) | **3.68 ± 0.63** | — | — |
+| **Hausdorff** (worst-case point coverage) | **3.81 ± 0.65** | 0.88s | (1−1/e) |
+| sum, Hausdorff-weighted (2:1:1) | 4.16 ± 0.78 | 2.86s | (1−1/e) |
+| **Kernel herding** (global MMD matching) | **4.19 ± 0.90** | **0.09s** | none (O(1/T) rate) |
+| Sliced Wasserstein | 4.20 ± 0.47 | 1.38s | (1−1/e) |
+| *Random subset (control)* | *4.41 ± 0.76* | — | — |
+| K-means (M=K, reps=1) | 4.61 ± 1.11 | 0.09s | none |
+| Kernel mean (MMD) | 4.65 ± 0.89 | 0.59s | (1−1/e) |
+| ProbCover (hard δ-ball coverage) | 5.09 ± 1.59 | 0.58s | none |
+
+**Hausdorff wins** and nearly matches the full pool while labeling 47% fewer
+triples. **Kernel herding is the standout efficiency result** — within 0.38 pp of
+Hausdorff (overlapping CIs) at **~9× less selection compute**, and it needs no
+metric-selection tuning. **ProbCover is the only method worse than random.**
+K-means, the heuristic this whole line of work started from, is beaten by four of
+the six principled rules.
+
+**Where the time actually goes** (full end-to-end, 9 configs × 5 seeds = 36.3 min):
+Stage-1 selection — the part these methods change — is a *rounding error*. The
+`Facility-location` **baseline acquisition** call dominates at ≈28.8s per config
+(15–19× `ActiveEval-Pair`'s ≈1.7s) because `cover_all=True` scores every greedy
+round against the entire pool; on the full pool it balloons to **169.3s**, and that
+single row is ~39% of the whole experiment. There are **no LLM calls anywhere** in
+this benchmark, so *compute tokens are not applicable* — CPU wall-clock is the only
+real cost unit.
+
+⚠️ **The kernel-herding speed advantage is regime-specific and reverses on
+realistic data.** It holds at this benchmark's 20 points/sample-set, but the kernel
+Gram is $O(M^2)$ in points-per-sample-set while SciPy's Hausdorff is ~$O(M)$
+average-case; measured crossover is $M\approx100$, and at $M{=}640$ Hausdorff is
+**40× faster** than herding. Real workloads have hundreds of examples each, so
+expect this ranking to flip. Full derivation, profiling, and the theory of *why*
+herding stays accurate despite being a cheap average:
+[docs/representative_meta_dataset_facility_location_full.md](docs/representative_meta_dataset_facility_location_full.md)
+§27.9–§27.10 (`outputs/herding_probcover_comparison_K60_timed.json`).
+
 ## Quick start — reproduce the image-classification acquisition benchmark (CPU, no downloads)
 
 ```bash
