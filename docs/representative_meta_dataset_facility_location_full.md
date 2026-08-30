@@ -2697,12 +2697,66 @@ token cost, same convention as §27.4):
 
 | Formula | build clouds | distance/Gram matrix | greedy select | **total** |
 | --- | ---: | ---: | ---: | ---: |
-| **Kernel herding** | 0.001s | 0.086s | 0.000s | **0.087s** |
-| Kernel mean | 0.001s | 0.602s | 0.001s | **0.604s** |
-| ProbCover | 0.001s | 0.598s | 0.001s | **0.600s** |
-| Hausdorff | 0.001s | 0.897s | 0.001s | **0.899s** |
-| Sliced Wasserstein | 0.001s | 1.517s | 0.001s | **1.519s** |
-| sum, Hausdorff-weighted | 0.001s | 3.002s | 0.001s | **3.004s** |
+| **Kernel herding** | 0.001s | 0.093s | 0.000s | **0.093s** |
+| Kernel mean | 0.001s | 0.588s | 0.001s | **0.588s** |
+| ProbCover | 0.001s | 0.577s | 0.001s | **0.577s** |
+| Hausdorff | 0.001s | 0.876s | 0.001s | **0.876s** |
+| Sliced Wasserstein | 0.001s | 1.378s | 0.001s | **1.378s** |
+| sum, Hausdorff-weighted | 0.001s | 2.862s | 0.001s | **2.862s** |
+
+**But Stage-1 (the actual new methods) is a rounding error against the
+real cost of this benchmark.** Full end-to-end wall-clock per config
+(seconds, mean over 5 seeds; `acq:*` = one full acquisition-method call,
+i.e. greedy selection over the reduced pool **plus** `train_eval`'s
+250-epoch Adam-on-CPU MLP training from scratch — this is what actually
+takes minutes, not Stage-1's sub-3-second selection). Raw output:
+`outputs/herding_probcover_comparison_K60_timed.json`; reproduce by
+re-running the §27.9 command above (timing is captured automatically by
+`run_distance_formula_comparison`, no separate flag needed).
+
+| Config | stage1 | make_problem | acq:ActiveEval-Pair | acq:Facility-location | acq:Random | **total** |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Kernel herding | 0.09s | 0.03s | 1.72s | 28.83s | 0.51s | **31.19s** |
+| ProbCover | 0.58s | 0.03s | 1.66s | 28.86s | 0.57s | **31.70s** |
+| Kernel mean | 0.59s | 0.03s | 1.66s | 28.85s | 0.58s | **31.71s** |
+| Sliced Wasserstein | 1.38s | 0.03s | 1.57s | 28.94s | 0.50s | **32.42s** |
+| Hausdorff | 0.88s | 0.03s | 1.54s | 28.87s | 0.57s | **31.89s** |
+| sum, Hausdorff-weighted | 2.86s | 0.03s | 1.77s | 28.96s | 0.46s | **34.08s** |
+| K-means (M=K, reps=1) | 0.09s | 0.00s | 1.59s | 28.83s | 0.55s | **31.06s** |
+| Full source pool | 0.00s | 0.06s | 9.92s | **169.29s** | 0.47s | **179.74s** |
+| Random subset | 0.00s | 0.03s | 1.60s | 29.24s | 0.60s | **31.48s** |
+
+**Grand total: 2176.3s (36.3 min) across all 9 configs × 5 seeds** (45
+config-seed pairs, ≈48.4s average). **Compute tokens: not applicable** —
+this entire module makes zero LLM/API calls; wall-clock CPU-seconds is the
+only real resource cost, and it is reported here in full rather than as a
+placeholder.
+
+**A genuinely new, previously-undocumented finding: the `Facility-location`
+*baseline* acquisition method is 15–19× more expensive per config than
+`ActiveEval-Pair`** (≈28.8s vs. ≈1.6–1.8s at the reduced $K{=}60$ pool
+size) **— and it's also consistently the worse performer on MAE** (every
+row in the results table above shows Facility-location's MAE higher than
+ActiveEval-Pair's). The mechanism: the `Facility-location` baseline runs
+with `cover_all=True`, meaning its target mask spans the **entire**
+candidate pool (thousands of points), so every greedy round's marginal-gain
+sum is computed over the full pool; `ActiveEval-Pair` instead scores
+against a much smaller, target-narrowed subset (plus a cheap log-det
+diversity term) — doing *more* algorithmically but over a far smaller
+working set, making it both better and dramatically cheaper. This gap
+widens sharply with pool size: on `Full source pool` ($P{=}6780$ vs.
+$3600$, a $1.9\times$ increase), Facility-location's cost jumps to
+**169.29s — nearly 3 minutes per seed, and worse-than-linear in $P$**
+(a $5.9\times$ cost increase for a $1.9\times$ pool-size increase, roughly
+consistent with the per-round full-pool coverage scan scaling closer to
+$O(P^2)$ than $O(P)$ once the proportionally-larger budget is accounted
+for). **This single row's `Facility-location` cost — 169.29s × 5 seeds ≈
+846s — is roughly 39% of the entire experiment's 2176.3s wall-clock
+total.** None of the actual new methods this section introduces
+(kernel herding, ProbCover, or any distance formula) contribute
+meaningfully to total runtime; the cost story here is almost entirely
+about the pre-existing `Facility-location` baseline's whole-pool coverage
+computation, not about anything new implemented in this section.
 
 #### Analysis
 

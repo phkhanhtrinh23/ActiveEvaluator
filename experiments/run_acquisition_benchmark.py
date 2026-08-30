@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Dict, List
 
@@ -786,29 +787,58 @@ def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, b
     rows = {name: {meth: [] for meth in methods} for name, _ in configs}
     triples = {name: [] for name, _ in configs}
     timing = {f: [] for f in formulas}
+    # Full end-to-end wall-clock per config: Stage-1 selection (already in
+    # `timing` for distance formulas), problem construction, and Stage-2 --
+    # each of the 3 acquisition calls (greedy selection over the reduced
+    # pool + train_eval's 250-epoch MLP training, which dominates total
+    # runtime -- Stage-1 is sub-3-seconds even for the priciest formula,
+    # Stage-2 is where the real minutes go).
+    full_timing = {name: {"stage1": [], "make_problem": [], "acq": {m: [] for m in methods}, "total": []}
+                   for name, _ in configs}
 
     for seed in seeds:
         for name, formula in configs:
+            t_config0 = time.time()
+            t_stage1 = 0.0
             if formula == "__kmeans__":
+                t0 = time.time()
                 prob = make_problem(seed, n_samplesets=n_samplesets_full,
                                     n_clusters=budget_K, reps_per_cluster=1)
+                t_stage1 = time.time() - t0  # k-means clustering is part of make_problem here
             elif formula is not None:
+                t0 = time.time()
                 sel_idx, diag = select_via_distance_formula(
                     seed, formula, n_train_models=60, n_unseen_models=8,
                     n_samplesets_full=n_samplesets_full, d_lat=6, budget_K=budget_K,
                     n_points_per_subset=n_points_per_subset)
+                t_stage1 = time.time() - t0
                 timing[formula].append(diag)
                 prob = make_problem(seed, n_samplesets=n_samplesets_full, fixed_source_sets=sel_idx)
             elif name == "Full source pool":
                 prob = make_problem(seed, n_samplesets=n_samplesets_full)
             else:  # matched-size random control
                 prob = make_problem(seed, n_samplesets=n_samplesets_full, random_subset_size=budget_K)
+            t_after_problem = time.time()
+            full_timing[name]["stage1"].append(t_stage1)
+            full_timing[name]["make_problem"].append(t_after_problem - t_config0 - t_stage1)
+
             P = len(prob["X"])
             triples[name].append(P)
             budget = max(1, int(budget_frac * P))
+
+            t_acq0 = time.time()
             rows[name]["ActiveEval-Pair"].append(_acq(prob, "activeeval_pair", budget, seed, influence=True))
+            full_timing[name]["acq"]["ActiveEval-Pair"].append(time.time() - t_acq0)
+
+            t_acq0 = time.time()
             rows[name]["Facility-location"].append(_acq(prob, "facility_location", budget, seed, cover_all=True))
+            full_timing[name]["acq"]["Facility-location"].append(time.time() - t_acq0)
+
+            t_acq0 = time.time()
             rows[name]["Random"].append(_acq(prob, "random", budget, seed))
+            full_timing[name]["acq"]["Random"].append(time.time() - t_acq0)
+
+            full_timing[name]["total"].append(time.time() - t_config0)
 
     def _mci(v):
         v = np.asarray(v, float)
@@ -843,6 +873,35 @@ def run_distance_formula_comparison(seeds, budget_frac, n_samplesets_full=150, b
         out["timing"][f] = means
         print(f"{f:<20} {means['seconds_build_clouds']:13.3f} {means['seconds_distance_matrix']:13.3f} "
               f"{means['seconds_greedy_select']:14.3f} {means['seconds_total']:8.3f}")
+
+    print(f"\nFull end-to-end wall-clock cost per config (seconds, mean over {len(seeds)} seeds). "
+          f"'acq' columns = one acquisition-method call each, dominated by train_eval's 250-epoch "
+          f"MLP training (torch/Adam, CPU) -- this, not Stage-1 selection, is why full runs take "
+          f"minutes: Stage-1 tops out under 3s/config (table above) while a single train_eval call "
+          f"runs 250 full-batch gradient steps over a fresh model. No LLM calls anywhere in this "
+          f"module -- compute tokens: not applicable, wall-clock seconds is the real cost unit.")
+    print(f"{'Config':<32} {'stage1':>8} {'mk_prob':>8} {'acq:AEval':>10} {'acq:FacLoc':>11} "
+          f"{'acq:Rand':>9} {'total':>8}")
+    out["full_timing"] = {}
+    for name, _ in configs:
+        ft = full_timing[name]
+        row_out = {
+            "stage1_s": float(np.mean(ft["stage1"])),
+            "make_problem_s": float(np.mean(ft["make_problem"])),
+            "acq_activeeval_pair_s": float(np.mean(ft["acq"]["ActiveEval-Pair"])),
+            "acq_facility_location_s": float(np.mean(ft["acq"]["Facility-location"])),
+            "acq_random_s": float(np.mean(ft["acq"]["Random"])),
+            "total_s": float(np.mean(ft["total"])),
+            "total_s_all_seeds": float(np.sum(ft["total"])),
+        }
+        out["full_timing"][name] = row_out
+        print(f"{name:<32} {row_out['stage1_s']:8.3f} {row_out['make_problem_s']:8.3f} "
+              f"{row_out['acq_activeeval_pair_s']:10.2f} {row_out['acq_facility_location_s']:11.2f} "
+              f"{row_out['acq_random_s']:9.2f} {row_out['total_s']:8.2f}")
+    grand_total = sum(np.sum(full_timing[name]["total"]) for name, _ in configs)
+    print(f"\nGrand total wall-clock across all {len(configs)} configs x {len(seeds)} seeds: "
+          f"{grand_total:.1f}s ({grand_total/60:.1f} min).")
+    out["grand_total_seconds"] = float(grand_total)
     return out
 
 

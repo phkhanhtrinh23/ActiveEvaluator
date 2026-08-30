@@ -1,0 +1,265 @@
+{
+  "n_samplesets_full": 150,
+  "budget_K": 60,
+  "budget_frac": 0.15,
+  "seeds": 5,
+  "configs": {
+    "Distance: kernel_herding": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.185578264296055,
+        "ci": 0.9012791458936082
+      },
+      "Facility-location": {
+        "mae": 5.271640866994858,
+        "ci": 0.7694119831187677
+      },
+      "Random": {
+        "mae": 4.883289039134979,
+        "ci": 0.922946622466375
+      }
+    },
+    "Distance: probcover": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 5.085304342210293,
+        "ci": 1.589132347640114
+      },
+      "Facility-location": {
+        "mae": 5.061562806367874,
+        "ci": 0.5832085073019965
+      },
+      "Random": {
+        "mae": 4.776452258229256,
+        "ci": 0.7273258748590978
+      }
+    },
+    "Distance: kernel_mean": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.651990719139576,
+        "ci": 0.8878019831038598
+      },
+      "Facility-location": {
+        "mae": 4.763292893767357,
+        "ci": 0.6034591093637465
+      },
+      "Random": {
+        "mae": 5.145436674356461,
+        "ci": 0.8310014084938454
+      }
+    },
+    "Distance: sliced_wasserstein": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.198030903935432,
+        "ci": 0.4660065134853378
+      },
+      "Facility-location": {
+        "mae": 4.830280989408493,
+        "ci": 1.0789284434883815
+      },
+      "Random": {
+        "mae": 4.5984504371881485,
+        "ci": 0.6207120104584096
+      }
+    },
+    "Distance: hausdorff": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 3.8128333911299706,
+        "ci": 0.6456517835156548
+      },
+      "Facility-location": {
+        "mae": 4.829962328076363,
+        "ci": 0.570658609983135
+      },
+      "Random": {
+        "mae": 5.249233916401863,
+        "ci": 0.9986297124042492
+      }
+    },
+    "Distance: sum_hausdorff_weighted": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.161572344601154,
+        "ci": 0.7825260403104222
+      },
+      "Facility-location": {
+        "mae": 4.610825702548027,
+        "ci": 0.5739282912894408
+      },
+      "Random": {
+        "mae": 4.828479737043381,
+        "ci": 0.8184807327375084
+      }
+    },
+    "K-means (M=K, reps=1)": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.606248736381531,
+        "ci": 1.111472000217226
+      },
+      "Facility-location": {
+        "mae": 5.333960875868797,
+        "ci": 0.48230468431716483
+      },
+      "Random": {
+        "mae": 4.965022504329681,
+        "ci": 0.7972211678420428
+      }
+    },
+    "Full source pool": {
+      "n_triples_labelable": 6780.0,
+      "ActiveEval-Pair": {
+        "mae": 3.6803044751286507,
+        "ci": 0.6277978094056847
+      },
+      "Facility-location": {
+        "mae": 3.9386218041181564,
+        "ci": 0.5040624692899223
+      },
+      "Random": {
+        "mae": 4.393858723342419,
+        "ci": 0.947669986288824
+      }
+    },
+    "Random subset": {
+      "n_triples_labelable": 3600.0,
+      "ActiveEval-Pair": {
+        "mae": 4.410583004355431,
+        "ci": 0.764939998781261
+      },
+      "Facility-location": {
+        "mae": 5.489043369889259,
+        "ci": 0.7243055025885003
+      },
+      "Random": {
+        "mae": 5.249193161725998,
+        "ci": 1.0880636513122524
+      }
+    }
+  },
+  "timing": {
+    "kernel_herding": {
+      "seconds_build_clouds": 0.000994253158569336,
+      "seconds_distance_matrix": 0.09144005775451661,
+      "seconds_greedy_select": 0.0002094268798828125,
+      "seconds_total": 0.09264373779296875
+    },
+    "probcover": {
+      "seconds_build_clouds": 0.0008636474609375,
+      "seconds_distance_matrix": 0.5746700763702393,
+      "seconds_greedy_select": 0.001266813278198242,
+      "seconds_total": 0.576800537109375
+    },
+    "kernel_mean": {
+      "seconds_build_clouds": 0.0010695934295654296,
+      "seconds_distance_matrix": 0.5852062225341796,
+      "seconds_greedy_select": 0.0012672901153564452,
+      "seconds_total": 0.5875431060791015
+    },
+    "sliced_wasserstein": {
+      "seconds_build_clouds": 0.0009514808654785157,
+      "seconds_distance_matrix": 1.3752996921539307,
+      "seconds_greedy_select": 0.001290750503540039,
+      "seconds_total": 1.3775419235229491
+    },
+    "hausdorff": {
+      "seconds_build_clouds": 0.0006472587585449219,
+      "seconds_distance_matrix": 0.873897647857666,
+      "seconds_greedy_select": 0.0013483524322509765,
+      "seconds_total": 0.8758932590484619
+    },
+    "sum_hausdorff_weighted": {
+      "seconds_build_clouds": 0.0009315967559814453,
+      "seconds_distance_matrix": 2.8599264144897463,
+      "seconds_greedy_select": 0.001326131820678711,
+      "seconds_total": 2.8621841430664063
+    }
+  },
+  "full_timing": {
+    "Distance: kernel_herding": {
+      "stage1_s": 0.0926590919494629,
+      "make_problem_s": 0.03362383842468262,
+      "acq_activeeval_pair_s": 1.720225954055786,
+      "acq_facility_location_s": 28.834444999694824,
+      "acq_random_s": 0.5124310493469239,
+      "total_s": 31.193389177322388,
+      "total_s_all_seeds": 155.96694588661194
+    },
+    "Distance: probcover": {
+      "stage1_s": 0.5768207550048828,
+      "make_problem_s": 0.032390260696411134,
+      "acq_activeeval_pair_s": 1.6558971881866456,
+      "acq_facility_location_s": 28.863850116729736,
+      "acq_random_s": 0.5686090469360352,
+      "total_s": 31.69757122993469,
+      "total_s_all_seeds": 158.48785614967346
+    },
+    "Distance: kernel_mean": {
+      "stage1_s": 0.5875640869140625,
+      "make_problem_s": 0.0322840690612793,
+      "acq_activeeval_pair_s": 1.655648946762085,
+      "acq_facility_location_s": 28.854399490356446,
+      "acq_random_s": 0.5761541843414306,
+      "total_s": 31.7060546875,
+      "total_s_all_seeds": 158.5302734375
+    },
+    "Distance: sliced_wasserstein": {
+      "stage1_s": 1.3775643348693847,
+      "make_problem_s": 0.03214750289916992,
+      "acq_activeeval_pair_s": 1.5725868225097657,
+      "acq_facility_location_s": 28.938021612167358,
+      "acq_random_s": 0.49737977981567383,
+      "total_s": 32.41770424842834,
+      "total_s_all_seeds": 162.08852124214172
+    },
+    "Distance: hausdorff": {
+      "stage1_s": 0.8759149074554443,
+      "make_problem_s": 0.03216776847839355,
+      "acq_activeeval_pair_s": 1.5430089950561523,
+      "acq_facility_location_s": 28.866357707977294,
+      "acq_random_s": 0.5701978206634521,
+      "total_s": 31.88765115737915,
+      "total_s_all_seeds": 159.43825578689575
+    },
+    "Distance: sum_hausdorff_weighted": {
+      "stage1_s": 2.862211799621582,
+      "make_problem_s": 0.03363204002380371,
+      "acq_activeeval_pair_s": 1.7692436695098877,
+      "acq_facility_location_s": 28.959037399291994,
+      "acq_random_s": 0.4553657054901123,
+      "total_s": 34.07949433326721,
+      "total_s_all_seeds": 170.39747166633606
+    },
+    "K-means (M=K, reps=1)": {
+      "stage1_s": 0.0858534812927246,
+      "make_problem_s": 9.059906005859375e-07,
+      "acq_activeeval_pair_s": 1.5924553394317627,
+      "acq_facility_location_s": 28.831350088119507,
+      "acq_random_s": 0.5515460968017578,
+      "total_s": 31.061210107803344,
+      "total_s_all_seeds": 155.30605053901672
+    },
+    "Full source pool": {
+      "stage1_s": 0.0,
+      "make_problem_s": 0.06103968620300293,
+      "acq_activeeval_pair_s": 9.922576522827148,
+      "acq_facility_location_s": 169.28795523643493,
+      "acq_random_s": 0.4692716598510742,
+      "total_s": 179.74084682464598,
+      "total_s_all_seeds": 898.70423412323
+    },
+    "Random subset": {
+      "stage1_s": 0.0,
+      "make_problem_s": 0.03280963897705078,
+      "acq_activeeval_pair_s": 1.5990293979644776,
+      "acq_facility_location_s": 29.240976572036743,
+      "acq_random_s": 0.6035846710205078,
+      "total_s": 31.476404476165772,
+      "total_s_all_seeds": 157.38202238082886
+    }
+  },
+  "grand_total_seconds": 2176.3016312122345
+}
