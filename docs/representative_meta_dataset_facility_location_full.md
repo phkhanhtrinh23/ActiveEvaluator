@@ -2552,3 +2552,228 @@ Hausdorff/random gap nearly vanishes by $K{=}90$), so there is no guarantee
 this specific 2:1:1 weighting remains the right choice outside the $K{=}60$
 regime it was derived from — it is a budget-specific tuning, not a
 generally-derived optimum.
+
+### 27.9 Two more coreset methods: ProbCover and Kernel Herding
+
+Two additional selection algorithms, from a different source than the rest
+of this document — [orobix/active-learning](https://github.com/orobix/active-learning)
+(`activelearning/queries/representative/`), a general-purpose active
+learning library. Implemented in
+`experiments/subset_distances.py::select_probcover` and
+`::select_kernel_herding`.
+
+#### ProbCover
+
+Yehuda, Mahmood, Sabach & Shalev-Shwartz, *"Active Learning Through a
+Covering Lens,"* NeurIPS 2022. Reference implementation:
+`probcover_query.py` in the repo above. A **hard-threshold coverage**
+algorithm: two candidates are "adjacent" iff their distance is at most
+$\delta$; greedily pick whichever candidate covers the most currently
+*uncovered* candidates (including itself), mark those covered, repeat.
+
+$$
+\text{adjacent}(b_i,b_j) \iff D_{ij} \le \delta,
+\qquad
+i^\star = \arg\max_{i:\ b_i\notin A} \big|\{j : \text{adjacent}(b_i,b_j)\ \wedge\ b_j\notin\text{covered}\}\big|
+$$
+
+This differs from facility location (§6/§25) in one precise way: facility
+location's marginal gain $\max(0, S_{ij}-c_A(j))$ is a **smooth, graded**
+reward — a closer match always helps a little more than a farther one, no
+matter how close. ProbCover's marginal gain is **binary and hard** — a
+point within $\delta$ contributes exactly the same regardless of whether it
+is barely inside the radius or dead center, and a point just outside
+$\delta$ contributes nothing at all, however close it is. $\delta$ defaults
+to the median pairwise distance (the same median-heuristic convention used
+everywhere else in this module); if no candidate covers anything new,
+$\delta$ halves and retries, mirroring the reference implementation's own
+fallback (its version shrinks $\delta$ once an *existing labeled pool*
+runs out of "uncovered" points to query against — this document's version
+is adapted to a from-scratch coreset problem with no pre-existing labeled
+set, so every one of the $N$ candidates starts uncovered rather than only
+points far from an existing pool).
+
+ProbCover is **distance-metric-agnostic** — it needs *a* distance, not a
+specific one. Defaults here to the **kernel_mean (MMD)** distance matrix,
+as the closest analogue among this document's three metrics to the
+reference implementation's plain Euclidean distance.
+
+No submodularity claim is made for ProbCover here — the source paper's
+guarantee is a separate covering-radius argument, not the NWF78 $(1-1/e)$
+bound proven for facility location in `docs/submodularity-audit.md` Part 1.
+
+#### Kernel Herding
+
+Chen, Welling & Smola, *"Super-Samples from Kernel Herding,"* UAI 2010.
+Picks a subset whose **kernel mean embedding** matches the *whole pool's*
+kernel mean embedding as closely as possible — a fundamentally different
+goal from facility location's per-point coverage:
+
+$$
+\mu_B = \frac1N\sum_{j=1}^N \phi(b_j), \qquad
+\mu_A = \frac1{|A|}\sum_{b_i\in A}\phi(b_i), \qquad
+\boxed{\min_{|A|=K} \|\mu_B-\mu_A\|_{\mathcal H}^2 = \min_{|A|=K}\operatorname{MMD}^2(A,B)}
+$$
+
+Greedy rule: at each step, given the currently selected $A_t$, add whichever
+candidate points furthest in the direction the selected mean is currently
+*missing*:
+
+$$
+a_{t+1} = \arg\max_{b_i\in B} \big\langle \phi(b_i),\ \mu_B - \mu_{A_t} \big\rangle_{\mathcal H}
+$$
+
+This needs no explicit feature map $\phi$ — only inner products, via the
+kernel trick. `compute_subset_kernel_gram` builds
+$G_{ij} = \langle\mu_i,\mu_j\rangle_{\mathcal H}$ (the mean pairwise RBF
+kernel value between every point in cloud $i$ and every point in cloud
+$j$ — literally the cross term already inside `kernel_mean_distance`,
+exposed as a full $N\times N$ matrix; note $\mathrm{MMD}^2(b_i,b_j) =
+G_{ii}+G_{jj}-2G_{ij}$, so this is the *same* underlying kernel as the
+kernel_mean distance formula, just used for a different objective).
+`select_kernel_herding` then runs the recursion purely from $G$:
+
+$$
+\langle\phi(b_i),\mu_B\rangle = \tfrac1N\textstyle\sum_j G_{ij} \quad\text{(fixed target)}, \qquad
+\langle\phi(b_i),\mu_{A_t}\rangle = \tfrac1t\textstyle\sum_{a\in A_t} G_{ia} \quad\text{(updated each round)}
+$$
+
+with $\mu_{A_0} := 0$ (standard herding convention, so the first pick is
+just $\arg\max_i \langle\phi(b_i),\mu_B\rangle$).
+
+**Why this is a fundamentally different objective than everything else in
+this document**, restated from the problem specification that motivated
+implementing it: kernel herding asks *"does the selected subset, as a
+whole, statistically resemble the full meta-dataset's distribution?"*
+(global distribution-matching, $\min\operatorname{MMD}(A,B)$); facility
+location asks *"does every individual dataset in $B$ have at least one
+good representative in $A$?"* (per-point coverage,
+$F(A)=\sum_j\max_i S_{ij}$). A population with 90 common-type and 10
+rare-type datasets: kernel herding, at $K{=}10$, tends toward
+proportionally reproducing the mix (roughly 9 common + 1 rare, matching the
+90/10 frequency); facility location tends to spend more of its budget on
+distinct regions once the common cluster is already well covered by one or
+two picks, since further common-type picks have little marginal coverage
+gain left.
+
+**Kernel herding is not submodular.** It directly minimizes
+$-\operatorname{MMD}(A,B)$, a global-matching objective, not a per-point
+coverage sum — this is not generally monotone or submodular, so it carries
+no $(1-1/e)$ guarantee (contrast with facility location, proven monotone
+submodular in `docs/submodularity-audit.md` Part 1). Its own theoretical
+grounding instead comes from empirical-kernel-mean convergence rates
+(Chen/Welling/Smola 2010), a different kind of guarantee entirely — a
+useful mental model is *"deterministic representative sampling for the
+kernel mean,"* not a clustering or coverage algorithm.
+
+#### Results — all methods head to head
+
+5 seeds, $K{=}60$, same 113-source pool as §27.6–27.8. Reproduce:
+
+```python
+run_distance_formula_comparison(
+    list(range(5)), 0.15, n_samplesets_full=150, budget_K=60,
+    formulas=("kernel_herding", "probcover", "kernel_mean", "sliced_wasserstein",
+             "hausdorff", "sum_hausdorff_weighted"),
+    include_kmeans=True)
+```
+
+Raw output: `outputs/herding_probcover_comparison_K60.json`.
+
+| Config | ActiveEval-Pair MAE | Facility-location MAE | Random MAE |
+| --- | --- | --- | --- |
+| Full source pool (ref.) | 3.68 ± 0.63 | 3.94 ± 0.50 | 4.39 ± 0.95 |
+| **Hausdorff** | **3.81 ± 0.65** | 4.83 ± 0.57 | 5.25 ± 1.00 |
+| sum, Hausdorff-weighted (2:1:1) | 4.16 ± 0.78 | 4.61 ± 0.57 | 4.83 ± 0.82 |
+| **Kernel herding** | **4.19 ± 0.90** | 5.27 ± 0.77 | 4.88 ± 0.92 |
+| Sliced Wasserstein | 4.20 ± 0.47 | 4.83 ± 1.08 | 4.60 ± 0.62 |
+| Random subset | 4.41 ± 0.76 | 5.49 ± 0.72 | 5.25 ± 1.09 |
+| K-means (M=K, reps=1) | 4.61 ± 1.11 | 5.33 ± 0.48 | 4.97 ± 0.80 |
+| Kernel mean | 4.65 ± 0.89 | 4.76 ± 0.60 | 5.15 ± 0.83 |
+| **ProbCover** | **5.09 ± 1.59** | 5.06 ± 0.58 | 4.78 ± 0.73 |
+
+**Stage-1 wall-clock cost** (seconds, mean over 5 seeds — no LLM calls, no
+token cost, same convention as §27.4):
+
+| Formula | build clouds | distance/Gram matrix | greedy select | **total** |
+| --- | ---: | ---: | ---: | ---: |
+| **Kernel herding** | 0.001s | 0.086s | 0.000s | **0.087s** |
+| Kernel mean | 0.001s | 0.602s | 0.001s | **0.604s** |
+| ProbCover | 0.001s | 0.598s | 0.001s | **0.600s** |
+| Hausdorff | 0.001s | 0.897s | 0.001s | **0.899s** |
+| Sliced Wasserstein | 0.001s | 1.517s | 0.001s | **1.519s** |
+| sum, Hausdorff-weighted | 0.001s | 3.002s | 0.001s | **3.004s** |
+
+#### Analysis
+
+**Kernel herding is a genuinely strong, and the cheapest, method here.**
+On ActiveEval-Pair it lands at 4.19 ± 0.90 — third overall, essentially
+tied with sliced Wasserstein (4.20 ± 0.47) and the Hausdorff-weighted sum
+(4.16 ± 0.78), clearly ahead of random (4.41), k-means (4.61), and
+kernel_mean alone (4.65). And its Stage-1 cost (0.087s) is **7× cheaper**
+than the next-cheapest method (kernel_mean/ProbCover, ~0.6s) and **35×
+cheaper** than the Hausdorff-weighted sum (3.0s) — it needs only *one*
+Gram-matrix pass, not a pairwise-distance computation per point followed by
+standardization and combination. This is a real, practically useful
+finding: **kernel herding gets most of the benefit of the best
+distance-formula methods at a small fraction of the Stage-1 compute.**
+
+This is worth pausing on given §27.9's own theory: kernel herding carries
+*no* submodular guarantee (its objective, $-\mathrm{MMD}(A,B)$, is not
+proven monotone or submodular, unlike facility location), yet it performs
+competitively with — and cheaper than — every submodular-guaranteed
+distance-formula variant except Hausdorff itself. This is consistent with a
+pattern already seen throughout this investigation (`docs/submodularity-audit.md`,
+§27.6-27.8): **a theoretical guarantee is not the same thing as, and does
+not reliably predict, an empirical win.** Facility location's $(1-1/e)$
+bound is a worst-case floor on *its own* objective, not a promise that its
+objective is the right one for this downstream task, and kernel herding's
+different objective (global distribution-matching rather than per-point
+coverage) turns out to be a good fit for this problem despite lacking an
+analogous guarantee.
+
+**ProbCover is the worst method tested here — worse than doing nothing
+clever at all (random).** 5.09 ± 1.59, both the highest MAE and by far the
+widest confidence interval of any config in this table (more than double
+most others). Two likely, complementary reasons:
+
+1. **Hard vs. smooth reward.** ProbCover's marginal gain is binary — a
+   candidate within $\delta$ of an uncovered point contributes the same
+   whether it's barely inside the radius or dead center, and a candidate
+   just outside $\delta$ contributes nothing however close. Facility
+   location's smooth $\exp(-D^2/\tau)$ reward has no such cliff. In a
+   synthetic generator whose ground-truth accuracy function varies
+   continuously (§0's `true_acc`), a graded reward is plausibly a better
+   match to the underlying structure than a hard in/out threshold.
+2. **Budget regime mismatch.** ProbCover's median-heuristic $\delta$ means
+   roughly half of all pairs count as "adjacent" from the start, so the
+   first few picks likely cover a large fraction of the pool immediately —
+   leaving the remaining ~55 of 60 picks (at $K{=}60$ out of 113
+   candidates, over half the pool) to repeatedly hit the "nothing left to
+   cover, shrink $\delta$" fallback path. The algorithm's original design
+   context (Yehuda et al. 2022) is incremental active learning with modest
+   per-round query sizes against an existing labeled pool, not grabbing
+   over half a from-scratch candidate pool in one shot — this may simply be
+   outside the budget regime it was designed for. Not verified directly
+   here (would need testing ProbCover at a smaller $K$, e.g. $K{=}15$–$30$,
+   to see if it fares better relative to the other methods there); flagged
+   as the more likely of the two explanations but untested.
+
+It also inherits kernel_mean's own middling distance matrix as its base
+(ProbCover defaults to it here, §27.9), and kernel_mean alone is itself a
+below-random performer at $K{=}60$ (4.65 vs. random's 4.41) — so some of
+ProbCover's weakness may simply propagate from an unfavorable choice of
+underlying distance rather than the hard-threshold mechanism itself; this
+is not disentangled here (testing ProbCover on the Hausdorff distance
+matrix instead would isolate the two effects) but is worth flagging as a
+confound rather than presenting the hard-threshold explanation as the sole
+cause.
+
+**Practical bottom line:** if a combined-signal, non-target-aware coreset
+method is wanted, **kernel herding is the best choice among the ones tested
+that don't require picking a single winning distance metric in advance** —
+it is cheap, competitive, and requires no metric-selection tuning (unlike
+the Hausdorff-weighted sum, which needed the $K{=}60$-specific tuning
+documented in §27.7–27.8 to become competitive). **ProbCover is not
+recommended at this budget regime** without further investigation at
+smaller $K$ or a different base distance.
