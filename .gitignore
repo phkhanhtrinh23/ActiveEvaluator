@@ -10,6 +10,5 @@ outputs/fusionsql/*
 shift_predictor/__pycache__
 .vscode
 .claude
-pdfs
 # benchmark-selection/
 .DS_Store

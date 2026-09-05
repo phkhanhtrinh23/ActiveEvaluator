@@ -1,0 +1,746 @@
+ Determining the Effective Sample Size of a Parametric Prior
+
+                       Satoshi Morita1 , Peter F. Thall2 and Peter Müller2
+      1
+          Department of Epidemiology and Health Care Research, Kyoto University
+                   Graduate School of Medicine, Kyoto 606-8501, Japan
+                              satoshi morita@pbh.med.kyoto-u.ac.jp
+
+                   2
+                       Department of Biostatistics, The University of Texas
+                M. D. Anderson Cancer Center, Houston, TX 77030, U.S.A
+Summary. We present a definition for the effective sample size of a parametric prior dis-
+tribution in a Bayesian model, and propose methods for computing the effective sample
+size in a variety of settings. Our approach first constructs a prior chosen to be vague in
+a suitable sense, and updates this prior to obtain a sequence of posteriors corresponding
+to each of a range of sample sizes. We then compute a distance between each posterior
+and the parametric prior, defined in terms of the curvature of the logarithm of each
+distribution, and the posterior minimizing the distance defines the effective sample size
+of the prior. For cases where the distance cannot be computed analytically, we provide a
+numerical approximation based on Monte Carlo simulation. We provide general guide-
+lines for application, illustrate the method in several standard cases where the answer
+seems obvious, and then apply it to some non-standard settings.
+
+Key words: Bayesian analysis; Effective sample size; Parametric prior distribution;
+ε-information prior; Computationally intensive methods.
+
+
+
+
+                                                1
+1.    Introduction
+A fundamental question in any Bayesian analysis is the amount of information contained
+in the prior. For many commonly used models, the answer seems straightforward. For
+example, it can be argued that a beta(a, b) distribution has effective sample size (ESS)
+a + b. This is based on the fact that a binomial variable Y from a sample of size n with
+success probability θ following a beta(a, b) prior implies a beta(a+Y, b+n−Y ) posterior.
+In other words, given a sample of size n, the prior sum a + b becomes the posterior sum
+a+b+n. Thus, saying that a given beta(a, b) prior has ESS m = a+b requires the implicit
+reasoning that the beta(a, b) may be identified with a beta(c + Y, d + m − Y ) posterior
+arising from a previous beta(c, d) prior having a very small amount of information. A
+simple way to formalize this is to set c + d = ε for an arbitrarily small value ε > 0 and
+solve for m = a + b − (c + d) = a + b − ε.
+     More generally, one may match a given prior p(θ) with the posterior qm (θ | Y ) arising
+from an earlier prior q0 (θ) that is chosen to be vague in a suitable sense and that was
+updated by a sample of size m, and consider m to be the ESS of p(θ). In this general
+formulation, p(θ), q0 (θ) and qm (θ | Y ) play roles analogous to those of the beta(a, b),
+beta(c, d) and beta(a+Y, b+n−Y ) distributions given above. In some cases one may find
+the hyperparameters of qm (θ | Y ) as a function of m, compare qm (θ | Y ) with p(θ) and
+solve for m analytically. For many parametric Bayesian models, however, this analytic
+approach does not work, and it is not obvious how to determine the ESS of the prior. A
+simple example is the usual normal linear regression model where the observed response
+variable Y for predictor X has mean β0 + β1 X and variance σ 2 , so that θ = (β0 , β1 , σ 2 ).
+A traditional, technically convenient prior is that (β0 , β1 ) is bivariate normal and σ 2 is
+inverse chi-squared, with hyperparameters chosen either for computational convenience
+or by elicitation. In either case, there is no obvious answer to the question of what the
+
+
+
+                                              2
+ESS of the prior may be. Moreover, for many commonly used choices of q0 (θ ), the joint
+prior p(θθ) cannot be matched with qm (θθ | Y ) analytically.
+   Understanding the prior ESS is important when applying Bayesian methods in set-
+tings with a small to moderate sample size. For example, when fitting a Bayesian model
+to a data set of 10 observations, an a priori ESS of 1 is reasonable, whereas a prior ESS
+of 20 implies that the prior, rather than the data, dominates posterior inferences. If the
+prior is elicited from a domain expert, then an informative prior is desirable (Chaloner
+and Rhame, 2001; Garthwaite et al., 2005). In contrast, if the prior is only a technically
+convenient ad-hoc choice, as is often the case in practice, then understanding the ESS
+may prompt the investigator to reconsider the prior choice. Thus, it is important to
+have a good idea of the prior’s ESS when interpreting one’s inferences. This is especially
+important from the viewpoint of defending Bayesian methods against the concern that
+the prior may inappropriately introduce artificial information.
+   In this paper, we present a definition for the ESS of a prior p(θθ) in a Bayesian
+parametric model, and we provide methods for computing the ESS in a wide variety
+of settings. Our approach relies on the idea of constructing an “ε-information” prior
+q0 (θ ), considering a sample Y of size m and the posterior qm (θ | Y), and computing a
+distance between qm (θ | Y) and p(θ ) in terms of the curvature (second derivatives) of
+log{p(θ )} and log{qm (θ | Y)}. The value of m minimizing the distance is the prior ESS.
+For cases where the distance cannot be computed analytically, we provide a numerical
+approximation based on Monte Carlo simulations from qm (θ | Y). In cases where θ
+is multivariate, one may compute multiple ESSs, one associated with each of several
+subvectors of θ .
+   Section 2 presents a motivating application and defines ε-information priors and ESS.
+Computational methods are presented in Section 3. Section 4 gives guidelines for using
+
+
+
+                                             3
+ESS computations in specific settings. Applications are described in Sections 5 and 6. In
+Section 7, we discuss connections between our proposed procedures and related methods
+given by Hodges and Sargent (2001), Spiegelhalter, Freedman and Parmar (1992), and
+Spiegelhalter, Best, Carlin, and van der Linde (2002).
+
+2.    Effective Sample Size
+The following example illustrates why it may be useful to determine the ESS of a prior.
+We consider a design for a phase I trial to determine an optimal dose combination X =
+(X1 , X2 ) of two cytotoxic agents (Thall et al., 2003). The toxicity probability at X is
+given by the 6-parameter model
+
+                                    α1 X1β1 + α2 X2β2 + α3 (X1β1 X2β2 )β3
+                     π(X, θ ) =                                               ,              (1)
+                                  1 + α1 X1β1 + α2 X2β2 + α3 (X1β1 X2β2 )β3
+
+where all parameters in θ = (α1 , β1 , α2 , β2 , α3 , β3 ) are non-negative. Under this model, if
+only agent 1 is administered at dose X1 , with X2 = 0, as in a single-agent phase I trial,
+then π(X, θ ) = π1 (X1 , θ 1 ) = α1 X1β1 /(1 + α1 X1β1 ) only depends on X1 and θ 1 = (α1 , β1 ).
+Similarly, if X1 = 0 then π(X, θ ) = π2 (X2 , θ 2 ) = α2 X2β2 /(1 + α2 X2β2 ) only depends on
+X2 and θ2 = (α2 , β2 ). The parameters θ3 = (α3 , β3 ) characterize interactions that may
+occur when the two agents are used in combination. The model parameter vector thus
+is partitioned as θ = (θ 1 , θ 2 , θ 3 ). Since phase I trials of combinations generally require
+that each agent previously has been tested alone, it is natural to obtain informative
+priors on θ 1 and θ 2 , but assume a vague prior on θ 3 . Denoting by Ga(a, b) the gamma
+distribution with mean a/b and variance a/b2 , the elicitation process (Thall et al., 2003,
+section 3) yielded the priors α1 ∼ Ga(1.74, 4.07), β1 ∼ Ga(10.24, 1.34) for the effects of
+agent 1 alone, α2 ∼ Ga(2.32, 5.42), β2 ∼ Ga(15.24, 1.95) for the effects of agent 2 alone,
+and α3 ∼ Ga(0.33, 0.33), β3 ∼ Ga(0.0008, 0.0167) for the interaction parameters.
+     Since doses must be selected sequentially in phase I trials based on very small amounts
+
+                                               4
+of data, an important question is what ESS may be associated with the prior. Our
+proposed methods (Section 5, below) show that the overall ESS of this prior is m = 1.5.
+However, since informative priors on θ 1 and θ 2 were obtained and a vague prior on θ 3
+was desired, it also is important to determine the prior ESS of each subvector. Applying
+our proposed methods yielded prior ESSs m1 = 547.3 for θ 1 , m2 = 756.8 for θ 2 , and
+m3 = 0.01 for θ 3 . The small value for m3 confirms that the prior on θ 3 reflects little
+information about the interaction of the two agents. The large numerical discrepancy
+between m = 1.5 and (m1 , m2 ) = (547.3, 756.8) is desirable. It reflects the fact that, for
+each i = 1, 2, “θ i ” has a very different meaning in the submodel πi (Xi , θ i ) parameterized
+by θ i alone versus its meaning in the full 6-parameter model π(X, θ ). See, for, example,
+Berger and Pericchi (2001). From a geometric viewpoint, if π(X, θ ) is thought of as a
+response surface varying as a function of the two-dimensional dose (X1 , X2 ), since the
+edges of the surface correspond to the submodels π1 (X1 , θ 1 ) where X2 = 0 and π2 (X2 , θ 2 )
+where X1 = 0, the large values of m1 and m2 indicate that the locations of the edges
+were well known, while the small overall ESS m = 1.5 says that otherwise very little
+was known about the surface. In practice, one would report m1 , m2 , m3 and m to the
+clinician from whom the priors were elicted. The clinician could then judge whether m1
+and m2 are reasonable characterizations of his/her prior information about the single
+agents, and compare m to the trial’s sample size. In the motivating application, a trial of
+gemcitabine and cyclophosphamide for advanced cancer, the large values of m1 and m2
+were appropriate since there was substantial clinical experience with each single agent,
+and the small overall ESS also was appropriate since no clinical data on the two agents
+used together were available and a sample size of 60 patients was planned.
+   This example illustrates four key features of our proposed method, namely that (1)
+ESS is a readily interpretable index of a prior’s informativeness, (2) it may be useful
+
+
+
+                                              5
+to compute ESSs for both the entire parameter vector and for particular subvectors,
+(3) ESS values may be used as feedback in the elicitation process, and (4) even when
+standard distributions are used, it may not be obvious how to define a prior’s ESS.
+    The intuitive motivation for the following construction is to mimic the rationale,
+given in Section 1, for why the ESS of a beta(a, b) equals a + b. As a general Bayesian
+framework, let f (Y | θ ) denote the probability distribution function (pdf) of an s-
+dimensional random vector Y , and let p(θ | θ̃ ) be the prior on the parameter vector θ =
+(θ1 , . . . , θd ), where θ̃ denotes the vector of hyperparameters. The likelihood of an i.i.d.
+sample Ym = (Y1 , . . . , Ym ) is then given by fm (Ym | θ ) = m
+                                                                 Q
+                                                                   i=1 f (Yi | θ ).
+
+    We define an ε-information prior q0 (θ | θ̃ 0 ) by requiring it to have the same mean,
+Eq0 (θ ) = Ep (θ ), and correlations, Corrq0 (θj , θj 0 ) = Corrp (θj , θj 0 ), j 6= j 0 , as p(θ | θ̃ ), while
+inflating the variances of the elements of θ so that Varq0 (θj )  Varp (θj ), in such a way
+that q0 (θ | θ̃ 0 ) has small information but Varq0 (θj ) must exist for j = 1, . . . , d. Table
+1 illustrates how to specify q0 (θθ | θ̃ 0 ) for several standard parametric priors. Given the
+likelihood fm (Ym | θ ) and ε-information prior q0 (θ | θ̃ 0 ), we denote the posterior by
+qm (θ | θ̃ 0 , Ym ) ∝ q0 (θ | θ̃ 0 )fm (Ym | θ ) and the marginal distribution under p(θ | θ̃ ) by
+                                                 Z
+                                 fm (Ym | θ̃ ) = fm (Ym | θ )p(θ | θ̃ )dθ .                      (2)
+
+When θ̃ is fixed we write f (Ym ) for brevity. To define the ESS(s), consider the following
+three cases based on p(θ | θ̃ ). For implementation, we find it useful to distinguish between
+these cases although, formally, Cases 1 and 2 are special instances of Case 3.
+
+Case 1: d = 1, with p(θ | θ̃ ) a univariate parametric model. For this case, we will define
+one ESS. Examples include the beta, gamma, univariate normal with known variance,
+and inverse-χ2 distributions.
+
+Case 2: d ≥ 2 with p(θθ | θ̃ ) a d-variate parametric model. For this case, we will define
+
+                                                      6
+one ESS. Examples include the Dirichlet and multivariate normal (MVN) distributions.
+
+The following case deals with settings where it is scientifically appropriate to define two
+or more ESSs for p(θ | θ̃ ).
+
+Case 3: d ≥ 2 with p(θ | θ̃ ) written as a product of K parametric distributions, p(θ | θ̃ )
+= K
+ Q
+   k=1 pk (θ k , | θ̃ k , θ 1 , . . . , θ k−1 ) where θ = (θ 1 , . . . , θ K ) is partitioned into K subvectors,
+
+for 1 < K ≤ d. In this case, a vector of K ESSs, one for each subvector, may be
+meaningful. An example is a normal-inverse-χ2 distribution where (θ1 , θ2 ) = (σ 2 , µ), the
+variance and mean of a normal sampling model, with p(θ1 , θ2 ) = p1 (σ 2 )p2 (µ | σ 2 ) and σ 2
+∼ Inv-χ2 (ν̃, σ̃ 2 ) and µ | σ 2 ∼ N (µ̃, σ 2 /φ̃). Here K = d = 2 and the two subvectors of θ
+are the single parameters σ 2 and µ. We will discuss other examples in Sections 4 and 5.
+
+    To define the distance between p(θ | θ̃ ) and qm (θ | θ̃ 0 , Ym ) in Cases 1 and 2, the basic
+idea is to find the sample size, m, that would be implied by normal approximations of
+the prior p(θθ) and the posterior qm (θθ | θ̃ 0 , Ym ). This led us to use the second derivatives
+of the log densities to define the distance. The real validation and justification of our
+definition, however, comes from comparing the resulting ESS values with the commonly
+reported ESS in standard settings. We carry out these comparisons in Section 5.
+    Let θ̄ = Ep (θ ) denote the prior mean under p(θ | θ̃ ). We define
+
+                                                      ∂ 2 log{p(θ | θ̃ )}
+                                     Dp,j (θ ) = −                        ,
+                                                             ∂θj2
+
+and
+                                   ∂ 2 log{qm (θ | θ̃ 0 , Ym )}
+                 Dq,j (m, θ , Ym ) = −                          , j = 1, . . . , d .
+                                              ∂θj2
+Denote Dp,+ (θ ) = dj=1 Dp,j (θ ) and Dq,+ (m, θ ) = dj=1 Dq,j (m, θ , Ym ) fm (Ym )d Ym .
+                  P                                       P R
+
+We define a distance between p(θ | θ̃ ) and qm (θ | θ̃ 0 , Ym ) for sample size m as the
+
+
+
+                                                       7
+difference of the trace of the two information matrices,
+
+                         δ(m, θ̄ , p, q0 ) = Dp,+ (θ̄ ) − Dq,+ (m, θ̄ ) .              (3)
+
+That is, we define the distance in terms of the trace of the information matrix (2nd
+derivative of the log density) of the prior p(θ | θ̃ ), and the expected information matrix
+of the posterior qm (θ | θ̃ 0 , Ym ), where the expectation is with respect to the marginal
+fm (Ym ). When d = 1, since the ’+’ subscript is superfluous, we write Dp (θ̄ ) and
+Dq (m, θ̄ ).
+
+DEFINITION 1: The ESS of p(θ | θ̃ ) with respect to the likelihood fm (Ym | θ ) is the
+integer m that minimizes the distance δ(m, θ̄ , p, q0 ).
+
+Algorithm 1, below, will generalize this to allow non-integer-valued m. An essential
+point is that the ESS is defined as a property of a prior and likelihood pair, so that,
+for example, a given prior might have two different ESS values in the context of two
+different likelihoods.
+    The definition of the distance (3) involves some arbitrary choices. We chose this
+definition after an extensive empirical investigation (not shown) of alternative formula-
+tions. Instead of evaluating the curvature at the prior mean, one could use the prior
+mode. Similarly, one could marginalize θ with respect to the prior, average over Ym
+with respect to fm (Ym | θ ) rather than the marginal fm (Ym ), or use the determinant
+rather than the trace of the information matrix. One also could define δ(.) in terms
+of Kullback-Liebler divergence, or variances. We investigated all of these alternatives
+and evaluated the resulting ESS in each of several standard cases, and found that the
+proposed distance (3) was best at matching the results that are commonly used as ESS
+values.
+    For Case 3, a more general definition is required. A motivating example is the logistic
+
+                                                8
+regression model, logit{π(X , θ )} = β0 + β1 X1 + β2 X2 where d = 3, θ = (β0 , β1 , β2 ) and βj
+∼ N (µ̃j , σ̃j2 ) independently with θ̃ = (µ̃j , σ̃j2 } for j = 0, 1, 2. In this case, the subvectors
+of interest are θ 1 = β0 and θ 2 = (β1 , β2 ), so two ESS values, m1 and m2 , may be
+computed. To accommodate Case 3, we generalize (3) by defining a set of K subvector-
+                                                                                      k
+specific distances. Let γk be the set of indices of the elements of θ k , and denote Dp,+ (θ )
+  P                      k
+                                       P      R
+= j∈γk Dp,j (θ ) and Dq,+   (mk , θ ) = j∈γk Dq,j (mk , θ , Ymk )fmk (Ymk )d Ymk . For each
+k = 1, · · · , K, we define the distance between pk (θ k | θ̃ k , θ 1 , . . . , θ k−1 ) and qmk (θ k |
+θ̃ 0,k , Ymk , θ 1 , . . . , θ k −1 ) to be
+
+                                                          k            k
+                                 δk (mk , θ̄ , p, q0 ) = Dp,+ (θ̄ ) − Dq,+ (mk , θ̄ ) .           (4)
+
+
+DEFINITION 2: Assume p(θθ | θ̃ ) as in Case 3. Let mk = arg min δk (m, θ̄ , p, q0 ).
+We define (m1 , . . . , mK ) to be the ESSs for the prior p(θ | θ̃ ) with respect to the model
+fm (Ym | θ ) and the partition θ = (θ 1 , . . . , θ K ).
+
+3.     Computational Methods
+Let θ̄ = (θ̄1 , . . . , θ̄d ) denote the prior mean vector. With the following algorithms, we
+generalize Definitions 1 and 2 to allow non-integer ESS values.
+
+Algorithm 1, for Cases 1 and 2: Let M be a positive integer chosen so that, initially,
+it is reasonable to assume that m ≤ M .
+
+Step 1. Specify q0 (θ | θ̃ 0 ).
+Step 2. For each m = 0, . . . , M , compute δ(m, θ̄ , p, q0 ).
+Step 3. The ESS is the interpolated value of m minimizing δ(m, θ̄ , p, q0 ).
+
+In practice, Step 2 is carried out either analytically or using the simulation-based nu-
+merical approximation described in Section 3.2.
+
+
+                                                           9
+Algorithm 2, for Case 3: For each k = 1, . . . , K, let Mk be a positive integer chosen
+so that, initially, it is reasonable to assume that mk ≤ Mk .
+                                     QK
+Step 1. Specify q0 (θ | θ̃ 0 ) =       k=1 q0,k (θ k | θ̃ 0,k , θ 1 , . . . , θ k−1 ).
+                                                   θ     θ       θ           θ
+Step 2. For each k = 1, . . . , K, and mk = 0, . . . , Mk , compute δk (mk , θ̄ , p, q0 ).
+Step 3. The ESS of θk is the interpolated value of mk minimizing δk (mk , θ̄ , p, q0 ).
+
+If the hyperparameter θ̃ of p(θ | θ̃ ) includes a degree of freedom (d.f.) parameter ν̃, as with
+an inverse-χ2 , inverse-gamma, inverse-Wishart, or t distribution, then the corresponding
+hyperparameter of q0 (θ | θ̃ 0 ) is ν̃0 = ν̃min + ε, where ν̃min is the smallest integer that
+ensures the second moments of θ ∼ q0 (θ | θ̃ 0 ) exist and ε > 0 is arbitrarily small. In such
+                                                                           k                    k
+cases, we add Dq,+ (ν̃min , θ̄ ) − Dq,+ (0, θ̄ ) to Dq,+ (m, θ̄ ) and add Dq,+ (ν̃min , θ̄ ) − Dq,+ (0, θ̄ )
+    k
+to Dq,+ (mk , θ̄ ) to ensure that ESS > ν̃min .
+                                       R
+   For each m = 1, · · · , M, when Dq,j (m, θ̄ , Ym )fm (Ym )d Ym cannot be computed
+analytically, we use the following simulation-based approximation. Given θ̄ = Ep (θ ),
+we first simulate Monte Carlo sample θ (1) , . . . , θ (T ) from p(θ | θ̃ ) for large T , e.g. T
+                                                   (t)        (t)
+= 100,000. For each t = 1, . . . , T , simulate Y1 , . . . , YM from fM (YM | θ(t) ). Use the
+                                               (t)
+Monte Carlo average T −1 Tt=1 Dq,j (m, θ̄ , Ym ) in place of Dq,j (m, θ̄ , Ym )fm (Ym )d Ym .
+                        P                                         R
+
+For Case 3, the same method is used to evaluate Dk (mk , θ¯) in (4).   q,+
+
+    For regression models of Y as a function of a u-dimensional predictor X, we extend
+Definition 1 by augmenting the regression model with a probability distribution gm (Xm |
+ξ ) for the covariates and prior r(ξ | ξ̃ ), usually assuming independence, gm (Xm | ξ ) =
+Qm
+   i=1 g(Xi | ξ ). Then we define
+                         Z
+               fm (Ym ) = fm (Ym | Xm , θ ) gm (Xm | ξ ) f (θ | θ̃ ) r (ξ | ξ̃ ) dθ dξ .
+
+In this case, we simulate θ (1) , . . . , θ (T ) from p(θ | θ̃ ) and ξ (1) , . . . , ξ (T ) from r(ξ | ξ̃ ), then
+               (t)          (t)                            (t)                   (t)
+simulate each X1 , . . . , XM from gM (XM | ξ (t) ), and Yi from f (Yi | θ(t) , Xi ) for each
+
+                                                         10
+                              (t)   (t)        (t)   (t)
+i = 1, . . . , M , to obtain (Y1 , X1 ), . . . , (YM , XM ). Finally, we compute the Monte
+                                        (t)       (t)
+Carlo average T −1 Tt=1 Dq,j (m, θ̄ , Ym , Xm ). For Case 3, the same method is used to
+                       P
+
+evaluate Dk (mk , θ¯) in (4).
+           q,+
+
+
+4.   Guidelines for Application
+Before illustrating how the above methods for computing ESS may be applied in par-
+ticular cases, we provide general guidelines for using ESS values in some commonly
+encountered settings of Bayesian inference.
+1. Prior Elicitation. When eliciting a prior from an area expert, ESS values may be
+provided as a readily interpretable form of feedback. The area expert may use this as
+a basis to modify his/her judgments, if desired, and this process may be iterated. For
+example, in the motivating example of Section 2, we would report the ESS values m1 =
+547 and m2 = 756 to the investigator planning the study. If his/her prior were based
+on earlier single agent trials with around 100 patients each, (s)he would be prompted to
+revise the replies to the prior elicitation questions.
+2. Formalizing Uninformative Priors. Often an investigator wishes to formalize vague
+prior information. The ESS can be used to confirm that the chosen prior carries little
+information, as desired. For example, in for the motivating example in section 2.1, the
+reported ESS m3 = 0.01 for the interaction parameter confirms that this prior is vague.
+3. Reviewing Others’ Analyses. When interpreting or formally reviewing a Bayesian data
+analysis, the ESS of the analyst’s prior provides a tool for evaluating the reasonableness
+of the analysis. In particular, if it is claimed that a vague or uninformative prior was
+used, the ESS provides an objective index to evaluate this claim. If appropriate, one may
+alert the analyst if a prior appears to be overly informative. Similarly, if an informative
+prior based on historical data is used in the analysis, reporting the ESS enables the
+reviewer to verify that the prior data is given appropriate weight.
+
+
+                                             11
+4. Sensitivity Analyses. In performing a conventional Bayesian sensitivity analysis in
+which prior parameters are varied and corresponding posterior values of interest are
+computed, the ESS of each prior may be computed to enhance interpretation of this
+analysis. The ESS itself may be used as an index of prior informativeness in such a
+sensitivity analysis.
+5. Designing Outcome-Adaptive Experiments. When formulating a prior as part of a
+Bayesian model to be used in a sequentially outcome-adaptive experiment, the ESS
+may be used to calibrate the prior to ensure that the data, rather than the prior, will
+dominate early decisions during the trial.
+6. Reviewing Bayesian Designs. When interpreting or formally reviewing a Bayesian
+design, such as that given in a clinical trial protocol, the ESS of the prior provides a
+tool for determining the extent to which the prior may influence the design’s decisions.
+Currently, an important reservation about using Bayesian inference in a regulatory en-
+vironment, such as the planning of clinical trial protocols, is the difficulty of evaluating
+and judging the appropriateness of prior distributions in complex probability models.
+The ESS provides a useful tool to mitigate such concerns.
+
+5.    Validation with Standard Models
+We validate the proposed definition of ESS by computing the implied sample sizes
+in standard models (Table 2) for which commonly reported prior equivalent sample
+sizes exist. Following Gelman et al. (2004), we denote Be(α, β), Bin(n, θ), Ga(α, β),
+Exp(θ), N(µ, σ 2 ), Inv-χ2 (ν, s2 ) Dir(α1 , . . . , αJ ), Mn(n, θ1 , . . . , θJ ), and BeBin(n, α, β) for
+the beta, binomial, gamma, exponential, normal, scaled inverse-χ2 , Dirichlet, multino-
+mial and beta-binomial distributions. The corresponding ε-information priors are given
+in Table 1. For each model in Table 2, the reported ESS matches the obvious choice.
+
+Example 1: Beta/Binomial Model. δ(m, θ̄ , p, q0 ) = {(α̃ − 1)θ̄−2 + (β̃ − 1)(1 − θ̄)−2 }
+
+                                                   12
+             Pm                          −2
+                                                              Pm                            −2
+− {(α̃/c +      Y =0 Y fm (Ym ) − 1)θ̄        + (β̃/c + m −     Y =0 Y fm (Ym ) − 1)(1 − θ̄) },
+
+where fm (Ym ) = BeBin(n, α̃, β̃) and θ̄ = Ep (θ) = α̃/(α̃ + β̃). Figure 1 shows a plot of
+δ(m, θ̄, p, q0 ) against m in the case θ̃ = (α̃, β̃) = (3,7). Using θ ∼ Be(3,7), the computed
+ESS is 10, matching the commonly reported ESS in this case. Analogous plots (not
+shown) in all other cases examined below are very similar in appearance to Figure 1.
+Example 2: Gamma/Exponential Model. δ(m, θ̄, p, q0 ) = (α̃ − 1)θ̄−2 − (α̃/c + m − 1)θ̄−2 ,
+where θ̄ = α̃/β̃, and the ESS is found analytically to be α̃, as desired.
+
+Example 3: Univariate Normal With Known Variance. For Y | θ ∼ N (θ, σ 2 ) with σ 2
+known and prior θ | θ̃ ∼ N (µ̃, σ̃ 2 ), so that θ̃ = (µ̃, σ̃ 2 ), one may compute analyti-
+cally Dp (θ) = −∂ 2 log{p(θ | θ̃ )}/∂θ2 = 1/σ̃ 2 and, similarly, Dq (m, θ̄) = m/σ 2 . Thus,
+δ(m, θ̄, p, q0 ) = |1/σ̃ 2 − m/σ 2 |, so the ESS = σ 2 /σ̃ 2 , the ratio of the known variance
+in the likelihood to the prior variance of θ. In applying this model to a clinical trial
+setting where θ is the difference between two treatment effects, Spiegelhalter, Freedman
+and Parmar (1994, section 3.1.2) propose assuming that σ̃ 2 = σ 2 /n0 to obtain a prior
+that “... is equivalent to a normalized likelihood arising from a (hypothetical) trial of
+n0 patients with an observed value µ̃ of the treatment difference statistic.” Thus, in this
+case, the two methods for defining prior effective sample size agree.
+
+Example 4: Inverse-χ2 /Normal Model. We find analytically that Dp (θ) = −(σ 2 )−2 (ν̃ +
+2)/2 + (σ 2 )−3 ν̃ σ̃ 2 , while Dq (m, θ̄, Ym )fm (Ym )d Ym is obtained by simulation. As
+                               R
+
+explained in Section 3, the adjustment factor {Dq (4, θ̄) − Dq, (0, θ̄)} is added to Dq (m, θ̄).
+For θ̃ = (ν̃, σ̃ 2 ) = (20,1), ESS = 20 = ν̃, as desired.
+
+Example 5: Dirichlet/Multinomial Model. From Table 1, denote α̃ = (α̃1 , . . . , α̃J ), θ =
+(θ1 , . . . , θJ ) and S = (S1 , . . . , SJ ) with Sj = m
+                                                       P
+                                                        i=1 Yji . Compute Dq,j (m, θ) analytically,
+                                                                                         P
+as with the beta−binomial. For d = 3 and θ̃ = (10, 15, 25), ESS = 50 =                      α̃j , as
+desired.
+
+
+                                                 13
+Example 6: Power Priors. Ibrahim and Chen (2000) propose a class of “power priors”
+based on an initial prior p0 (θθ | c0 ), a likelihood L(θθ | D0 ) of historical data D0 , and a
+scalar prior parameter a0 . The power prior is p(θ | D0 , a0 ) ∝ L(θ | D0 )a0 p0 (θ | c0 ), so
+that a0 weights the historical data relative to the data that will be obtained in the future.
+To see how one would compute the ESS of a power prior, consider the beta/binomial
+model with a beta(1,1) initial prior and D0 consisting of 3 successes in 10 historical
+trials. The power prior is p(θ | D0 , a0 ) = p(θ | (3, 10), a0 ) ∝ {θ3 (1 − θ7 )}a0 θ(1 − θ), and
+it follows easily (Case 1) that ESS = a0 10 + 2. More generally, the ESS of p(θ | D0 , a0 )
+is ao ESS{L(θ | D0 )} + ESS{p0 (θ | c0 )}, the weighting parameter times the ESS of the
+historical data likelihood treated as a function of θ plus the ESS of the initial prior.
+
+    Hodges and Sargent (2001) derive a formula for the effective degrees of freedom
+(EDF) of a richly parameterized model, and illustrate this for a balanced one-way normal
+linear random effects model for N n observations {Yij , i = 1, . . . , N, j = 1, . . . , n}, given
+by the likelihood Yi1 , · · · Yin | θi , σ 2 ∼ iid N (θi , σ 2 ) for each i, and prior θ1 , · · · , θN | µ̃, σ̃ 2
+∼ iid N (µ̃, σ̃ 2 ). They show that the EDF for this model is ρ = (nN +φ)/(n+φ), where φ
+= σ 2 /σ̃ 2 , the ratio of the residual variance and the prior variance. Recall from Example
+3 that φ is the ESS of the simple normal model with known variance. In the limiting
+case with φ → ∞, i.e., all θi are equal, θi = µ, we find ρ = 1. In other words, for large
+ESS and essentially only one group, Hodges and Sargent report ρ ≈ 1. At the other
+extreme, for φ → 0, i.e., for small ESS and θi ’s very different from each other, they
+report ρ ≈ N . However, such comparisons should not be overinterpreted. EDF and ESS
+are quite different summaries. Formally, the EDF is a function of the sample size n. In
+contrast, ESS is not a function of n. Rather it reports an equivalent sample size for the
+given model.
+    Using an information theoretic argument, Spiegelhalter, Best, Carlin and van der
+
+
+
+                                                       14
+Linde et al. (2002) also derive a measure for the effective number of parameters in
+complex models, such as generalized linear (mixed effects) models, pD , defined as the
+difference between the posterior mean of the deviance and the deviance evaluated at
+the posterior means of the parameters of interest. But, similar to the effective degrees
+of freedom ρ, the nature of pD is different from the proposed ESS. Formally, pD is a
+function of the data, while the ESS is not.
+
+6.    Application to Some Non-Standard Cases
+The following examples show how ESS values may be computed in settings where no
+commonly agreed upon ESS exists, using the numerical approximations described earlier
+to obtain δ(m, θ̄ , p, q0 ).
+
+Example 7: Logistic Regression. Thall and Lee (2003) use a logistic regression model to
+determine a maximum tolerable dose in a phase I clinical trial. Each patient receives one
+of six doses 100, 200, 300, 400, 500, 600 mg/m2 , denoted by d1 , . . . , d6 , with standardized
+doses X(z) = log(dz ) − 6−1 6l=1 log(dl ). The outcome variable is the indicator Yi = 1
+                              P
+
+if a patient i suffers toxicity, 0 if not. A logistic model π(Xi , θ ) = Pr(Yi = 1 | Xi , θ ) =
+logit−1 {η(Xi , θ)} with η(Xi , θ) = µ + βXi is assumed, where logit−1 (x) = ex /(1 + ex ).
+Hence d = 2, θ = (θ1 , θ2 ) = (µ, β), and the likelihood for m patients is
+                                           m
+                                           Y
+                     fm (Ym | Xm , θ ) =         π(Xi , θ )Yi {1 − π(Xi , θ )}1−Yi .
+                                           i=1
+
+     Thall and Lee (2003) obtained independent normal priors for µ and β, based on
+elicited mean π(X, θ ) for d = 200 and 500, and setting σ̃µ = σ̃β = 2 based on prelim-
+inary sensitivy analyses, which yielded N (µ̃µ , σ̃µ2 ) = N (−0.1313, 22 ) and N (µ̃β , σ̃β2 ) =
+N (2.3980, 22 ). For this application, Algorithms 1 and 2 may be applied to compute one
+ESS of p(θ | θ̃ ) and two ESSs mµ and mβ of the priors for µ and β, as follows. For
+Step 1, specify q0 (θθ | θ̃ 0 ) = N (µ̃µ , cσ̃µ2 ) N (µ̃β , cσ̃β2 ), with c = 10,000. Next, compute
+
+                                                   15
+Dp,1 (θ ) = (σ̃µ2 )−1 , Dp,2 (θ ) = (σ̃β2 )−1 , Dq,1 (m, θ , Ym , Xm ) = m
+                                                                        P
+                                                                         i=1 π(Xi , θ ){1 − π(Xi , θ )},
+                                   Pm
+and Dq,2 (m, θ, Ym , Xm ) = i=1 Xi2 π(Xi , θ){1 − π(Xi , θ)}. Since Dq,1 (m, θ, Ym , Xm )
+and Dq,2 (m, θ , Ym , Xm ) depend on Xm but not on Ym , this simplifies the simulation
+method given in Section 3.2. We assume a uniform distribution on the six doses for the
+                                                (t)        (t)
+probability model g(Xi | ξ ). Draw X1 , . . . , XM independently from {X(1) , . . . , X(6) }
+with probability 1/6 each, for t = 1, . . . , 100, 000. Then, using the plug-in vector θ̄ =
+(µ̄, β̄) = (µ̃µ , µ̃β ), compute δ(m, θ̄ , p, q0 ) for each m = 0, . . . , M , δ1 (mµ , θ̄ , p, q0 ) for each
+mµ = 0, . . . , M1 , and δ2 (mβ , θ̄ , p, q0 ) for each mβ = 0, . . . , M2 . As shown in Table 3, m
+= 2.3, mµ = 1.4 and mβ =6.3.
+    Since the standardized doses Xi were defined to be centered at 0, one may interpret
+mµ as the ESS for the prior on the average effect, and mβ as the ESS for the dose effect.
+The prior indicates greater knowledge about the effects of the doses than about the
+average response. Since m = 2.3, after enrolling 3 patients, the information from the
+likelihood starts to dominate the prior, as desired.
+    As a sensitivity analysis, Table 3 summarizes corresponding results for σ̃µ2 = σ̃β2 =
+0.52 , 1.02 , 3.02 , and 5.02 . As a basis for comparison, we also include the ESS at each
+dose obtained by the crude method of equating the mean and variance of π(X(z) , θ )
+at each dose to the corresponding values for a beta, E(θ) = α̃/(α̃ + β̃) and Var(θ) =
+{E(θ)( 1 − E(θ) )} /(α̃ + β̃ + 1), and solving for α̃ + β̃. We denote by m̄ the average of
+the ESSs mX(1) , . . . , mX(6) at the six doses, obtained in this way. The results indicate
+that the crude method provides smaller estimates of the ESS for σ̃ 2 < 5.02 .
+    It also is useful to examine how the ESS in this example would vary with a0 if one
+wished to re-weight the prior by replacing it with a power prior {p(θ | θ̃ )}a0 . Identifying
+p(θ | θ̃ ) with L(θ | D0 ) in the set-up of Ibrahim and Chen (2000), and considering the
+additional ESS of an initial prior to be negligible, the ESS may be computed by applying
+
+
+
+                                                      16
+Algorithms 1 and 2 and setting the -information prior to be {q0 (θ | θ̃ 0 )}a0 . This yields
+the values summarized in Table 4. These values illustrate, as in Example 6 given earlier,
+that the power a0 acts essentially as a multiplier in the ESS domain, aside from the
+additive ESS of an initial prior.
+
+Example 8: Two-Agent Dose-Response Model:                    The next example is that described
+earlier in Section 2, a design to find acceptable dose combinations of two cytotoxic
+agents used together in a phase I trial. Recall the definition of π(X, θ ) given in equation
+(1). The likelihood for m patients with toxicity indicators Ym = (Y1 , . . . , Ym ) and dose
+pairs Xm = (X1 , . . . , Xm ) is
+                                           m
+                                           Y
+                     f (Ym | Xm , θ ) =          π(Xi , θ )Yi {1 − π(Xi , θ )}1−Yi .               (5)
+                                           i=1
+
+Based on (5) and the gamma priors given in Section 2, for this case, Algorithm 1 is used
+to compute one ESS, m, of p(θ | θ̃ ). The three ESSs m1 , m2 and m3 for θ 1 , θ 2 and θ 3
+can be computed using Algorithm 2. In Step 1, with c = 10,000, q0 (θ | θ̃ 0 ) = 3k =1
+                                                                                   Q
+
+Ga(ãk ,1 /c, ãk ,2 /c) Ga(b̃k ,1 /c, b̃k ,2 /c). In Step 2, we computed Dp,1 (θθ) = (ã1,1 − 1)α1−2 ,
+. . . , Dp,6 (θ ) = (b̃3,1 − 1)β3−2 analytically. The numerical methods given in Section 3 give
+δk (mk , θ̄ , p, q0 ) for k = 1, 2, 3, yielding the values m = 1.5, m1 = 547.3, m2 = 756.8, and
+m3 = 0.01, as reported earlier.
+
+Example 9: Linear Regression. The last example is a linear regression model used to
+analyze a small data set (Y1 , X1 ), · · · , (Y10 , X10 ) where Yi is December rainfall and Xi is
+November rainfall for ten consecutive years i = 1, . . . , 10 (Congdon, 2001). The sampling
+model is Yi | Xi , θ ∼ N (µi , 1/τ ) with µi = α + β(Xi − X̄ ) and τ denoting the precision
+where X̄ is the sample average of the original predictor, so θ = (θ1 , θ2 , θ3 ) = (α, β, τ ). Let
+N (x; m, s) indicate that the random variable x is normally distributed with moments
+(m, s). In Congdon (2001), an independent prior p(θθ) = p1 (θ1 , θ2 | θ̃ 1 , θ̃ 2 ) · p2 (θ3 | θ̃ 3 )
+
+                                                   17
+is assumed, with p1 (θ1 , θ2 ) = N (θ1 ; µ̃α , σ̃α2 ) · N (θ2 ; µ̃β , σ̃β2 ) and p2 = Ga(ã, b̃). Congdon
+(2001) uses µ̃α = µ̃β = 0, σ̃α2 = σ̃β2 = 1000, ã = b̃ = 0.001. Algorithm 2 was used
+to compute two ESSs: m1 for p1 (θ1 , θ2 | θ̃ 1 , θ̃ 2 ) and m2 of p2 (θ3 | θ̃ 3 ). The plug-
+in vector is θ̄ = Ep (θ ) = (µ̃α , µ̃β , ã/b̃). In Step 1, specify q0 (θ | θ̃ 0 ) = q0,1 (θ1 | θ̃ 0,1 )
+q0,1 (θ2 | θ̃ 0,2 ) q0,2 (θ3 | θ̃ 0,3 )= N (µ̃α , cσ̃α2 ) N (µ̃β , cσ̃β2 ) Ga(ã/c, b̃/c), with c = 10,000. In
+Step 2, compute analytically Dp,1 (θ ) = (σ̃α2 )−1 , Dp,2 (θ ) = (σ̃β2 )−1 , Dp,3 (θ ) = (ã − 1)τ −2 ,
+Dq,1 (m1 , θ , Ym1 , Xm1 ) = (cσ̃α2 )−1 + τ m1 , and Dq,3 (m2 , θ , Ym2 , Xm2 ) = (ã/c − 1)τ −2 +
+m2 τ −2 /2. For this case, only Dq,2 (m1 , θ , Ym1 , Xm1 ) = (cσ̃β2 )−1 + τ 10        2
+                                                                            P
+                                                                                i=1 Xi depends on
+                                                                      (t)         (t)
+X. Following the methods in Section 3, we simulated X1 , . . . , XM1 ∼ i.i.d. N (0, 1) for
+t = 1, . . . , 100, 000 to obtain m1 = 0.001 and m2 = 0.002. We interpret the reported
+ESSs as evidence of very vague priors. As a sensitivity analysis, we also computed the
+ESSs of two alternative priors p0 (θ | θ̃ ) = N (0, 100) N (0, 10) Ga(1, 1) and p00 (θ | θ̃ ) =
+N (0, 1) N (0, 1) Ga(2, 2), which gave m1 = 0.06 and m2 = 2.0 for p0 (θ | θ̃ ), and m1 =
+1.0 and m2 = 4.0 for p00 (θθ | θ̃ ).
+
+7.    Discussion
+The methods proposed in this paper are useful in Bayesian analysis, particularly in
+settings with elicited priors or where the data consist of a relatively small number of
+observations. By computing ESSs, one may avoid the use of an overly informative prior
+in the sense that inference is dominated by the prior rather than the data. As noted in
+our guidelines for application, other uses of ESS values include interpreting or review-
+ing others’ Bayesian analyses or designs, using the ESS values themselves to perform
+sensitivity analyses in the prior’s informativeness, and calibrating the parameters of
+outcome-adaptive Bayesian designs.
+     Extension of our methods to accommodate hierarchical models is not straightfor-
+ward. This is a potentially important area for future research, since it would be useful
+
+
+                                                     18
+to compute ESS values in such settings. Other potential applications involving more
+complicated problems include mixture priors synthesizing multiple component priors, or
+the class of ε-contaminated priors where ε reflects the amount of uncertainty in the prior
+information (Greenhouse and Wasserman, 1995).
+
+                                 Acknowledgments
+Satoshi Morita’s work was supported in part by Grant H16-TRANS-003 from the Min-
+istry of Health, Labour, and Welfare in Japan. Peter Thall’s work was partially sup-
+ported by NCI grant RO1 CA 83932. Peter Muller’s work was partially supported by
+NCI grant R01 CA 075981. We thank the associate editor and the referee for their
+thoughtful and constructive comments and suggestions.
+
+                                     References
+
+ Berger, J. and Pericchi, L. (2001) Objective Bayesian methods for model selection:
+     introduction and comparison (with discussion). In ‘Model Selection’ (P. Lahiri,
+     ed.), Inst. of Math. Stat. Lecture Notes, Monograph Series, vol. 38.
+
+ Chaloner, K. and Rhame, F. S. (2001). Quantifying and documenting prior beliefs in
+     clinical trials. Statistics in Medicine 20, 581-600.
+
+ Congdon, P. (2001). Bayesian Statistical Modelling. Chichester: John Wiley and Sons,
+     pp. 94-99.
+
+ Garthwaite, P. H., Kadane, J. B., and O’Hagan, A. (2005). Statistical methods for
+     eliciting probability distributions. Journal of the American Statistical Association
+     100, 680-701.
+
+ Gelfand, A. E., Hills, S. E., Racine-Poon, A., and Smith, A. F. M. (1990). Illustration
+
+
+                                           19
+    of Bayesian inference in normal data models using Gibbs sampling. Journal of the
+    American Statistical Association 85, 972-985.
+
+Gelman, A., Carlin, J. B., Stern, H. S., and Rubin, D. B. (2004). Bayesian Data
+    Analysis (2nd Edition). New York: Chapman and Hall/CRC.
+
+Greenhouse, J. and Wasserman, L. (1995) Rob8ust Bayesain methods for monitoring
+    clinical trials. Statistics in Medicine 14, 1379-1391.
+
+Hodges J.S. and Sargent, D.J. (2001) Counting degrees of freedom in hierarchical and
+    other richly-parameteriazed models. Biometrika 88, 367-379.
+
+Ibrahim, J. G., and Chen, M.-H. (2000). Power prior distributions for regression mod-
+    els. Statistical Science 15, 46-60.
+
+Spiegelhalter, D.J., Freedman, L.S. and Parmar, M.K.B. (1994) Bayesian approaches to
+    randomized trials. Journal of the Royal Statistical Society, Series A 157, 357-416.
+
+Spiegelhalter, D.J., Best, N.G., Carlin, B.P. and van der Linde, A. (2002) Bayesian
+    measures of model complexity and fit (with discussion). Journal of the Royal
+    Statistical Society, Series B 64, 583-639.
+
+Thall, P. F., and Lee, S. J. (2003) Practical model-based dose-finding in phase I clinical
+    trials: methods based on toxicity. Int J Gynecol Cancer 13, 251-261.
+
+Thall, P. F., Millikan, R.E., Mueller, P., and Lee, S. J. (2003). Dose-finding with two
+    agents in phase I oncology trials. Biometrics 59, 487-496.
+
+
+
+
+                                           20
+Table 1. Examples of ε-information prior distributions. The hyperparameters c, c1 , and
+c2 are very large constants chosen to inflate the variances of the elements of θ under q0 .
+
+
+
+ d       Distribution                    p(θ | θ̃ )                                   q0 (θ | θ̃ 0 )
+ 1           Beta                      Be(α̃, β̃)                                  Be(α̃/c, β̃/c)
+ 1         Gamma                       Ga(α̃, β̃)                                  Ga(α̃/c, β̃/c)
+ 1   Univariate normal                  N (µ̃, σ̃ 2 )                                N (µ̃, cσ̃ 2 )
+     with known variance
+ 1    Scaled inverse-χ2             Inv-χ2 (ν̃, σ̃ 2 )               Inv-χ2 (4 + c−1 , ν̃ σ̃ 2 /2(ν̃ − 2))
+ 2   Normal-inverse-χ2      N (µ̃, σ̃ 2 /φ̃)∗Inv-χ2 (ν̃, σ̃ 2 )                   N (µ̃, cσ̃ 2 /φ̃)∗
+                                                                       Inv-χ2 (4 + c−1 , ν̃ σ̃ 2 /2(ν̃ − 2))
+ 3         Dirichlet               Dir(α̃1 , α̃2 , α̃3 )                    Dir(α̃1 /c, α̃2 /c, α̃3 /c)
+ 3   Multivariate normal    MVN (µ̃1 , µ̃2 , σ̃12 , σ̃22 , σ̃12 )   MVN (µ̃1 , µ̃2 , c21 σ̃12 , c22 σ̃22 , c1 c2 σ̃12 )
+
+
+
+
+                                                  21
+Table 2. Prior, likelihood and corresponding posterior qm with respect to the ε-information
+prior q0 , and traditionally reported prior effective sample size, ESS, for some common
+models. In line three, we denote s2 = m                   2
+                                        P
+                                           i=1 (Yi − ν̃0 ) .
+
+
+             p(θ | θ̃ )        f (Ym | θ )             qm (θ |θ̃ , Ym )           ESS
+            Be(α̃, β̃)         Bin(n, θ)     Be(c−1 α̃ + Y, c−1 β̃ + m − Y ) α̃ + β̃
+                                             Ga(c−1 α̃ + m, c−1 β̃ + Yi )
+                                                                      P
+            Ga(α̃, β̃)          Exp(θ)                                          α̃
+                                                                          2   2
+          Inv-χ2 (ν̃, σ̃ 2 )   N (0, σ 2 )      Inv-χ2 (ν̃0 + m, ν̃0ν̃σ̃0 +m
+                                                                           +s
+                                                                              )    ν̃
+                                                       Dir(c−1α̃ + S)
+                                                                                  P
+             Dir(α̃ )          M n(n, θ )                                            α̃j
+
+
+
+
+                                                  22
+Table 3. Comparison of ESSs computed using the proposed method and the crude
+method that matches first and second moments to a beta, for the logistic regression
+model, π(Xi , θ ) = P r(Yi = 1 | Xi , θ ) = exp (µ + βXi ) / {1 + exp(µ + βXi )}, where the
+priors are µ ∼ N (µ̃µ , σ̃µ2 ) with µ̃µ = −0.1313 and β ∼ N (µ̃β , σ̃β2 ) with µ̃β = 2.3980.
+
+               Proposed method                             Crude method
+ σ̃µ2 = σ̃β2    m      mµ      mβ      m̄∗   mX(1)    mX(2)    mX(3)   mX(4)    mX(5)   mX(6)
+    0.52       37.1    22.7   101.3   18.2    23.5     18.2    17.0     16.6    16.8     17.3
+    1.02       9.3     5.7    25.3     4.5     4.1     4.7      4.8      4.6     4.4      4.2
+    2.02       2.3     1.4     6.3     1.3     1.0     1.4      1.5      1.5     1.3      1.2
+    3.02       1.0     0.6     2.8     0.7     0.5     0.8      0.8      0.8     0.7      0.7
+    5.02       0.4     0.2     1.0     0.4     0.3     0.4      0.4      0.4     0.4      0.3
+                      P6
+      ∗ m̄ = 6−1       z=1 mX(z) .
+
+
+
+
+                                               23
+Table 4. ESSs for power priors {p(θ | θ̃ )}a0 based on the prior {p(θ | θ̃ )} in the logistic
+regression example, using hyperparameter values µ̃µ = −0.1313 and µ̃β = 2.3980, as in
+Table 3, with σ̃µ2 = σ̃β2 = 4.
+
+                                    a0   m      mµ    mβ
+                                   0.5   1.2    0.7   3.2
+                                    1    2.3    1.4   6.3
+                                    2    4.6    2.8   12.6
+                                    4    9.3    5.7   25.3
+
+
+
+
+                                               24
+                                      Figure Legends
+
+
+Figure 1. Plot of δ(m, θ̄, p, q0 ) against m for the beta/binomial model with θ̃ = (α̃, β̃) =
+(3, 7).
+
+
+
+
+                                             25
+
