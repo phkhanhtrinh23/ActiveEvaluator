@@ -292,3 +292,201 @@ and a different bound.
    $\Delta = 0$, i.e. "nothing left to gain", not "the gain went negative".
 3. **§24 step (4)/(5)** — optionally state once that $\mathcal{R}$ holds indices
    while $A$ holds workloads, since the two notations appear on the same line.
+
+---
+---
+
+# Addendum — reconciling with `submodularity_under_metric_swaps.md`
+
+**Question.** `../../active_model_eval/pdfs/submodularity_under_metric_swaps.md` states that
+*"true directed Hausdorff, $\max_x\min_z d$ — monotone: yes, submodular: **no**, fixed by
+$\exp(-d)$: **no**"*. The notes above state that Hausdorff-driven facility location **is**
+monotone submodular. Is one of them wrong?
+
+**Answer: no. Both are correct.** They are statements about two different functions, at two
+different levels of the hierarchy. The word "Hausdorff" appears in each, but in a structurally
+different position.
+
+---
+
+## A.1 The two objects
+
+### Object A — Hausdorff as the *affinity* (this project, `active_eval`)
+
+$$D_{ij}=d_H(b_i,b_j)=\max\Bigl\{\max_{x\in b_i}\min_{y\in b_j}\lVert x-y\rVert,\ \max_{y\in b_j}\min_{x\in b_i}\lVert x-y\rVert\Bigr\}$$
+
+$$S_{ij}=\exp\!\bigl(-D_{ij}^2/\tau\bigr),
+\qquad
+F(A)=\sum_{j=1}^{N}\ \max_{b_i\in A} S_{ij}.$$
+
+The $\max\min$ lives **inside the computation of one scalar** $D_{ij}$ — it ranges over
+*examples* $x,y$ within a fixed pair of workloads. It happens entirely **below** the level of
+the set function. By the time $F$ sees anything, $D_{ij}$ is just a number.
+
+The set-function-level aggregation is $\sum_j \max_{b_i\in A}$ — a **sum of maxes**. That is
+facility location. **Monotone and submodular.**
+
+### Object B — Hausdorff-shaped *aggregation* (the `active_model_eval` doc, §1.1)
+
+$$H(\mathcal X \to \mathcal U_{\mathcal Q})=\max_{x\in\mathcal X}\ \min_{z\in\mathcal U_{\mathcal Q}}d(x,z),
+\qquad g(\mathcal Q)=M-H(\mathcal Q).$$
+
+Here the outer $\max_x$ ranges over the **targets being covered**, i.e. it *is* the aggregation
+the set function performs. That makes $g$ a **minimum of submodular functions**, which is not
+submodular in general. Their $2\times2$ counterexample is correct:
+
+| $\mathcal Q$ | $H$ | $g=10-H$ |
+|---|---:|---:|
+| $\varnothing$ | 10 | 0 |
+| $\{e_1\}$ | 10 | 0 |
+| $\{e_2\}$ | 10 | 0 |
+| $\{e_1,e_2\}$ | 0 | 10 |
+
+$\Delta(e_2\mid\varnothing)=0$ but $\Delta(e_2\mid\{e_1\})=10$ — *increasing* returns.
+Submodularity would demand $0\ge 10$. This is the standard fact that **$k$-center is not
+submodular**, and it is right.
+
+### The distinction in one line
+
+> **Hausdorff as the edge weight $S_{ij}$: submodular. Hausdorff as the outer aggregation:
+> not submodular.** The failure is never in the distance; it is in what sits outside the sum.
+
+The metric-swaps document says exactly this itself, in its own §7 taxonomy: F2 ("outer $\max_x$
+instead of $\sum_x$") is a property of the **aggregation**, not of $d$. And its own final table
+row — *"any point-to-point $d(x,z)$ wrapped as $\sum_x\max_z e^{-d/\sigma}$: monotone yes,
+submodular yes"* — **is** Object A, because $d_H(b_i,b_j)$ is a point-to-point distance once the
+"points" are workloads. Theorem 7.1 of that document therefore *confirms* the notes above rather
+than contradicting them.
+
+---
+
+## A.2 Why the two projects land in different places
+
+| | `active_eval` (this project) | `active_model_eval` |
+|---|---|---|
+| Ground set | $B=\{b_1,\dots,b_N\}$, workloads | $\mathcal P=\{P_1,\dots,P_R\}$, labeled subsets |
+| Element = | one point cloud $b_i$ | one subset $P$, items pooled into $\mathcal U_{\mathcal Q}$ |
+| "Points" the objective ranges over | **workloads** $b_j$ | **items** $x\in\mathcal X$ |
+| Where Hausdorff sits | *below* the ground set (between examples inside two workloads) | *at* the objective level (over items) |
+| Consequence | affinity → facility location ✓ | aggregation → $k$-center ✗ |
+
+Same word, different level. Nothing to reconcile beyond noticing which level is meant.
+
+---
+
+## A.3 The Hausdorff-shaped object *does* exist in this project — and §34 handles it correctly
+
+The `active_eval` proof does contain a genuine Object-B quantity. It is the **covering radius**
+of §34:
+
+$$\varepsilon(A)=\max_{1\le j\le N}\ \min_{b_i\in A} d_H(b_i,b_j).$$
+
+This is $\max\min$ **at the set-function level**, over workloads — structurally identical to the
+metric-swaps §1.1 counterexample. So $-\varepsilon(A)$ is **not submodular**, and greedy carries
+no $(1-1/e)$ guarantee for it.
+
+The document already flags the structure explicitly (§34 remark: *"$\varepsilon(A)$ is itself a
+$\max\min$, exactly like the Hausdorff distance of Part II — but one level higher, over workloads
+rather than over points"*), and — crucially — **it never optimizes $\varepsilon(A)$.**
+
+The architecture is:
+
+$$\underbrace{\max_{|A|\le K} F(A)}_{\text{submodular; greedy gets } 1-1/e}
+\ \xrightarrow[\ \text{Lemma \texttt{lem:cover}(b)}\ ]{}\
+\underbrace{\varepsilon(A)\le\sqrt{\tau\ln\tfrac{1}{1-\Delta}}}_{\text{derived bound, not optimized}}
+\ \xrightarrow[\ \text{Thm \texttt{thm:cover}}\ ]{}\
+L\,\varepsilon(A).$$
+
+Optimize the submodular surrogate $F$; **bound** the non-submodular quantity $\varepsilon$ as a
+corollary. That is precisely the move the metric-swaps document prescribes when it writes *"only
+replacing the outer $\max_x$ by $\sum_x$ fixes it, and that turns Hausdorff into facility
+location."* The two documents agree on both the diagnosis and the remedy.
+
+**Naming check.** The metric-swaps takeaway warns: *"the paper should say 'facility location',
+not describe it in Hausdorff terms."* This paper already complies — `abstract.tex`, `intro.tex`
+and `method.tex` consistently say **"Hausdorff dataset distance"** and **"Hausdorff facility
+location"**, which correctly names Hausdorff as the *distance* and facility location as the
+*objective*. No edit needed.
+
+---
+
+## A.4 One convention difference, not a disagreement
+
+The notes above say: if you used $S_{ij}=-D_{ij}$ directly, $F$ stays monotone submodular and
+what breaks is **normalization** ($F(\varnothing)=-\infty$, $F<0$).
+
+The metric-swaps §7.1 says: with $S=-d\le 0$, **monotonicity** breaks, because
+$\varnothing\mapsto 0$ and $\{z\}\mapsto -d<0$.
+
+Both are correct; they use different empty-set conventions:
+
+| Convention | $F(\varnothing)$ | What fails |
+|---|---|---|
+| $\max_{\varnothing}:=-\infty$ (natural for $\max$) | $-\infty$ | normalization + non-negativity |
+| $\max_{\varnothing}:=0$ (metric-swaps §0) | $0$ | monotonicity, **at the empty set only** |
+
+On non-empty sets the function is monotone either way — a max over a larger set cannot shrink,
+whatever the sign of the entries. The operational conclusion is identical and is what matters:
+
+> **NWF needs $S\ge 0$; the exponential is what supplies it. Submodularity itself never uses the
+> sign.**
+
+---
+
+## A.5 Two genuine defects in `submodularity_under_metric_swaps.md`
+
+Both are minor and repairable; neither changes any conclusion.
+
+### (i) Proposition 7.3 is false as literally stated
+
+> *"Let $\psi$ be any strictly decreasing function and $F$ any set function. If $F$ violates
+> monotonicity, so does $\psi\circ F$."*
+
+Counterexample: take $F(\mathcal A)=-\lvert\mathcal A\rvert$, which violates monotonicity
+(increasing). With $\psi=\exp(-\cdot)$ we get $\psi(F(\mathcal A))=e^{\lvert\mathcal A\rvert}$,
+which **is** monotone. So the statement as written is wrong.
+
+The intended — and correct — content is visible in the proof, which silently assumes $F$ is a
+*divergence* to be minimized:
+
+> **Proposition 7.3′.** For strictly decreasing $\psi$, the composite $\psi\circ F$ is monotone
+> non-decreasing **if and only if** $F$ is monotone non-increasing. Hence if the divergence $F$
+> (e.g. $\mathrm{MMD}^2$) *increases* along some chain $\mathcal A\subseteq\mathcal B$, then
+> $\psi\circ F$ *decreases* along that chain and is non-monotone.
+
+Restated this way the argument is airtight and the §7.2 conclusion ($\exp$ cannot repair F3)
+stands unchanged.
+
+### (ii) The numerical report in §7.2 contradicts the proposition it illustrates
+
+> *"$-\mathrm{MMD}^2$ had 13 monotonicity and 28 submodularity violations;
+> $\exp(-\mathrm{MMD}^2)$ still had **8 and 8**."*
+
+Monotonicity violation counts **must be identical**, not merely similar. A violation of
+$-\mathrm{MMD}^2$ is a pair $\mathcal A\subseteq\mathcal B$ with
+$\mathrm{MMD}^2(\mathcal A)<\mathrm{MMD}^2(\mathcal B)$; a violation of $\exp(-\mathrm{MMD}^2)$
+is $\exp(-\mathrm{MMD}^2(\mathcal A))>\exp(-\mathrm{MMD}^2(\mathcal B))$ — **the same condition**,
+since $\exp(-\cdot)$ is a strictly decreasing bijection. So the count should read $13\to 13$.
+
+Reporting $13\to 8$ contradicts the document's own claim that violations survive "one-for-one".
+Almost certainly the checker used an absolute tolerance: $\exp$ compresses large
+$\mathrm{MMD}^2$ gaps into differences near $0$, so 5 genuine violations fell below the epsilon.
+**Fix:** use a relative tolerance, or compare orderings rather than value gaps, and report
+$13\to 13$ — which strengthens the section rather than weakening it.
+
+(The submodularity counts $28\to 8$ are fine and need no correction: submodularity is *not*
+preserved by monotone transforms, so that number may legitimately move in either direction.)
+
+---
+
+## A.6 Summary
+
+| claim | status |
+|---|---|
+| Hausdorff *as affinity* $S_{ij}=e^{-d_H^2/\tau}$ → facility location is monotone submodular | **correct** (these notes; and their own Thm 7.1) |
+| Hausdorff *as aggregation* $\max_x\min_z d$ is not submodular | **correct** (their §1.1; standard $k$-center fact) |
+| the two are in conflict | **no** — different functions, different levels |
+| $\varepsilon(A)$ in `active_eval` §34 is Object B, hence not submodular | **true, and the document never optimizes it** |
+| the $\exp$ supplies non-negativity, not submodularity | **both documents agree** |
+| Prop 7.3 as literally stated | **false**; repair as 7.3′ |
+| $13\to 8$ monotonicity counts | **inconsistent**; should be $13\to 13$ |
