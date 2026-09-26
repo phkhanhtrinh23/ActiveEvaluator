@@ -1,0 +1,224 @@
+{
+  "out": "outputs/text2sql",
+  "encoder": "sentence-transformers/all-MiniLM-L6-v2",
+  "embed_dim": 64,
+  "meta_pool": [
+    "data/sft_spider_train_text2sql.json",
+    "data/sft_bird_train_text2sql.json"
+  ],
+  "workloads": {
+    "n": 30000,
+    "size": [
+      50,
+      200
+    ],
+    "dbs": [
+      1,
+      5
+    ],
+    "seed": 0
+  },
+  "sources": {
+    "spider": "data/sft_spider_train_text2sql.json",
+    "bird": "data/sft_bird_train_text2sql.json"
+  },
+  "source_size": 1000,
+  "calibration_size": 1000,
+  "max_target_examples": 2000,
+  "db_root": null,
+  "variants_root": "data/database_variants",
+  "targets": {
+    "Spider": "data/sft_spider_dev_text2sql.json",
+    "BIRD": "data/sft_bird_dev_text2sql.json",
+    "Spider 2.0": "data/sft_spider2_lite_text2sql.json",
+    "BEAVER": "data/sft_beaver_text2sql.json",
+    "ScienceBench": "data/sft_sciencebenchmark_text2sql.json",
+    "EntSQL": "data/sft_entsql_text2sql.json",
+    "LiveSQLBench": "data/sft_livesqlbench_text2sql.json"
+  },
+  "models": [
+    {
+      "name": "Arctic-Text2SQL-R1-7B",
+      "hf": "Snowflake/Arctic-Text2SQL-R1-7B",
+      "source": "bird"
+    },
+    {
+      "name": "Code-Llama-2-13B-Instruct-Text2SQL",
+      "hf": "bugdaryan/Code-Llama-2-13B-instruct-text2sql",
+      "source": "spider"
+    },
+    {
+      "name": "CodeLlama-70B-Instruct",
+      "hf": "codellama/CodeLlama-70b-Instruct-hf",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "CodeS-1B",
+      "hf": "seeklhy/codes-1b",
+      "source": "spider"
+    },
+    {
+      "name": "CodeS-3B",
+      "hf": "seeklhy/codes-3b",
+      "source": "spider"
+    },
+    {
+      "name": "CodeS-7B",
+      "hf": "seeklhy/codes-7b",
+      "source": "spider"
+    },
+    {
+      "name": "CodeS-15B",
+      "hf": "seeklhy/codes-15b",
+      "source": "spider"
+    },
+    {
+      "name": "CscSQL-Merge-Qwen2.5-Coder-7B",
+      "hf": "cycloneboy/CscSQL-Merge-Qwen2.5-Coder-7B-Instruct",
+      "source": "bird"
+    },
+    {
+      "name": "Distil-Qwen3-4B-Text2SQL",
+      "hf": "distil-labs/distil-qwen3-4b-text2sql",
+      "source": "spider"
+    },
+    {
+      "name": "Flan-T5-Text2SQL-Schema",
+      "hf": "juierror/flan-t5-text2sql-with-schema",
+      "source": "spider"
+    },
+    {
+      "name": "Flan-T5-Text2SQL-Schema-v2",
+      "hf": "juierror/flan-t5-text2sql-with-schema-v2",
+      "source": "spider"
+    },
+    {
+      "name": "Gemma-2-2B",
+      "hf": "google/gemma-2-2b",
+      "source": "spider"
+    },
+    {
+      "name": "Graphix-3B",
+      "hf": "patrickNLP/Graphix-3B",
+      "source": "spider"
+    },
+    {
+      "name": "Hrida-T2SQL-3B",
+      "hf": "HridaAI/Hrida-T2SQL-3B-V0.2",
+      "source": "spider"
+    },
+    {
+      "name": "Llama-3-SQLCoder-8B",
+      "hf": "defog/llama-3-sqlcoder-8b",
+      "source": "spider"
+    },
+    {
+      "name": "Llama-3.1-70B-Instruct",
+      "hf": "meta-llama/Llama-3.1-70B-Instruct",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "Meta-Llama-3-70B",
+      "hf": "meta-llama/Meta-Llama-3-70B",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "Ministral-3-14B",
+      "hf": "mistralai/Ministral-3-14B-Instruct-2512",
+      "source": "spider"
+    },
+    {
+      "name": "Mixtral-8x7B-Instruct",
+      "hf": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "OmniSQL-7B",
+      "hf": "seeklhy/OmniSQL-7B",
+      "source": "bird"
+    },
+    {
+      "name": "OmniSQL-14B",
+      "hf": "seeklhy/OmniSQL-14B",
+      "source": "bird"
+    },
+    {
+      "name": "Pip-SQL-1.3B",
+      "hf": "PipableAI/pip-sql-1.3b",
+      "source": "spider"
+    },
+    {
+      "name": "Qwen2.5-32B",
+      "hf": "Qwen/Qwen2.5-32B",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "Qwen2.5-72B-Instruct",
+      "hf": "Qwen/Qwen2.5-72B-Instruct",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "Qwen3-4B-Text-to-SQL",
+      "hf": "Ellbendls/Qwen-3-4b-Text_to_SQL",
+      "source": "spider"
+    },
+    {
+      "name": "SQLCoder-7B-2",
+      "hf": "defog/sqlcoder-7b-2",
+      "source": "spider"
+    },
+    {
+      "name": "SQLCoder-15B",
+      "hf": "defog/sqlcoder",
+      "source": "spider"
+    },
+    {
+      "name": "SQLCoder-70B-Alpha",
+      "hf": "defog/sqlcoder-70b-alpha",
+      "source": "spider",
+      "batch_size": 2
+    },
+    {
+      "name": "SQLCoder2",
+      "hf": "defog/sqlcoder2",
+      "source": "spider"
+    },
+    {
+      "name": "T5-LM-Large-Text2SQL-Spider",
+      "hf": "gaussalgo/T5-LM-Large-text2sql-spider",
+      "source": "spider"
+    },
+    {
+      "name": "T5-Small-Text-to-SQL",
+      "hf": "cssupport/t5-small-awesome-text-to-sql",
+      "source": "spider"
+    },
+    {
+      "name": "XiYanSQL-QwenCoder-3B",
+      "hf": "XGenerationLab/XiYanSQL-QwenCoder-3B-2502",
+      "source": "bird"
+    },
+    {
+      "name": "XiYanSQL-QwenCoder-7B",
+      "hf": "XGenerationLab/XiYanSQL-QwenCoder-7B-2502",
+      "source": "bird"
+    },
+    {
+      "name": "XiYanSQL-QwenCoder-14B",
+      "hf": "XGenerationLab/XiYanSQL-QwenCoder-14B-2502",
+      "source": "bird"
+    },
+    {
+      "name": "XiYanSQL-QwenCoder-32B",
+      "hf": "XGenerationLab/XiYanSQL-QwenCoder-32B-2504",
+      "source": "bird",
+      "batch_size": 2
+    }
+  ]
+}

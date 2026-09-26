@@ -1,0 +1,63 @@
+{
+  "out": "outputs/node",
+  "root": "data/graph",
+  "embed_dim": 64,
+  "hops": 2,
+  "workloads": {
+    "n": 30000,
+    "seed": 0
+  },
+  "targets": {
+    "ACMv9": {
+      "kind": "domain",
+      "source": "dblp",
+      "target": "acm"
+    },
+    "Citationv1": {
+      "kind": "domain",
+      "source": "acm",
+      "target": "network"
+    },
+    "DBLPv7": {
+      "kind": "domain",
+      "source": "network",
+      "target": "dblp"
+    },
+    "ogbn-arxiv": {
+      "kind": "ogb",
+      "name": "ogbn-arxiv"
+    },
+    "GOOD-Cora": {
+      "kind": "good"
+    },
+    "GOOD-Twitch": {
+      "kind": "good"
+    },
+    "GOOD-WebKB": {
+      "kind": "good"
+    }
+  },
+  "models": [
+    "APPNP",
+    "ARMA",
+    "ChebNet",
+    "GAT",
+    "GATv2",
+    "GCN",
+    "GCNII",
+    "GIN",
+    "GraphSAGE",
+    "JKNet",
+    "MixHop",
+    "MLP",
+    "SGC",
+    "SuperGAT",
+    "TAGCN",
+    "UniMP"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ]
+}

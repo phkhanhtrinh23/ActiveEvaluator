@@ -1,11 +1,8 @@
-"""ActiveEvaluator meta-learning utilities."""
+"""ActiveEvaluator: budgeted meta-dataset selection for label-free model evaluation."""
 
-from .model import ActiveEvaluator
-from .meta_learning import ActiveEvaluatorLearner, MetaLearningConfig, ShiftDescriptorTask
+from .distances import pairwise
+from .evaluator import MetaEvaluator, Task
+from .records import ModelRecord
+from .selection import Selection, facility_location, select, similarity
 
-__all__ = [
-    "ActiveEvaluator",
-    "ActiveEvaluatorLearner",
-    "MetaLearningConfig",
-    "ShiftDescriptorTask",
-]
+__all__ = ["MetaEvaluator", "ModelRecord", "Selection", "Task", "facility_location", "pairwise", "select", "similarity"]

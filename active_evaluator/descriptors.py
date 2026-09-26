@@ -1,85 +1,56 @@
-"""Shift descriptor helpers tailored for ActiveEvaluator."""
+"""Shift descriptor SD(D_S, b, f) computed from a model's own features and confidences."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, Sequence
-
 import numpy as np
-import torch
 
-from shift_descriptor.metrics import (
-    DistributionStats,
-    compute_stats,
-    frechet_distance,
-    mahalanobis_distance,
-    sliced_wasserstein_distance,
-)
-
-
-DEFAULT_FEATURE_ORDER: Sequence[str] = (
-    "frechet_distance",
-    "frechet_mean_shift",
-    "mahalanobis_distance",
+FEATURES = (
+    "frechet",
+    "mean_shift",
+    "mahalanobis",
     "swd_mean",
     "swd_std",
     "swd_max",
+    "conf_mean",
+    "conf_shift",
 )
 
+EPS = 1e-6
 
-@dataclass(frozen=True)
+
 class ShiftDescriptor:
-    """Stores shift descriptor metadata for a pair of splits."""
+    """Fitted on the source data D_S of one model; maps a workload to its shift features."""
 
-    model_name: str
-    split_a: str
-    split_b: str
-    features: Dict[str, float]
+    def __init__(self, source_emb: np.ndarray, source_conf: np.ndarray, dim: int = 64,
+                 n_proj: int = 128, n_quantiles: int = 64, seed: int = 0):
+        x = source_emb.astype(np.float64)
+        self.center = x.mean(0)
+        _, _, vt = np.linalg.svd(x - self.center, full_matrices=False)
+        self.basis = vt[:dim].T
+        z = self._reduce(source_emb)
+        rng = np.random.default_rng(seed)
+        theta = rng.normal(size=(z.shape[1], n_proj))
+        self.theta = theta / np.linalg.norm(theta, axis=0, keepdims=True)
+        self.levels = (np.arange(n_quantiles) + 0.5) / n_quantiles
+        self.mean, self.var, self.cov = z.mean(0), z.var(0).clip(EPS), np.cov(z, rowvar=False)
+        self.quantiles = np.quantile(z @ self.theta, self.levels, axis=0)
+        self.conf = float(np.mean(source_conf))
 
-    def as_tensor(self, feature_order: Sequence[str] = DEFAULT_FEATURE_ORDER, device: torch.device | None = None) -> torch.Tensor:
-        vec = [self.features[feature] for feature in feature_order]
-        return torch.tensor(vec, dtype=torch.float32, device=device)
+    def _reduce(self, emb: np.ndarray) -> np.ndarray:
+        return (emb.astype(np.float64) - self.center) @ self.basis
 
-
-def _maybe_compute_stats(cache: Dict[int, DistributionStats], emb: np.ndarray) -> DistributionStats:
-    cache_key = id(emb)
-    if cache_key not in cache:
-        cache[cache_key] = compute_stats(emb)
-    return cache[cache_key]
-
-
-def compute_shift_descriptor(
-    model_name: str,
-    split_a: str,
-    emb_a: np.ndarray,
-    split_b: str,
-    emb_b: np.ndarray,
-    *,
-    num_projections: int = 128,
-    seed: int = 13,
-    feature_order: Sequence[str] = DEFAULT_FEATURE_ORDER,
-) -> ShiftDescriptor:
-    """Compute the requested shift descriptor features between two embedding clouds."""
-
-    stats_cache: Dict[int, DistributionStats] = {}
-    stats_a = _maybe_compute_stats(stats_cache, emb_a)
-    stats_b = _maybe_compute_stats(stats_cache, emb_b)
-
-    frechet = frechet_distance(stats_a, stats_b)
-    mahala = mahalanobis_distance(stats_a, stats_b)
-    swd = sliced_wasserstein_distance(emb_a, emb_b, num_projections=num_projections, seed=seed)
-
-    features = {
-        "frechet_distance": frechet["frechet_distance"],
-        "frechet_mean_shift": frechet["frechet_mean_shift"],
-        "mahalanobis_distance": mahala,
-        "swd_mean": swd["swd_mean"],
-        "swd_std": swd["swd_std"],
-        "swd_max": swd["swd_max"],
-    }
-    # Validate feature order early.
-    for feature_name in feature_order:
-        if feature_name not in features:
-            raise KeyError(f"Feature '{feature_name}' missing from computed descriptor.")
-
-    return ShiftDescriptor(model_name=model_name, split_a=split_a, split_b=split_b, features=features)
+    def __call__(self, emb: np.ndarray, conf: np.ndarray) -> np.ndarray:
+        z = self._reduce(emb)
+        mean, var = z.mean(0), z.var(0).clip(EPS)
+        diff = mean - self.mean
+        mean_shift = float(diff @ diff)
+        frechet = mean_shift + float(((np.sqrt(var / self.var) - 1.0) ** 2).sum())
+        cov = np.cov(z, rowvar=False) if len(z) > 1 else np.zeros_like(self.cov)
+        pooled = 0.5 * (self.cov + cov) + EPS * np.eye(len(diff))
+        mahalanobis = float(np.sqrt(max(diff @ np.linalg.pinv(pooled) @ diff, 0.0)))
+        swd = np.abs(np.quantile(z @ self.theta, self.levels, axis=0) - self.quantiles).mean(0)
+        conf_mean = float(np.mean(conf))
+        return np.array(
+            [frechet, np.sqrt(mean_shift), mahalanobis, swd.mean(), swd.std(), swd.max(), conf_mean, conf_mean - self.conf],
+            dtype=np.float32,
+        )

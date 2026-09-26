@@ -1,0 +1,143 @@
+{
+  "out": "outputs/image",
+  "root": "data/image",
+  "encoder": "facebook/dinov2-small",
+  "embed_dim": 64,
+  "workloads": {
+    "n": 30000,
+    "size": [
+      100,
+      300
+    ],
+    "seed": 0
+  },
+  "source_size": 2000,
+  "calibration_size": 2000,
+  "max_target_examples": 5000,
+  "tasks": {
+    "digits": {
+      "source": "mnist",
+      "targets": {
+        "USPS": "usps",
+        "SVHN": "svhn"
+      }
+    },
+    "cifar": {
+      "source": "cifar10",
+      "targets": {
+        "CIFAR-10.1": "cifar10.1",
+        "CIFAR-10-C": "cifar10-c"
+      }
+    },
+    "imagenet": {
+      "source": "imagenet",
+      "targets": {
+        "ImageNet-V2": "imagenet-v2",
+        "ImageNet-R": "imagenet-r",
+        "ImageNet-Sketch": "imagenet-sketch"
+      }
+    }
+  },
+  "models": [
+    {
+      "name": "CLIP-ViT-B/32",
+      "type": "zeroshot",
+      "id": "openai/clip-vit-base-patch32"
+    },
+    {
+      "name": "CLIP-ViT-L/14",
+      "type": "zeroshot",
+      "id": "openai/clip-vit-large-patch14"
+    },
+    {
+      "name": "ConvNeXt-Tiny",
+      "type": "timm",
+      "id": "convnext_tiny.fb_in1k"
+    },
+    {
+      "name": "ConvNeXtV2-Base",
+      "type": "hf",
+      "id": "facebook/convnextv2-base-22k-384"
+    },
+    {
+      "name": "DeiT-Small",
+      "type": "timm",
+      "id": "deit_small_patch16_224.fb_in1k"
+    },
+    {
+      "name": "DenseNet-121",
+      "type": "timm",
+      "id": "densenet121.ra_in1k"
+    },
+    {
+      "name": "EfficientNet-B2",
+      "type": "timm",
+      "id": "efficientnet_b2.ra_in1k"
+    },
+    {
+      "name": "MobileNetV2",
+      "type": "timm",
+      "id": "mobilenetv2_100.ra_in1k"
+    },
+    {
+      "name": "MobileNetV3-Small",
+      "type": "timm",
+      "id": "mobilenetv3_small_100.lamb_in1k"
+    },
+    {
+      "name": "RegNetY-8GF",
+      "type": "timm",
+      "id": "regnety_080.ra3_in1k"
+    },
+    {
+      "name": "ResNet-18 (Microsoft)",
+      "type": "hf",
+      "id": "microsoft/resnet-18"
+    },
+    {
+      "name": "ResNet-18 (timm)",
+      "type": "timm",
+      "id": "resnet18.a1_in1k"
+    },
+    {
+      "name": "ResNet-50 (Microsoft)",
+      "type": "hf",
+      "id": "microsoft/resnet-50"
+    },
+    {
+      "name": "ResNeXt-50-32x4d",
+      "type": "timm",
+      "id": "resnext50_32x4d.a1_in1k"
+    },
+    {
+      "name": "SigLIP2-Base/16",
+      "type": "zeroshot",
+      "id": "google/siglip2-base-patch16-224"
+    },
+    {
+      "name": "SigLIP-SO400M/14",
+      "type": "zeroshot",
+      "id": "google/siglip-so400m-patch14-384"
+    },
+    {
+      "name": "VGG-16",
+      "type": "timm",
+      "id": "vgg16.tv_in1k"
+    },
+    {
+      "name": "ViT-Base",
+      "type": "hf",
+      "id": "google/vit-base-patch16-224"
+    },
+    {
+      "name": "ViT-Tiny",
+      "type": "timm",
+      "id": "vit_tiny_patch16_224.augreg_in21k_ft_in1k"
+    },
+    {
+      "name": "WideResNet-50-2",
+      "type": "timm",
+      "id": "wide_resnet50_2.racm_in1k"
+    }
+  ]
+}
